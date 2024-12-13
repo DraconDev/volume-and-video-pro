@@ -145,7 +145,7 @@ function App() {
                     type="range"
                     id="bass-slider"
                     min="0"
-                    max="300"
+                    max="200"
                     value={settings.bassBoost}
                     onChange={(e) =>
                         handleBassBoostChange(Number(e.target.value))
@@ -153,7 +153,7 @@ function App() {
                     className="slider"
                     style={
                         {
-                            "--percentage": `${settings.bassBoost / 3}%`,
+                            "--percentage": `${settings.bassBoost / 2}%`,
                         } as React.CSSProperties
                     }
                 />
@@ -190,7 +190,7 @@ function App() {
                     type="range"
                     id="voice-slider"
                     min="0"
-                    max="300"
+                    max="200"
                     value={settings.voiceBoost}
                     onChange={(e) =>
                         handleVoiceBoostChange(Number(e.target.value))
@@ -198,7 +198,7 @@ function App() {
                     className="slider"
                     style={
                         {
-                            "--percentage": `${settings.voiceBoost / 3}%`,
+                            "--percentage": `${settings.voiceBoost / 2}%`,
                         } as React.CSSProperties
                     }
                 />

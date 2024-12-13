@@ -40,13 +40,13 @@ export default defineContentScript({
 
                     // Create bass boost filter
                     const bassFilter = context.createBiquadFilter();
-                    bassFilter.type = 'lowshelf';
+                    bassFilter.type = "lowshelf";
                     bassFilter.frequency.value = 150;
                     bassFilter.gain.value = 0;
 
                     // Create voice boost filter
                     const voiceFilter = context.createBiquadFilter();
-                    voiceFilter.type = 'peaking';
+                    voiceFilter.type = "peaking";
                     voiceFilter.frequency.value = 2500;
                     voiceFilter.Q.value = 1.5;
                     voiceFilter.gain.value = 0;
@@ -66,13 +66,13 @@ export default defineContentScript({
                         voiceFilter,
                     });
 
-                    console.log('Audio context setup complete', {
+                    console.log("Audio context setup complete", {
                         gain: gainNode.gain.value,
                         bassGain: bassFilter.gain.value,
-                        voiceGain: voiceFilter.gain.value
+                        voiceGain: voiceFilter.gain.value,
                     });
                 } catch (error) {
-                    console.error('Error setting up audio context:', error);
+                    console.error("Error setting up audio context:", error);
                 }
             }
         };
@@ -89,20 +89,22 @@ export default defineContentScript({
                         const volumeGain = settings.volume / 100;
                         audioContext.gain.gain.value = volumeGain;
 
-                        // Update bass boost (max 45dB boost, -15dB cut)
-                        const bassGain = ((settings.bassBoost - 100) / 100) * 45;
+                        // Update bass boost (max 30db boost, -15dB cut)
+                        const bassGain =
+                            ((settings.bassBoost - 100) / 100) * 15;
                         audioContext.bassFilter.gain.value = bassGain;
 
-                        // Update voice boost (max 36dB boost, -12dB cut)
-                        const voiceGain = ((settings.voiceBoost - 100) / 100) * 36;
+                        // Update voice boost (max 24dB boost, -12dB cut)
+                        const voiceGain =
+                            ((settings.voiceBoost - 100) / 100) * 24;
                         audioContext.voiceFilter.gain.value = voiceGain;
 
-                        console.log('Updated audio effects:', {
+                        console.log("Updated audio effects:", {
                             volume: volumeGain,
                             bassBoost: settings.bassBoost,
                             bassGain,
                             voiceBoost: settings.voiceBoost,
-                            voiceGain
+                            voiceGain,
                         });
                     }
                 }
