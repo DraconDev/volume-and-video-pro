@@ -44,7 +44,8 @@
     padding: 20px;
     background: #ffffff;
     color: #333333;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
 }
 
 h1 {
@@ -293,7 +294,7 @@ h1 {
 .donate-button {
     width: 100%;
     padding: 12px;
-    background: #10b981;
+    background: #22a;
     border: none;
     border-radius: 6px;
     color: white;
@@ -308,7 +309,7 @@ h1 {
 }
 
 .donate-button:hover {
-    background: #059669;
+    background: #22f;
     transform: translateY(-1px);
 }
 

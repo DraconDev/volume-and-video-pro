@@ -5,6 +5,7 @@ interface AudioSettings {
     bassBoost: number;
     voiceBoost: number;
     mono: boolean;
+    speed: number;
 }
 
 export default defineContentScript({
@@ -16,6 +17,7 @@ export default defineContentScript({
             bassBoost: 100,
             voiceBoost: 100,
             mono: false,
+            speed: 100,
         };
 
         let settings = { ...defaultSettings };
@@ -63,7 +65,7 @@ export default defineContentScript({
                         .connect(gainNode)
                         .connect(context.destination);
 
-                    // Store the nodes
+                    // Store the nodes and element
                     audioContexts.set(element, {
                         context,
                         source,
@@ -72,6 +74,7 @@ export default defineContentScript({
                         voiceFilter,
                         merger,
                         splitter,
+                        element, // Store the element for playback rate control
                     });
 
                     console.log("Content: Audio context setup complete", {
@@ -79,6 +82,7 @@ export default defineContentScript({
                         bassGain: bassFilter.gain.value,
                         voiceGain: voiceFilter.gain.value,
                         mono: settings.mono,
+                        speed: settings.speed,
                     });
                 } catch (error) {
                     console.error("Content: Error setting up audio context:", error);
@@ -122,6 +126,10 @@ export default defineContentScript({
                             audioContext.source.connect(audioContext.bassFilter);
                         }
 
+                        // Update playback speed
+                        const speedMultiplier = settings.speed / 100;
+                        audioContext.element.playbackRate = speedMultiplier;
+
                         console.log("Content: Updated audio effects for element:", {
                             volume: volumeGain,
                             bassBoost: settings.bassBoost,
@@ -129,6 +137,8 @@ export default defineContentScript({
                             voiceBoost: settings.voiceBoost,
                             voiceGain,
                             mono: settings.mono,
+                            speed: settings.speed,
+                            playbackRate: audioContext.element.playbackRate,
                         });
                     }
                 }

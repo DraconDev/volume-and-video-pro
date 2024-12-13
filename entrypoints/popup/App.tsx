@@ -6,6 +6,7 @@ interface AudioSettings {
     bassBoost: number;
     voiceBoost: number;
     mono: boolean;
+    speed: number;
 }
 
 const defaultSettings: AudioSettings = {
@@ -13,6 +14,7 @@ const defaultSettings: AudioSettings = {
     bassBoost: 100,
     voiceBoost: 100,
     mono: false,
+    speed: 100,
 };
 
 function App() {
@@ -96,6 +98,10 @@ function App() {
         updateSettings({ ...settings, voiceBoost: newVoiceBoost });
     };
 
+    const handleSpeedChange = (newSpeed: number) => {
+        updateSettings({ ...settings, speed: newSpeed });
+    };
+
     const handleMonoToggle = () => {
         updateSettings({ ...settings, mono: !settings.mono });
     };
@@ -154,6 +160,49 @@ function App() {
                     style={
                         {
                             "--percentage": `${settings.volume / 10}%`,
+                        } as React.CSSProperties
+                    }
+                />
+            </div>
+
+            <div className="controls-section">
+                <div className="control-header">
+                    <label htmlFor="speed-slider">
+                        <svg
+                            className="icon"
+                            viewBox="0 0 24 24"
+                            width="24"
+                            height="24"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            fill="none"
+                        >
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                        </svg>
+                        Speed <span>{settings.speed}%</span>
+                    </label>
+                    <button
+                        onClick={() => handleSpeedChange(100)}
+                        className="reset-button"
+                        title="Reset speed to 100%"
+                    >
+                        Reset
+                    </button>
+                </div>
+                <input
+                    type="range"
+                    id="speed-slider"
+                    min="25"
+                    max="500"
+                    step="5"
+                    value={settings.speed}
+                    onChange={(e) =>
+                        handleSpeedChange(Number(e.target.value))
+                    }
+                    className="slider"
+                    style={
+                        {
+                            "--percentage": `${settings.speed / 5}%`,
                         } as React.CSSProperties
                     }
                 />
