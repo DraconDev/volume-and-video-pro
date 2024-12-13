@@ -2,8 +2,8 @@ import { defineContentScript } from "wxt/sandbox";
 
 interface AudioSettings {
     volume: number;
-    bassBoost: boolean;
-    voiceBoost: boolean;
+    bassBoost: number;
+    voiceBoost: number;
 }
 
 export default defineContentScript({
@@ -12,8 +12,8 @@ export default defineContentScript({
     async main() {
         const defaultSettings: AudioSettings = {
             volume: 100,
-            bassBoost: false,
-            voiceBoost: false
+            bassBoost: 100,
+            voiceBoost: 100,
         };
 
         let settings = { ...defaultSettings };
@@ -33,35 +33,43 @@ export default defineContentScript({
                 try {
                     const context = new AudioContext();
                     const source = context.createMediaElementSource(element);
-                    
+
                     // Create gain node for volume
                     const gainNode = context.createGain();
-                    
-                    // Create filters for voice and bass boost
+                    gainNode.gain.value = 1.0;
+
+                    // Create bass boost filter
                     const bassFilter = context.createBiquadFilter();
                     bassFilter.type = 'lowshelf';
-                    bassFilter.frequency.value = 100;
+                    bassFilter.frequency.value = 150;
                     bassFilter.gain.value = 0;
 
+                    // Create voice boost filter
                     const voiceFilter = context.createBiquadFilter();
                     voiceFilter.type = 'peaking';
-                    voiceFilter.frequency.value = 2000;
-                    voiceFilter.Q.value = 1;
+                    voiceFilter.frequency.value = 2500;
+                    voiceFilter.Q.value = 1.5;
                     voiceFilter.gain.value = 0;
-                    
+
                     // Connect the audio graph
                     source
                         .connect(bassFilter)
                         .connect(voiceFilter)
                         .connect(gainNode)
                         .connect(context.destination);
-                    
+
                     // Store the nodes
-                    audioContexts.set(element, { 
+                    audioContexts.set(element, {
                         context,
                         gain: gainNode,
                         bassFilter,
-                        voiceFilter
+                        voiceFilter,
+                    });
+
+                    console.log('Audio context setup complete', {
+                        gain: gainNode.gain.value,
+                        bassGain: bassFilter.gain.value,
+                        voiceGain: voiceFilter.gain.value
                     });
                 } catch (error) {
                     console.error('Error setting up audio context:', error);
@@ -72,20 +80,30 @@ export default defineContentScript({
         // Function to update all audio effects
         const updateAllEffects = () => {
             const mediaElements = document.querySelectorAll("audio, video");
-            
             mediaElements.forEach((element) => {
                 if (element instanceof HTMLMediaElement) {
                     setupAudioContext(element);
                     const audioContext = audioContexts.get(element);
                     if (audioContext) {
                         // Update volume
-                        audioContext.gain.gain.value = settings.volume / 100;
-                        
-                        // Update bass boost
-                        audioContext.bassFilter.gain.value = settings.bassBoost ? 7.0 : 0;
-                        
-                        // Update voice boost
-                        audioContext.voiceFilter.gain.value = settings.voiceBoost ? 5.0 : 0;
+                        const volumeGain = settings.volume / 100;
+                        audioContext.gain.gain.value = volumeGain;
+
+                        // Update bass boost (max 45dB boost, -15dB cut)
+                        const bassGain = ((settings.bassBoost - 100) / 100) * 45;
+                        audioContext.bassFilter.gain.value = bassGain;
+
+                        // Update voice boost (max 36dB boost, -12dB cut)
+                        const voiceGain = ((settings.voiceBoost - 100) / 100) * 36;
+                        audioContext.voiceFilter.gain.value = voiceGain;
+
+                        console.log('Updated audio effects:', {
+                            volume: volumeGain,
+                            bassBoost: settings.bassBoost,
+                            bassGain,
+                            voiceBoost: settings.voiceBoost,
+                            voiceGain
+                        });
                     }
                 }
             });
