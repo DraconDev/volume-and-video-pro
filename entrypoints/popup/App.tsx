@@ -12,6 +12,7 @@ interface AudioSettings {
 interface SiteConfig {
     enabled: boolean;
     settings?: AudioSettings;
+    lastUsedType?: "default" | "custom" | "disabled";
 }
 
 interface SiteSettingsMap {
@@ -49,54 +50,131 @@ function App() {
     const [isCustomSettings, setIsCustomSettings] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
-    const handleSettingsToggle = (type: "default" | "custom") => {
+    const handleSettingsToggle = (type: "default" | "custom" | "disabled") => {
         setIsCustomSettings(type === "custom");
-        
-        const updateContentScript = (settings: AudioSettings) => {
+        setIsEnabled(type !== "disabled");
+
+        if (type === "disabled") {
+            // Set all values to 100% and mono off, but speed to 60%
+            const disabledSettings: AudioSettings = {
+                volume: 100,
+                bassBoost: 100,
+                voiceBoost: 100,
+                speed: 100,
+                mono: false,
+            };
+
+            // Update UI and storage
+            setSettings(disabledSettings);
+
+            if (currentUrl) {
+                const newSiteConfigs = { ...siteConfigs };
+                newSiteConfigs[currentUrl] = {
+                    enabled: false,
+                    settings: disabledSettings,
+                    lastUsedType: "disabled", // Store the last used type
+                };
+                setSiteConfigs(newSiteConfigs);
+                chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
+            }
+
+            // Notify content script that audio is disabled
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (tabs[0]?.id) {
-                    console.log("Updating content script with settings:", settings);
                     chrome.tabs.sendMessage(tabs[0].id, {
                         type: "UPDATE_SETTINGS",
-                        settings: settings,
+                        settings: null,
+                        enabled: false,
                     });
                 }
             });
-        };
-
-        if (
+        } else if (
             type === "custom" &&
             currentUrl &&
             siteConfigs[currentUrl]?.settings
         ) {
             const customSettings = siteConfigs[currentUrl].settings!;
             setSettings(customSettings);
-            updateContentScript(customSettings);
+
+            if (currentUrl) {
+                const newSiteConfigs = { ...siteConfigs };
+                newSiteConfigs[currentUrl] = {
+                    ...newSiteConfigs[currentUrl],
+                    lastUsedType: "custom", // Store the last used type
+                };
+                setSiteConfigs(newSiteConfigs);
+                chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
+            }
+
+            // Update content script with custom settings
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0]?.id) {
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        type: "UPDATE_SETTINGS",
+                        settings: customSettings,
+                        enabled: true,
+                    });
+                }
+            });
         } else if (type === "custom" && currentUrl) {
-            // Initialize new custom settings with default values
+            // Initialize new custom settings
             const newCustomSettings: AudioSettings = {
                 volume: 100,
                 bassBoost: 100,
                 voiceBoost: 100,
                 mono: false,
-                speed: 100
+                speed: 100,
             };
-            
-            // Update both local state and storage
+
             setSettings(newCustomSettings);
-            updateContentScript(newCustomSettings);
-            
+
             const newSiteConfigs = { ...siteConfigs };
             newSiteConfigs[currentUrl] = {
                 enabled: true,
-                settings: newCustomSettings
+                settings: newCustomSettings,
+                lastUsedType: "custom", // Store the last used type
             };
             setSiteConfigs(newSiteConfigs);
             chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
+
+            // Update content script with new custom settings
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0]?.id) {
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        type: "UPDATE_SETTINGS",
+                        settings: newCustomSettings,
+                        enabled: true,
+                    });
+                }
+            });
         } else {
+            // Load default settings
             chrome.storage.sync.get({ defaultSettings }, (result) => {
                 setSettings(result.defaultSettings);
-                updateContentScript(result.defaultSettings);
+
+                if (currentUrl) {
+                    const newSiteConfigs = { ...siteConfigs };
+                    newSiteConfigs[currentUrl] = {
+                        ...newSiteConfigs[currentUrl],
+                        lastUsedType: "default", // Store the last used type
+                    };
+                    setSiteConfigs(newSiteConfigs);
+                    chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
+                }
+
+                // Update content script with default settings
+                chrome.tabs.query(
+                    { active: true, currentWindow: true },
+                    (tabs) => {
+                        if (tabs[0]?.id) {
+                            chrome.tabs.sendMessage(tabs[0].id, {
+                                type: "UPDATE_SETTINGS",
+                                settings: result.defaultSettings,
+                                enabled: true,
+                            });
+                        }
+                    }
+                );
             });
         }
     };
@@ -134,36 +212,44 @@ function App() {
                     currentUrl,
                 });
 
-                setSettings(result.defaultSettings);
                 setSiteConfigs(result.siteConfigs);
                 setDisabledSites(result.disabledSites);
 
-                // Set initial custom/default mode based on current URL
-                if (currentUrl && result.siteConfigs[currentUrl]?.settings) {
-                    console.log(
-                        "Initial load - found custom settings for URL:",
-                        currentUrl
-                    );
-                    setIsCustomSettings(true);
-                    setSettings(result.siteConfigs[currentUrl].settings!);
-                } else {
-                    console.log("Initial load - using default settings");
-                }
+                // Get current tab URL
+                chrome.tabs.query(
+                    { active: true, currentWindow: true },
+                    (tabs) => {
+                        const url = new URL(tabs[0].url!).hostname;
+                        setCurrentUrl(url);
+
+                        // Load site-specific settings if they exist
+                        if (result.siteConfigs[url]) {
+                            const siteConfig = result.siteConfigs[url];
+                            const lastUsedType =
+                                siteConfig.lastUsedType ||
+                                (siteConfig.enabled
+                                    ? siteConfig.settings
+                                        ? "custom"
+                                        : "default"
+                                    : "disabled");
+
+                            // Automatically switch to the last used type
+                            handleSettingsToggle(lastUsedType);
+                        } else {
+                            // For new sites, start with default settings
+                            setSettings(result.defaultSettings);
+                            setIsEnabled(true);
+                            setIsCustomSettings(false);
+                            chrome.tabs.sendMessage(tabs[0].id!, {
+                                type: "UPDATE_SETTINGS",
+                                settings: result.defaultSettings,
+                                enabled: true,
+                            });
+                        }
+                    }
+                );
             }
         );
-
-        // Get current tab URL
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs[0]?.url) {
-                try {
-                    const url = new URL(tabs[0].url);
-                    console.log("Setting current URL to:", url.hostname);
-                    setCurrentUrl(url.hostname);
-                } catch (e) {
-                    console.error("Invalid URL:", e);
-                }
-            }
-        });
     }, []);
 
     useEffect(() => {
@@ -413,17 +499,19 @@ function App() {
                                 stroke="currentColor"
                                 strokeWidth="2"
                                 fill="none"
+                                style={{ opacity: isEnabled ? 1 : 0.5 }}
                             >
-                                <path d="M11 5L6 9H2v6h4l5 4V5z" />
-                                <path d="M15.54 8.46a5 5.5 5 0 0 1 0 7.07" />
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
                                 <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
                             </svg>
                             Volume <span>{settings.volume}%</span>
                         </label>
                         <button
-                            onClick={() => handleVolumeChange(100)}
+                            onClick={() => handleSettingChange("volume", 100)}
                             className="reset-button"
                             title="Reset volume to 100%"
+                            disabled={!isEnabled}
                         >
                             Reset
                         </button>
@@ -432,18 +520,23 @@ function App() {
                         type="range"
                         id="volume-slider"
                         min="0"
-                        max="1000"
-                        step="1"
+                        max="600"
                         value={settings.volume}
                         onChange={(e) =>
-                            handleVolumeChange(Number(e.target.value))
+                            handleSettingChange(
+                                "volume",
+                                Number(e.target.value),
+                                true
+                            )
                         }
-                        className="slider"
+                        className={`slider ${!isEnabled ? "disabled" : ""}`}
+                        disabled={!isEnabled}
                         style={
                             {
                                 "--percentage": `${
-                                    (settings.volume / 1000) * 100
+                                    (settings.volume / 600) * 100
                                 }%`,
+                                opacity: isEnabled ? 1 : 0.5,
                             } as React.CSSProperties
                         }
                     />
@@ -460,15 +553,18 @@ function App() {
                                 stroke="currentColor"
                                 strokeWidth="2"
                                 fill="none"
+                                style={{ opacity: isEnabled ? 1 : 0.5 }}
                             >
-                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
                             </svg>
                             Speed <span>{settings.speed}%</span>
                         </label>
                         <button
-                            onClick={() => handleSpeedChange(100)}
+                            onClick={() => handleSettingChange("speed", 100)}
                             className="reset-button"
                             title="Reset speed to 100%"
+                            disabled={!isEnabled}
                         >
                             Reset
                         </button>
@@ -481,14 +577,20 @@ function App() {
                         step="5"
                         value={settings.speed}
                         onChange={(e) =>
-                            handleSpeedChange(Number(e.target.value))
+                            handleSettingChange(
+                                "speed",
+                                Number(e.target.value),
+                                true
+                            )
                         }
-                        className="slider"
+                        className={`slider ${!isEnabled ? "disabled" : ""}`}
+                        disabled={!isEnabled}
                         style={
                             {
                                 "--percentage": `${
                                     ((settings.speed - 25) / 475) * 100
                                 }%`,
+                                opacity: isEnabled ? 1 : 0.5,
                             } as React.CSSProperties
                         }
                     />
@@ -505,6 +607,7 @@ function App() {
                                 stroke="currentColor"
                                 strokeWidth="2"
                                 fill="none"
+                                style={{ opacity: isEnabled ? 1 : 0.5 }}
                             >
                                 <path d="M12 3v18M8 7v10M4 10v4M16 7v10M20 10v4" />
                             </svg>
@@ -512,9 +615,12 @@ function App() {
                             <span>{getBoostLabel(settings.bassBoost)}</span>
                         </label>
                         <button
-                            onClick={() => handleBassBoostChange(100)}
+                            onClick={() =>
+                                handleSettingChange("bassBoost", 100)
+                            }
                             className="reset-button"
                             title="Reset bass boost to 0%"
+                            disabled={!isEnabled}
                         >
                             Reset
                         </button>
@@ -526,12 +632,18 @@ function App() {
                         max="200"
                         value={settings.bassBoost}
                         onChange={(e) =>
-                            handleBassBoostChange(Number(e.target.value))
+                            handleSettingChange(
+                                "bassBoost",
+                                Number(e.target.value),
+                                true
+                            )
                         }
-                        className="slider"
+                        className={`slider ${!isEnabled ? "disabled" : ""}`}
+                        disabled={!isEnabled}
                         style={
                             {
                                 "--percentage": `${settings.bassBoost / 2}%`,
+                                opacity: isEnabled ? 1 : 0.5,
                             } as React.CSSProperties
                         }
                     />
@@ -548,6 +660,7 @@ function App() {
                                 stroke="currentColor"
                                 strokeWidth="2"
                                 fill="none"
+                                style={{ opacity: isEnabled ? 1 : 0.5 }}
                             >
                                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
                                 <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
@@ -558,9 +671,12 @@ function App() {
                             <span>{getBoostLabel(settings.voiceBoost)}</span>
                         </label>
                         <button
-                            onClick={() => handleVoiceBoostChange(100)}
+                            onClick={() =>
+                                handleSettingChange("voiceBoost", 100)
+                            }
                             className="reset-button"
                             title="Reset voice boost to 0%"
+                            disabled={!isEnabled}
                         >
                             Reset
                         </button>
@@ -572,12 +688,18 @@ function App() {
                         max="200"
                         value={settings.voiceBoost}
                         onChange={(e) =>
-                            handleVoiceBoostChange(Number(e.target.value))
+                            handleSettingChange(
+                                "voiceBoost",
+                                Number(e.target.value),
+                                true
+                            )
                         }
-                        className="slider"
+                        className={`slider ${!isEnabled ? "disabled" : ""}`}
+                        disabled={!isEnabled}
                         style={
                             {
                                 "--percentage": `${settings.voiceBoost / 2}%`,
+                                opacity: isEnabled ? 1 : 0.5,
                             } as React.CSSProperties
                         }
                     />
@@ -585,11 +707,14 @@ function App() {
 
                 <div className="controls-section">
                     <button
-                        onClick={handleMonoToggle}
+                        onClick={() =>
+                            handleSettingChange("mono", !settings.mono)
+                        }
                         className={`mono-button ${
                             settings.mono ? "active" : ""
                         }`}
-                        title="Toggle mono audio"
+                        disabled={!isEnabled}
+                        style={{ opacity: isEnabled ? 1 : 0.5 }}
                     >
                         <svg
                             className="icon"
@@ -606,91 +731,33 @@ function App() {
                         Mono {settings.mono ? "On" : "Off"}
                     </button>
                 </div>
-                {/* 
-                <button
-                    onClick={handleReset}
-                    className="reset-all-button controls-section"
-                >
-                    Reset All Settings
-                </button>
 
-                <div className="site-controls">
+                <div className="settings-type-toggle">
                     <button
-                        onClick={toggleSite}
-                        className={`toggle-button ${
-                            isSiteEnabled ? "enabled" : "disabled"
+                        className={`settings-toggle-btn ${
+                            !isCustomSettings && isEnabled ? "active" : ""
                         }`}
+                        onClick={() => handleSettingsToggle("default")}
                     >
-                        <div className="toggle-button-content">
-                            <svg
-                                className="status-icon"
-                                viewBox="0 0 24 24"
-                                width="20"
-                                height="20"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                fill="none"
-                            >
-                                {isSiteEnabled ? (
-                                    <path d="M20 6L9 17l-5-5" />
-                                ) : (
-                                    <>
-                                        <line x1="18" y1="6" x2="6" y2="18" />
-                                        <line x1="6" y1="6" x2="18" y2="18" />
-                                    </>
-                                )}
-                            </svg>
-                            <div className="site-url">{currentUrl}</div>
-                        </div>
+                        Default
                     </button>
-
                     <button
-                        onClick={() => setShowSiteEditor(true)}
-                        className="edit-button bg-[#f0f0f0] text-black"
+                        className={`settings-toggle-btn ${
+                            isCustomSettings && isEnabled ? "active" : ""
+                        }`}
+                        onClick={() => handleSettingsToggle("custom")}
                     >
-                        <svg
-                            className="icon"
-                            viewBox="0 0 24 24"
-                            width="24"
-                            height="24"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            fill="none"
-                        >
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                        </svg>
+                        Custom
                     </button>
-                </div> */}
-
-                {currentUrl && (
-                    <div className="">
-                        <div className="">
-                            <div className="settings-type-toggle">
-                                <button
-                                    className={`settings-toggle-btn ${
-                                        !isCustomSettings ? "active" : ""
-                                    }`}
-                                    onClick={() =>
-                                        handleSettingsToggle("default")
-                                    }
-                                >
-                                    Default settings
-                                </button>
-                                <button
-                                    className={`settings-toggle-btn ${
-                                        isCustomSettings ? "active" : ""
-                                    }`}
-                                    onClick={() =>
-                                        handleSettingsToggle("custom")
-                                    }
-                                >
-                                    Custom settings
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                    <button
+                        className={`settings-toggle-btn ${
+                            !isEnabled ? "active" : ""
+                        }`}
+                        onClick={() => handleSettingsToggle("disabled")}
+                    >
+                        Disabled
+                    </button>
+                </div>
 
                 {showSiteEditor && (
                     <div className="modal-overlay">
@@ -770,7 +837,7 @@ function App() {
                     target="_blank"
                     rel="noopener noreferrer"
                 >
-                    Support ❤️
+                    Donate
                 </a>
             </div>
         </div>

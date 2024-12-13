@@ -20,16 +20,19 @@ const defaultSettings: AudioSettings = {
 export default defineBackground(() => {
     chrome.runtime.onInstalled.addListener(() => {
         // Initialize storage with default settings
-        chrome.storage.sync.get(["audioSettings", "disabledSites"], (result) => {
-            if (!result.audioSettings) {
-                chrome.storage.sync.set({
-                    audioSettings: defaultSettings,
-                });
+        chrome.storage.sync.get(
+            ["audioSettings", "disabledSites"],
+            (result) => {
+                if (!result.audioSettings) {
+                    chrome.storage.sync.set({
+                        audioSettings: defaultSettings,
+                    });
+                }
+                if (!result.disabledSites) {
+                    chrome.storage.sync.set({ disabledSites: [] });
+                }
             }
-            if (!result.disabledSites) {
-                chrome.storage.sync.set({ disabledSites: [] });
-            }
-        });
+        );
     });
 
     // Listen for messages from popup
@@ -44,7 +47,10 @@ export default defineBackground(() => {
             chrome.tabs.query({}, (tabs) => {
                 tabs.forEach((tab) => {
                     if (tab.id) {
-                        console.log("Background: Sending settings to tab", tab.id);
+                        console.log(
+                            "Background: Sending settings to tab",
+                            tab.id
+                        );
                         chrome.tabs.sendMessage(tab.id, {
                             type: "UPDATE_SETTINGS",
                             settings,
@@ -56,22 +62,22 @@ export default defineBackground(() => {
     });
 
     // Update badge when settings change
-    console.log("Background: Loading initial settings for badge");
-    chrome.storage.sync.get("audioSettings", (result) => {
-        console.log("Background: Got settings for badge:", result);
-        if (result.audioSettings) {
-            updateBadge(result.audioSettings.volume);
-        }
-    });
+    // console.log("Background: Loading initial settings for badge");
+    // chrome.storage.sync.get("audioSettings", (result) => {
+    //     console.log("Background: Got settings for badge:", result);
+    //     if (result.audioSettings) {
+    //         updateBadge(result.audioSettings.volume);
+    //     }
+    // });
 
     // Listen for storage changes
-    chrome.storage.onChanged.addListener((changes) => {
-        console.log("Background: Storage changed:", changes);
-        if (changes.audioSettings) {
-            console.log("Background: Updating badge with new volume:", changes.audioSettings.newValue.volume);
-            updateBadge(changes.audioSettings.newValue.volume);
-        }
-    });
+    // chrome.storage.onChanged.addListener((changes) => {
+    //     console.log("Background: Storage changed:", changes);
+    //     if (changes.audioSettings) {
+    //         console.log("Background: Updating badge with new volume:", changes.audioSettings.newValue.volume);
+    //         updateBadge(changes.audioSettings.newValue.volume);
+    //     }
+    // });
 
     // Check if a site is enabled before injecting content script
     chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
