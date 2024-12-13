@@ -4,6 +4,7 @@ interface AudioSettings {
     volume: number;
     bassBoost: number;
     voiceBoost: number;
+    mono: boolean;
 }
 
 export default defineContentScript({
@@ -14,6 +15,7 @@ export default defineContentScript({
             volume: 100,
             bassBoost: 100,
             voiceBoost: 100,
+            mono: false,
         };
 
         let settings = { ...defaultSettings };
@@ -43,8 +45,19 @@ export default defineContentScript({
                     voiceFilter.Q.value = 1.5;
                     voiceFilter.gain.value = 0;
 
-                    // Connect the audio graph
+                    // Create channel merger for mono
+                    const merger = context.createChannelMerger(2);
+                    const splitter = context.createChannelSplitter(2);
+
+                    // Connect the audio graph with mono support
                     source
+                        .connect(splitter);
+                    
+                    // Connect both channels to merger for mono capability
+                    splitter.connect(merger, 0, 0);
+                    splitter.connect(merger, 0, 1);
+                    
+                    merger
                         .connect(bassFilter)
                         .connect(voiceFilter)
                         .connect(gainNode)
@@ -53,15 +66,19 @@ export default defineContentScript({
                     // Store the nodes
                     audioContexts.set(element, {
                         context,
+                        source,
                         gain: gainNode,
                         bassFilter,
                         voiceFilter,
+                        merger,
+                        splitter,
                     });
 
                     console.log("Content: Audio context setup complete", {
                         gain: gainNode.gain.value,
                         bassGain: bassFilter.gain.value,
                         voiceGain: voiceFilter.gain.value,
+                        mono: settings.mono,
                     });
                 } catch (error) {
                     console.error("Content: Error setting up audio context:", error);
@@ -92,12 +109,26 @@ export default defineContentScript({
                             ((settings.voiceBoost - 100) / 100) * 24;
                         audioContext.voiceFilter.gain.value = voiceGain;
 
+                        // Update mono setting
+                        if (settings.mono) {
+                            // Disconnect stereo path
+                            audioContext.source.disconnect();
+                            audioContext.source.connect(audioContext.splitter);
+                            audioContext.splitter.connect(audioContext.merger, 0, 0);
+                            audioContext.splitter.connect(audioContext.merger, 0, 1);
+                        } else {
+                            // Restore stereo path
+                            audioContext.source.disconnect();
+                            audioContext.source.connect(audioContext.bassFilter);
+                        }
+
                         console.log("Content: Updated audio effects for element:", {
                             volume: volumeGain,
                             bassBoost: settings.bassBoost,
                             bassGain,
                             voiceBoost: settings.voiceBoost,
                             voiceGain,
+                            mono: settings.mono,
                         });
                     }
                 }

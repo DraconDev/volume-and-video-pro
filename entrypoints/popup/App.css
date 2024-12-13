@@ -256,3 +256,63 @@ h1 {
         opacity: 1;
     }
 }
+
+.mono-button {
+    width: 100%;
+    padding: 12px;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    color: #666;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.mono-button:hover {
+    background: #eee;
+    color: #333;
+}
+
+.mono-button.active {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+}
+
+.mono-button .icon {
+    width: 20px;
+    height: 20px;
+}
+
+.donate-button {
+    width: 100%;
+    padding: 12px;
+    background: #10b981;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+}
+
+.donate-button:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.donate-button .icon {
+    width: 20px;
+    height: 20px;
+}

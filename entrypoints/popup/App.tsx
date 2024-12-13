@@ -5,12 +5,14 @@ interface AudioSettings {
     volume: number;
     bassBoost: number;
     voiceBoost: number;
+    mono: boolean;
 }
 
 const defaultSettings: AudioSettings = {
     volume: 100,
     bassBoost: 100,
     voiceBoost: 100,
+    mono: false,
 };
 
 function App() {
@@ -23,7 +25,10 @@ function App() {
         chrome.storage.sync.get(["audioSettings"], (result) => {
             console.log("Popup: Got settings from storage:", result);
             if (result.audioSettings) {
-                console.log("Popup: Applying saved settings:", result.audioSettings);
+                console.log(
+                    "Popup: Applying saved settings:",
+                    result.audioSettings
+                );
                 setSettings(result.audioSettings);
             } else {
                 console.log("Popup: No saved settings found, using defaults");
@@ -35,7 +40,10 @@ function App() {
             console.log("Popup: Storage changed:", changes);
             if (changes.audioSettings) {
                 const newSettings = changes.audioSettings.newValue;
-                console.log("Popup: Updating settings from storage:", newSettings);
+                console.log(
+                    "Popup: Updating settings from storage:",
+                    newSettings
+                );
                 setSettings(newSettings);
             }
         });
@@ -59,7 +67,10 @@ function App() {
             });
             const activeTab = tabs[0];
             if (activeTab?.id) {
-                console.log("Popup: Sending settings to content script:", newSettings);
+                console.log(
+                    "Popup: Sending settings to content script:",
+                    newSettings
+                );
                 await chrome.tabs.sendMessage(activeTab.id, {
                     type: "UPDATE_SETTINGS",
                     settings: newSettings,
@@ -85,8 +96,16 @@ function App() {
         updateSettings({ ...settings, voiceBoost: newVoiceBoost });
     };
 
+    const handleMonoToggle = () => {
+        updateSettings({ ...settings, mono: !settings.mono });
+    };
+
     const handleReset = () => {
         updateSettings(defaultSettings);
+    };
+
+    const handleDonate = () => {
+        window.open("https://www.buymeacoffee.com/volumebooster", "_blank");
     };
 
     const getBoostLabel = (value: number) => {
@@ -227,8 +246,45 @@ function App() {
                 />
             </div>
 
+            <div className="controls-section">
+                <button
+                    onClick={handleMonoToggle}
+                    className={`mono-button ${settings.mono ? "active" : ""}`}
+                    title="Toggle mono audio"
+                >
+                    <svg
+                        className="icon"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        height="24"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        fill="none"
+                    >
+                        <circle cx="12" cy="12" r="10" />
+                        <circle cx="12" cy="12" r="4" />
+                    </svg>
+                    Mono {settings.mono ? "On" : "Off"}
+                </button>
+            </div>
+
             <button onClick={handleReset} className="reset-all-button">
-                Reset All
+                Reset All Settings
+            </button>
+
+            <button onClick={handleDonate} className="donate-button">
+                <svg
+                    className="icon"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    height="24"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    fill="none"
+                >
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+                Support Development
             </button>
         </div>
     );
