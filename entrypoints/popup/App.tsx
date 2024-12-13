@@ -19,34 +19,57 @@ function App() {
 
     useEffect(() => {
         // Load saved settings on mount
+        console.log("Popup: Loading settings from storage");
         chrome.storage.sync.get(["audioSettings"], (result) => {
+            console.log("Popup: Got settings from storage:", result);
             if (result.audioSettings) {
-                console.log("Loading saved settings:", result.audioSettings);
+                console.log("Popup: Applying saved settings:", result.audioSettings);
                 setSettings(result.audioSettings);
+            } else {
+                console.log("Popup: No saved settings found, using defaults");
+            }
+        });
+
+        // Listen for storage changes
+        chrome.storage.onChanged.addListener((changes) => {
+            console.log("Popup: Storage changed:", changes);
+            if (changes.audioSettings) {
+                const newSettings = changes.audioSettings.newValue;
+                console.log("Popup: Updating settings from storage:", newSettings);
+                setSettings(newSettings);
             }
         });
     }, []);
 
     const updateSettings = async (newSettings: AudioSettings) => {
+        console.log("Popup: Updating settings:", newSettings);
         setSettings(newSettings);
         setSaving(true);
 
-        // Update content script
-        const tabs = await chrome.tabs.query({
-            active: true,
-            currentWindow: true,
-        });
-        const activeTab = tabs[0];
-        if (activeTab?.id) {
-            console.log("Sending settings update:", newSettings);
-            await chrome.tabs.sendMessage(activeTab.id, {
-                type: "UPDATE_SETTINGS",
-                settings: newSettings,
+        try {
+            // Save to storage first
+            console.log("Popup: Saving settings to storage");
+            await chrome.storage.sync.set({ audioSettings: newSettings });
+            console.log("Popup: Settings saved to storage");
+
+            // Then update content script
+            const tabs = await chrome.tabs.query({
+                active: true,
+                currentWindow: true,
             });
+            const activeTab = tabs[0];
+            if (activeTab?.id) {
+                console.log("Popup: Sending settings to content script:", newSettings);
+                await chrome.tabs.sendMessage(activeTab.id, {
+                    type: "UPDATE_SETTINGS",
+                    settings: newSettings,
+                });
+                console.log("Popup: Settings sent to content script");
+            }
+        } catch (error) {
+            console.error("Popup: Error updating settings:", error);
         }
 
-        // Save to storage
-        await chrome.storage.sync.set({ audioSettings: newSettings });
         setTimeout(() => setSaving(false), 500);
     };
 

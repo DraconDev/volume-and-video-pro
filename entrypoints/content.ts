@@ -19,14 +19,6 @@ export default defineContentScript({
         let settings = { ...defaultSettings };
         const audioContexts = new WeakMap();
 
-        // Get initial settings
-        chrome.storage.sync.get(["audioSettings"], (result) => {
-            if (result.audioSettings) {
-                settings = result.audioSettings;
-                updateAllEffects();
-            }
-        });
-
         // Function to setup audio context for an element
         const setupAudioContext = (element: HTMLMediaElement) => {
             if (!audioContexts.has(element)) {
@@ -66,19 +58,20 @@ export default defineContentScript({
                         voiceFilter,
                     });
 
-                    console.log("Audio context setup complete", {
+                    console.log("Content: Audio context setup complete", {
                         gain: gainNode.gain.value,
                         bassGain: bassFilter.gain.value,
                         voiceGain: voiceFilter.gain.value,
                     });
                 } catch (error) {
-                    console.error("Error setting up audio context:", error);
+                    console.error("Content: Error setting up audio context:", error);
                 }
             }
         };
 
         // Function to update all audio effects
         const updateAllEffects = () => {
+            console.log("Content: Updating all audio effects with settings:", settings);
             const mediaElements = document.querySelectorAll("audio, video");
             mediaElements.forEach((element) => {
                 if (element instanceof HTMLMediaElement) {
@@ -99,7 +92,7 @@ export default defineContentScript({
                             ((settings.voiceBoost - 100) / 100) * 24;
                         audioContext.voiceFilter.gain.value = voiceGain;
 
-                        console.log("Updated audio effects:", {
+                        console.log("Content: Updated audio effects for element:", {
                             volume: volumeGain,
                             bassBoost: settings.bassBoost,
                             bassGain,
@@ -116,6 +109,7 @@ export default defineContentScript({
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
                     if (node instanceof HTMLMediaElement) {
+                        console.log("Content: New media element found, applying settings");
                         setupAudioContext(node);
                         updateAllEffects();
                     }
@@ -130,14 +124,40 @@ export default defineContentScript({
 
         // Listen for settings update messages
         chrome.runtime.onMessage.addListener((message) => {
+            console.log("Content: Received message:", message);
             if (message.type === "UPDATE_SETTINGS") {
+                console.log("Content: Updating settings from message:", message.settings);
                 settings = message.settings;
                 updateAllEffects();
             }
             return true;
         });
 
-        // Initial update
+        // Listen for storage changes
+        chrome.storage.onChanged.addListener((changes) => {
+            console.log("Content: Storage changed:", changes);
+            if (changes.audioSettings) {
+                console.log("Content: Updating settings from storage:", changes.audioSettings.newValue);
+                settings = changes.audioSettings.newValue;
+                updateAllEffects();
+            }
+        });
+
+        // Get initial settings
+        console.log("Content: Loading initial settings from storage");
+        chrome.storage.sync.get(["audioSettings"], (result) => {
+            console.log("Content: Got initial settings from storage:", result);
+            if (result.audioSettings) {
+                console.log("Content: Applying initial settings:", result.audioSettings);
+                settings = result.audioSettings;
+                updateAllEffects();
+            } else {
+                console.log("Content: No initial settings found, using defaults:", defaultSettings);
+            }
+        });
+
+        // Initial update with default settings
+        console.log("Content: Performing initial update with settings:", settings);
         updateAllEffects();
     },
 });
