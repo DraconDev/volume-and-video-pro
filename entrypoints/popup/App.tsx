@@ -67,9 +67,9 @@ function App() {
     };
 
     const getBoostLabel = (value: number) => {
-        const diff = value - 100;
+        const diff = value;
         if (diff === 0) return "0";
-        return `${diff > 0 ? "+" : ""}${diff}%`;
+        return `${diff > 0 ? "" : ""}${diff}%`;
     };
 
     return (
@@ -147,7 +147,9 @@ function App() {
                     min="0"
                     max="300"
                     value={settings.bassBoost}
-                    onChange={(e) => handleBassBoostChange(Number(e.target.value))}
+                    onChange={(e) =>
+                        handleBassBoostChange(Number(e.target.value))
+                    }
                     className="slider"
                     style={
                         {
@@ -190,7 +192,9 @@ function App() {
                     min="0"
                     max="300"
                     value={settings.voiceBoost}
-                    onChange={(e) => handleVoiceBoostChange(Number(e.target.value))}
+                    onChange={(e) =>
+                        handleVoiceBoostChange(Number(e.target.value))
+                    }
                     className="slider"
                     style={
                         {
