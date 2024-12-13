@@ -5,25 +5,29 @@ interface AudioSettings {
     volume: number;
     bassBoost: number;
     voiceBoost: number;
+    mono: boolean;
+    speed: number;
 }
 
 const defaultSettings: AudioSettings = {
     volume: 100,
     bassBoost: 100,
     voiceBoost: 100,
+    mono: false,
+    speed: 100,
 };
 
 export default defineBackground(() => {
     chrome.runtime.onInstalled.addListener(() => {
-        // Initialize default settings if not set
-        console.log("Background: Extension installed/updated, checking settings");
-        chrome.storage.sync.get(["audioSettings"], (result) => {
-            console.log("Background: Current storage state:", result);
+        // Initialize storage with default settings
+        chrome.storage.sync.get(["audioSettings", "disabledSites"], (result) => {
             if (!result.audioSettings) {
-                console.log("Background: No settings found, initializing with defaults:", defaultSettings);
-                chrome.storage.sync.set({ audioSettings: defaultSettings });
-            } else {
-                console.log("Background: Existing settings found:", result.audioSettings);
+                chrome.storage.sync.set({
+                    audioSettings: defaultSettings,
+                });
+            }
+            if (!result.disabledSites) {
+                chrome.storage.sync.set({ disabledSites: [] });
             }
         });
     });
@@ -66,6 +70,34 @@ export default defineBackground(() => {
         if (changes.audioSettings) {
             console.log("Background: Updating badge with new volume:", changes.audioSettings.newValue.volume);
             updateBadge(changes.audioSettings.newValue.volume);
+        }
+    });
+
+    // Check if a site is enabled before injecting content script
+    chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+        if (changeInfo.status === "loading" && tab.url) {
+            try {
+                const url = new URL(tab.url);
+                const hostname = url.hostname;
+
+                // Skip chrome:// and other special URLs
+                if (!url.protocol.startsWith("http")) {
+                    return;
+                }
+
+                const result = await chrome.storage.sync.get(["disabledSites"]);
+                const disabledSites = result.disabledSites || [];
+
+                // Don't inject if site is disabled
+                if (!disabledSites.includes(hostname)) {
+                    chrome.scripting.executeScript({
+                        target: { tabId },
+                        files: ["content.js"],
+                    });
+                }
+            } catch (error) {
+                console.error("Error injecting content script:", error);
+            }
         }
     });
 });

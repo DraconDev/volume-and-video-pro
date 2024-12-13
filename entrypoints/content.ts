@@ -21,7 +21,8 @@ export default defineContentScript({
         };
 
         let settings = { ...defaultSettings };
-        const audioContexts = new WeakMap();
+        const audioContexts = new Map();
+        const audioNodes = [];
 
         // Function to setup audio context for an element
         const setupAudioContext = (element: HTMLMediaElement) => {
@@ -172,6 +173,40 @@ export default defineContentScript({
                 updateAllEffects();
             }
             return true;
+        });
+
+        // Listen for enable/disable messages from popup
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            if (message.type === "TOGGLE_EXTENSION") {
+                if (!message.enabled) {
+                    // Clean up any existing audio nodes
+                    for (const [element, node] of audioContexts.entries()) {
+                        if (node.gain) {
+                            node.gain.disconnect();
+                        }
+                        if (node.bassFilter) {
+                            node.bassFilter.disconnect();
+                        }
+                        if (node.voiceFilter) {
+                            node.voiceFilter.disconnect();
+                        }
+                        if (node.merger) {
+                            node.merger.disconnect();
+                        }
+                        if (node.splitter) {
+                            node.splitter.disconnect();
+                        }
+                        
+                        // Restore original connections
+                        if (node.source && node.element) {
+                            node.source.connect(node.element);
+                        }
+                        audioContexts.delete(element);
+                    }
+                }
+                // If enabled, new media elements will be processed automatically
+                // by the existing mutation observer
+            }
         });
 
         // Listen for storage changes
