@@ -1,17 +1,29 @@
 import { defineContentScript } from "wxt/sandbox";
 
+interface AudioSettings {
+    volume: number;
+    bassBoost: boolean;
+    voiceBoost: boolean;
+}
+
 export default defineContentScript({
     matches: ["<all_urls>"],
     runAt: "document_start",
     async main() {
-        let volumeBoost = 100;
+        const defaultSettings: AudioSettings = {
+            volume: 100,
+            bassBoost: false,
+            voiceBoost: false
+        };
+
+        let settings = { ...defaultSettings };
         const audioContexts = new WeakMap();
 
-        // Get initial volume setting
-        chrome.storage.sync.get(["volumeBoost"], (result) => {
-            if (result.volumeBoost) {
-                volumeBoost = result.volumeBoost;
-                updateVolume(volumeBoost);
+        // Get initial settings
+        chrome.storage.sync.get(["audioSettings"], (result) => {
+            if (result.audioSettings) {
+                settings = result.audioSettings;
+                updateAllEffects();
             }
         });
 
@@ -21,32 +33,59 @@ export default defineContentScript({
                 try {
                     const context = new AudioContext();
                     const source = context.createMediaElementSource(element);
-                    const gain = context.createGain();
+                    
+                    // Create gain node for volume
+                    const gainNode = context.createGain();
+                    
+                    // Create filters for voice and bass boost
+                    const bassFilter = context.createBiquadFilter();
+                    bassFilter.type = 'lowshelf';
+                    bassFilter.frequency.value = 100;
+                    bassFilter.gain.value = 0;
 
+                    const voiceFilter = context.createBiquadFilter();
+                    voiceFilter.type = 'peaking';
+                    voiceFilter.frequency.value = 2000;
+                    voiceFilter.Q.value = 1;
+                    voiceFilter.gain.value = 0;
+                    
                     // Connect the audio graph
-                    source.connect(gain);
-                    gain.connect(context.destination);
-
-                    // Store the context and gain node
-                    audioContexts.set(element, { context, gain });
+                    source
+                        .connect(bassFilter)
+                        .connect(voiceFilter)
+                        .connect(gainNode)
+                        .connect(context.destination);
+                    
+                    // Store the nodes
+                    audioContexts.set(element, { 
+                        context,
+                        gain: gainNode,
+                        bassFilter,
+                        voiceFilter
+                    });
                 } catch (error) {
-                    console.error("Error setting up audio context:", error);
+                    console.error('Error setting up audio context:', error);
                 }
             }
         };
 
-        // Function to update volume for all audio/video elements
-        const updateVolume = (volume: number) => {
-            const gainValue = volume / 100;
+        // Function to update all audio effects
+        const updateAllEffects = () => {
             const mediaElements = document.querySelectorAll("audio, video");
-
+            
             mediaElements.forEach((element) => {
                 if (element instanceof HTMLMediaElement) {
                     setupAudioContext(element);
                     const audioContext = audioContexts.get(element);
                     if (audioContext) {
-                        audioContext.gain.gain.value = gainValue;
-                        console.log("Updated gain to:", gainValue);
+                        // Update volume
+                        audioContext.gain.gain.value = settings.volume / 100;
+                        
+                        // Update bass boost
+                        audioContext.bassFilter.gain.value = settings.bassBoost ? 7.0 : 0;
+                        
+                        // Update voice boost
+                        audioContext.voiceFilter.gain.value = settings.voiceBoost ? 5.0 : 0;
                     }
                 }
             });
@@ -58,7 +97,7 @@ export default defineContentScript({
                 mutation.addedNodes.forEach((node) => {
                     if (node instanceof HTMLMediaElement) {
                         setupAudioContext(node);
-                        updateVolume(volumeBoost);
+                        updateAllEffects();
                     }
                 });
             });
@@ -69,16 +108,16 @@ export default defineContentScript({
             subtree: true,
         });
 
-        // Listen for volume update messages
+        // Listen for settings update messages
         chrome.runtime.onMessage.addListener((message) => {
-            if (message.type === "UPDATE_VOLUME") {
-                volumeBoost = message.volume;
-                updateVolume(volumeBoost);
+            if (message.type === "UPDATE_SETTINGS") {
+                settings = message.settings;
+                updateAllEffects();
             }
-            return true; // Keep the message channel open
+            return true;
         });
 
-        // Initial volume update
-        updateVolume(volumeBoost);
+        // Initial update
+        updateAllEffects();
     },
 });
