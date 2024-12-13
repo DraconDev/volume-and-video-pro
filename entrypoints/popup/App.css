@@ -126,6 +126,10 @@ h1 {
     height: 6px;
     -webkit-appearance: none;
     appearance: none;
+    background: #ddd;
+    border-radius: 3px;
+    outline: none;
+    margin: 10px 0;
     background: linear-gradient(
         to right,
         #4a90e2 0%,
@@ -133,9 +137,6 @@ h1 {
         #ddd var(--percentage),
         #ddd 100%
     );
-    border-radius: 3px;
-    outline: none;
-    margin: 10px 0;
 }
 
 .slider::-webkit-slider-thumb {
@@ -157,8 +158,8 @@ h1 {
 }
 
 .slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     background: white;
     border: 2px solid #4a90e2;
     border-radius: 50%;
@@ -170,6 +171,12 @@ h1 {
 .slider::-moz-range-thumb:hover {
     background: #4a90e2;
     transform: scale(1.1);
+}
+
+.slider::-moz-range-progress {
+    background-color: #4a90e2;
+    height: 6px;
+    border-radius: 3px;
 }
 
 .controls-section {
@@ -342,28 +349,30 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    width: 100%;
-    padding: 12px;
+    padding: 8px 16px;
     background: #2563eb;
-    color: white;
-    border: none;
     border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+    font-size: 14px;
+    transition: background 0.2s ease;
+    border: none;
+    width: calc(100% - 32px);
+    margin: 16px auto 0;
 }
 
-.support-button {
-    font-size: 14px;
+.donate-button a {
     color: white;
+    text-decoration: none;
+    width: 100%;
+    font-size: 14px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .donate-button:hover {
-    background: #2563fb;
-}
-
-.donate-button .icon {
-    stroke: white;
+    background: #1d4ed8;
 }
 
 .site-controls {
@@ -492,11 +501,13 @@ h1 {
 
 .modal-content {
     padding: 16px;
-    overflow-y: auto;
+    max-height: 400px;
+    width: 400px;
+    overflow: visible;
 }
 
 .sites-list-container {
-    margin-top: 20px;
+    margin-top: 16px;
 }
 
 .sites-list-title {
@@ -603,4 +614,173 @@ h1 {
 .main-controls {
     display: flex;
     flex-direction: column;
+}
+
+.site-settings-controls {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.site-settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.site-settings-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.settings-type-toggle {
+    display: flex;
+    gap: 4px;
+    /* padding: 4px; */
+    width: 100%;
+}
+
+.settings-toggle-btn {
+    flex: 1;
+    padding: 8px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    background: #f8fafc;
+    color: #1f2937;
+}
+
+.settings-toggle-btn.active {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+}
+
+.settings-toggle-btn:hover:not(.active) {
+    background: #f1f5f9;
+}
+
+.donate-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    background: #2563eb;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: background 0.2s ease;
+    border: none;
+    width: calc(100% - 32px);
+    margin: 16px auto 0;
+}
+
+.donate-button a {
+    color: white;
+    text-decoration: none;
+    width: 100%;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.donate-button:hover {
+    background: #1d4ed8;
+}
+
+.site-item-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.site-name {
+    font-weight: 500;
+}
+
+.site-item-settings {
+    display: flex;
+    gap: 8px;
+}
+
+.site-disabled,
+.custom-settings {
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.site-disabled {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.custom-settings {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.site-item-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.reset-button {
+    padding: 4px 8px;
+    font-size: 12px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.reset-button:hover {
+    background: #e2e8f0;
+    color: #1f2937;
+}
+
+.use-default-button,
+.custom-settings-button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.use-default-button {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #1f2937;
+}
+
+.use-default-button:hover:not(:disabled) {
+    background: #e2e8f0;
+}
+
+.custom-settings-button {
+    background: #2563eb;
+    border: none;
+    color: white;
+}
+
+.custom-settings-button:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.use-default-button:disabled,
+.custom-settings-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
