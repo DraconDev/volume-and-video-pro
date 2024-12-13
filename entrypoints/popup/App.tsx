@@ -51,15 +51,52 @@ function App() {
 
     const handleSettingsToggle = (type: "default" | "custom") => {
         setIsCustomSettings(type === "custom");
+        
+        const updateContentScript = (settings: AudioSettings) => {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0]?.id) {
+                    console.log("Updating content script with settings:", settings);
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        type: "UPDATE_SETTINGS",
+                        settings: settings,
+                    });
+                }
+            });
+        };
+
         if (
             type === "custom" &&
             currentUrl &&
             siteConfigs[currentUrl]?.settings
         ) {
-            setSettings(siteConfigs[currentUrl].settings!);
+            const customSettings = siteConfigs[currentUrl].settings!;
+            setSettings(customSettings);
+            updateContentScript(customSettings);
+        } else if (type === "custom" && currentUrl) {
+            // Initialize new custom settings with default values
+            const newCustomSettings: AudioSettings = {
+                volume: 100,
+                bassBoost: 100,
+                voiceBoost: 100,
+                mono: false,
+                speed: 100
+            };
+            
+            // Update both local state and storage
+            setSettings(newCustomSettings);
+            updateContentScript(newCustomSettings);
+            
+            const newSiteConfigs = { ...siteConfigs };
+            newSiteConfigs[currentUrl] = {
+                enabled: true,
+                settings: newCustomSettings
+            };
+            setSiteConfigs(newSiteConfigs);
+            chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
         } else {
             chrome.storage.sync.get({ defaultSettings }, (result) => {
                 setSettings(result.defaultSettings);
+                updateContentScript(result.defaultSettings);
             });
         }
     };
