@@ -227,10 +227,11 @@ function App() {
                             const siteConfig = result.siteConfigs[url];
                             const lastUsedType =
                                 siteConfig.lastUsedType || "default";
-                            setIsCustomSettings(lastUsedType === "custom");
-                            setIsEnabled(lastUsedType !== "disabled");
 
+                            // If last used type was disabled, make sure we load in disabled state
                             if (lastUsedType === "disabled") {
+                                setIsCustomSettings(false);
+                                setIsEnabled(false);
                                 const disabledSettings: AudioSettings = {
                                     volume: 100,
                                     bassBoost: 100,
@@ -248,6 +249,8 @@ function App() {
                                 lastUsedType === "custom" &&
                                 siteConfig.settings
                             ) {
+                                setIsCustomSettings(true);
+                                setIsEnabled(true);
                                 setSettings(siteConfig.settings);
                                 chrome.tabs.sendMessage(tabs[0].id!, {
                                     type: "UPDATE_SETTINGS",
@@ -256,6 +259,8 @@ function App() {
                                 });
                             } else {
                                 // Default settings
+                                setIsCustomSettings(false);
+                                setIsEnabled(true);
                                 setSettings(result.defaultSettings);
                                 chrome.tabs.sendMessage(tabs[0].id!, {
                                     type: "UPDATE_SETTINGS",
@@ -345,16 +350,22 @@ function App() {
         setSettings(newSettings);
 
         // Always update content script immediately
-        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-            if (tabs[0]?.id) {
-                console.log("Updating content script with settings:", newSettings);
-                chrome.tabs.sendMessage(tabs[0].id, {
-                    type: "UPDATE_SETTINGS",
-                    settings: newSettings,
-                    enabled: true,
-                });
+        chrome.tabs.query(
+            { active: true, currentWindow: true },
+            async (tabs) => {
+                if (tabs[0]?.id) {
+                    console.log(
+                        "Updating content script with settings:",
+                        newSettings
+                    );
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        type: "UPDATE_SETTINGS",
+                        settings: newSettings,
+                        enabled: true,
+                    });
+                }
             }
-        });
+        );
 
         // If dragging, use debounced save, otherwise save immediately
         if (isDragging) {

@@ -5,16 +5,16 @@ export default defineConfig({
     manifest: {
         permissions: ["storage", "tabs"],
         host_permissions: ["<all_urls>"],
-        name: "True Volume Master",
-        version: "1.1.5",
-        description: "True Volume Master",
+        name: "Volume & Video Master",
+        version: "1.6.2",
+        description: "Volume & Video Master",
         background: {
             service_worker: "entrypoints/background.js",
             type: "module",
         },
         action: {
             default_icon: {
-                16: "icon/16.png", 
+                16: "icon/16.png",
                 32: "icon/32.png",
                 48: "icon/48.png",
                 96: "icon/96.png",
