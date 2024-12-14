@@ -55,7 +55,7 @@ function App() {
         setIsEnabled(type !== "disabled");
 
         if (type === "disabled") {
-            // Set all values to 100% and mono off, but speed to 60%
+            // Create disabled settings (all 100% and mono off)
             const disabledSettings: AudioSettings = {
                 volume: 100,
                 bassBoost: 100,
@@ -64,26 +64,23 @@ function App() {
                 mono: false,
             };
 
-            // Update UI and storage
-            setSettings(disabledSettings);
-
             if (currentUrl) {
                 const newSiteConfigs = { ...siteConfigs };
                 newSiteConfigs[currentUrl] = {
+                    ...newSiteConfigs[currentUrl],
                     enabled: false,
-                    settings: disabledSettings,
-                    lastUsedType: "disabled", // Store the last used type
+                    lastUsedType: "disabled",
                 };
                 setSiteConfigs(newSiteConfigs);
                 chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
             }
 
-            // Notify content script that audio is disabled
+            // Send disabled settings to content script
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (tabs[0]?.id) {
                     chrome.tabs.sendMessage(tabs[0].id, {
                         type: "UPDATE_SETTINGS",
-                        settings: null,
+                        settings: disabledSettings,
                         enabled: false,
                     });
                 }
@@ -100,7 +97,7 @@ function App() {
                 const newSiteConfigs = { ...siteConfigs };
                 newSiteConfigs[currentUrl] = {
                     ...newSiteConfigs[currentUrl],
-                    lastUsedType: "custom", // Store the last used type
+                    lastUsedType: "custom",
                 };
                 setSiteConfigs(newSiteConfigs);
                 chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
@@ -132,7 +129,7 @@ function App() {
             newSiteConfigs[currentUrl] = {
                 enabled: true,
                 settings: newCustomSettings,
-                lastUsedType: "custom", // Store the last used type
+                lastUsedType: "custom",
             };
             setSiteConfigs(newSiteConfigs);
             chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
@@ -156,7 +153,7 @@ function App() {
                     const newSiteConfigs = { ...siteConfigs };
                     newSiteConfigs[currentUrl] = {
                         ...newSiteConfigs[currentUrl],
-                        lastUsedType: "default", // Store the last used type
+                        lastUsedType: "default",
                     };
                     setSiteConfigs(newSiteConfigs);
                     chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
@@ -505,7 +502,8 @@ function App() {
                                 <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
                                 <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
                             </svg>
-                            Volume <span>{settings.volume}%</span>
+                            Volume{" "}
+                            <span>{isEnabled ? settings.volume : 100}%</span>
                         </label>
                         <button
                             onClick={() => handleSettingChange("volume", 100)}
@@ -521,7 +519,7 @@ function App() {
                         id="volume-slider"
                         min="0"
                         max="600"
-                        value={settings.volume}
+                        value={isEnabled ? settings.volume : 100}
                         onChange={(e) =>
                             handleSettingChange(
                                 "volume",
@@ -534,7 +532,9 @@ function App() {
                         style={
                             {
                                 "--percentage": `${
-                                    (settings.volume / 600) * 100
+                                    ((isEnabled ? settings.volume : 100) /
+                                        600) *
+                                    100
                                 }%`,
                                 opacity: isEnabled ? 1 : 0.5,
                             } as React.CSSProperties
@@ -558,7 +558,8 @@ function App() {
                                 <circle cx="12" cy="12" r="10" />
                                 <polyline points="12 6 12 12 16 14" />
                             </svg>
-                            Speed <span>{settings.speed}%</span>
+                            Speed{" "}
+                            <span>{isEnabled ? settings.speed : 100}%</span>
                         </label>
                         <button
                             onClick={() => handleSettingChange("speed", 100)}
@@ -575,7 +576,7 @@ function App() {
                         min="25"
                         max="500"
                         step="5"
-                        value={settings.speed}
+                        value={isEnabled ? settings.speed : 100}
                         onChange={(e) =>
                             handleSettingChange(
                                 "speed",
@@ -588,7 +589,9 @@ function App() {
                         style={
                             {
                                 "--percentage": `${
-                                    ((settings.speed - 25) / 475) * 100
+                                    (((isEnabled ? settings.speed : 100) - 25) /
+                                        475) *
+                                    100
                                 }%`,
                                 opacity: isEnabled ? 1 : 0.5,
                             } as React.CSSProperties
@@ -611,8 +614,8 @@ function App() {
                             >
                                 <path d="M12 3v18M8 7v10M4 10v4M16 7v10M20 10v4" />
                             </svg>
-                            Bass{" "}
-                            <span>{getBoostLabel(settings.bassBoost)}</span>
+                            Bass Boost{" "}
+                            <span>{isEnabled ? settings.bassBoost : 100}%</span>
                         </label>
                         <button
                             onClick={() =>
@@ -630,7 +633,7 @@ function App() {
                         id="bass-slider"
                         min="0"
                         max="200"
-                        value={settings.bassBoost}
+                        value={isEnabled ? settings.bassBoost : 100}
                         onChange={(e) =>
                             handleSettingChange(
                                 "bassBoost",
@@ -642,7 +645,9 @@ function App() {
                         disabled={!isEnabled}
                         style={
                             {
-                                "--percentage": `${settings.bassBoost / 2}%`,
+                                "--percentage": `${
+                                    (isEnabled ? settings.bassBoost : 100) / 2
+                                }%`,
                                 opacity: isEnabled ? 1 : 0.5,
                             } as React.CSSProperties
                         }
@@ -667,8 +672,10 @@ function App() {
                                 <line x1="12" y1="19" x2="12" y2="23" />
                                 <line x1="8" y1="23" x2="16" y2="23" />
                             </svg>
-                            Voice{" "}
-                            <span>{getBoostLabel(settings.voiceBoost)}</span>
+                            Voice Boost{" "}
+                            <span>
+                                {isEnabled ? settings.voiceBoost : 100}%
+                            </span>
                         </label>
                         <button
                             onClick={() =>
@@ -686,7 +693,7 @@ function App() {
                         id="voice-slider"
                         min="0"
                         max="200"
-                        value={settings.voiceBoost}
+                        value={isEnabled ? settings.voiceBoost : 100}
                         onChange={(e) =>
                             handleSettingChange(
                                 "voiceBoost",
@@ -698,7 +705,9 @@ function App() {
                         disabled={!isEnabled}
                         style={
                             {
-                                "--percentage": `${settings.voiceBoost / 2}%`,
+                                "--percentage": `${
+                                    (isEnabled ? settings.voiceBoost : 100) / 2
+                                }%`,
                                 opacity: isEnabled ? 1 : 0.5,
                             } as React.CSSProperties
                         }
@@ -711,7 +720,7 @@ function App() {
                             handleSettingChange("mono", !settings.mono)
                         }
                         className={`mono-button ${
-                            settings.mono ? "active" : ""
+                            settings.mono && isEnabled ? "active" : ""
                         }`}
                         disabled={!isEnabled}
                         style={{ opacity: isEnabled ? 1 : 0.5 }}
@@ -728,7 +737,7 @@ function App() {
                             <circle cx="12" cy="12" r="10" />
                             <circle cx="12" cy="12" r="4" />
                         </svg>
-                        Mono {settings.mono ? "On" : "Off"}
+                        Mono {settings.mono && isEnabled ? "On" : "Off"}
                     </button>
                 </div>
 
