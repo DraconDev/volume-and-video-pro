@@ -75,6 +75,7 @@ function App() {
                 chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
             }
 
+            setSettings(disabledSettings);
             // Send disabled settings to content script
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (tabs[0]?.id) {
@@ -85,93 +86,58 @@ function App() {
                     });
                 }
             });
-        } else if (
-            type === "custom" &&
-            currentUrl &&
-            siteConfigs[currentUrl]?.settings
-        ) {
-            const customSettings = siteConfigs[currentUrl].settings!;
-            setSettings(customSettings);
-
+        } else if (type === "custom") {
             if (currentUrl) {
+                // Use current settings as custom settings if none exist
+                const customSettings = siteConfigs[currentUrl]?.settings || settings;
+                setSettings(customSettings);
+
                 const newSiteConfigs = { ...siteConfigs };
                 newSiteConfigs[currentUrl] = {
                     ...newSiteConfigs[currentUrl],
+                    enabled: true,
                     lastUsedType: "custom",
+                    settings: customSettings,
                 };
                 setSiteConfigs(newSiteConfigs);
                 chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
+
+                // Send custom settings to content script
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (tabs[0]?.id) {
+                        chrome.tabs.sendMessage(tabs[0].id, {
+                            type: "UPDATE_SETTINGS",
+                            settings: customSettings,
+                            enabled: true,
+                        });
+                    }
+                });
             }
-
-            // Update content script with custom settings
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                if (tabs[0]?.id) {
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                        type: "UPDATE_SETTINGS",
-                        settings: customSettings,
-                        enabled: true,
-                    });
-                }
-            });
-        } else if (type === "custom" && currentUrl) {
-            // Initialize new custom settings
-            const newCustomSettings: AudioSettings = {
-                volume: 100,
-                bassBoost: 100,
-                voiceBoost: 100,
-                mono: false,
-                speed: 100,
-            };
-
-            setSettings(newCustomSettings);
-
-            const newSiteConfigs = { ...siteConfigs };
-            newSiteConfigs[currentUrl] = {
-                enabled: true,
-                settings: newCustomSettings,
-                lastUsedType: "custom",
-            };
-            setSiteConfigs(newSiteConfigs);
-            chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
-
-            // Update content script with new custom settings
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                if (tabs[0]?.id) {
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                        type: "UPDATE_SETTINGS",
-                        settings: newCustomSettings,
-                        enabled: true,
-                    });
-                }
-            });
         } else {
-            // Load default settings
+            // Load saved default settings
             chrome.storage.sync.get({ defaultSettings }, (result) => {
-                setSettings(result.defaultSettings);
-
                 if (currentUrl) {
                     const newSiteConfigs = { ...siteConfigs };
                     newSiteConfigs[currentUrl] = {
                         ...newSiteConfigs[currentUrl],
+                        enabled: true,
                         lastUsedType: "default",
                     };
                     setSiteConfigs(newSiteConfigs);
                     chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
                 }
 
+                setSettings(result.defaultSettings);
                 // Update content script with default settings
-                chrome.tabs.query(
-                    { active: true, currentWindow: true },
-                    (tabs) => {
-                        if (tabs[0]?.id) {
-                            chrome.tabs.sendMessage(tabs[0].id, {
-                                type: "UPDATE_SETTINGS",
-                                settings: result.defaultSettings,
-                                enabled: true,
-                            });
-                        }
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (tabs[0]?.id) {
+                        chrome.tabs.sendMessage(tabs[0].id, {
+                            type: "UPDATE_SETTINGS",
+                            settings: result.defaultSettings,
+                            enabled: true,
+                        });
                     }
-                );
+                });
             });
         }
     };
@@ -225,13 +191,13 @@ function App() {
                         // Load site-specific settings if they exist
                         if (result.siteConfigs[url]) {
                             const siteConfig = result.siteConfigs[url];
-                            const lastUsedType =
-                                siteConfig.lastUsedType || "default";
+                            const lastUsedType = siteConfig.lastUsedType || "default";
 
-                            // If last used type was disabled, make sure we load in disabled state
+                            // Always set state based on last used type
+                            setIsCustomSettings(lastUsedType === "custom");
+                            setIsEnabled(lastUsedType !== "disabled");
+
                             if (lastUsedType === "disabled") {
-                                setIsCustomSettings(false);
-                                setIsEnabled(false);
                                 const disabledSettings: AudioSettings = {
                                     volume: 100,
                                     bassBoost: 100,
@@ -245,12 +211,8 @@ function App() {
                                     settings: disabledSettings,
                                     enabled: false,
                                 });
-                            } else if (
-                                lastUsedType === "custom" &&
-                                siteConfig.settings
-                            ) {
-                                setIsCustomSettings(true);
-                                setIsEnabled(true);
+                            } else if (lastUsedType === "custom" && siteConfig.settings) {
+                                // If last used was custom, use custom settings
                                 setSettings(siteConfig.settings);
                                 chrome.tabs.sendMessage(tabs[0].id!, {
                                     type: "UPDATE_SETTINGS",
@@ -258,9 +220,7 @@ function App() {
                                     enabled: true,
                                 });
                             } else {
-                                // Default settings
-                                setIsCustomSettings(false);
-                                setIsEnabled(true);
+                                // For default or if custom settings missing, use saved default settings
                                 setSettings(result.defaultSettings);
                                 chrome.tabs.sendMessage(tabs[0].id!, {
                                     type: "UPDATE_SETTINGS",
@@ -269,7 +229,7 @@ function App() {
                                 });
                             }
                         } else {
-                            // For new sites, start with default settings
+                            // For new sites, use saved default settings
                             setSettings(result.defaultSettings);
                             setIsEnabled(true);
                             setIsCustomSettings(false);
@@ -281,9 +241,7 @@ function App() {
                                 lastUsedType: "default",
                             };
                             setSiteConfigs(newSiteConfigs);
-                            chrome.storage.sync.set({
-                                siteConfigs: newSiteConfigs,
-                            });
+                            chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
 
                             chrome.tabs.sendMessage(tabs[0].id!, {
                                 type: "UPDATE_SETTINGS",
@@ -298,29 +256,31 @@ function App() {
     }, []);
 
     useEffect(() => {
-        setIsEnabled(!disabledSites.includes(currentUrl));
-    }, [disabledSites, currentUrl]);
+        if (currentUrl && siteConfigs[currentUrl]) {
+            const siteConfig = siteConfigs[currentUrl];
+            const lastUsedType = siteConfig.lastUsedType || "default";
+            
+            // When URL changes, restore last used settings
+            if (lastUsedType === "custom" && siteConfig.settings) {
+                setIsCustomSettings(true);
+                setIsEnabled(true);
+                setSettings(siteConfig.settings);
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (tabs[0]?.id) {
+                        chrome.tabs.sendMessage(tabs[0].id, {
+                            type: "UPDATE_SETTINGS",
+                            settings: siteConfig.settings,
+                            enabled: true,
+                        });
+                    }
+                });
+            }
+        }
+    }, [currentUrl, siteConfigs]);
 
     useEffect(() => {
-        const loadAppropriateSettings = async () => {
-            if (isCustomSettings && currentUrl) {
-                if (siteConfigs[currentUrl]?.settings) {
-                    console.log("Loading custom settings for URL:", currentUrl);
-                    setSettings(siteConfigs[currentUrl].settings!);
-                }
-            } else {
-                console.log("Loading default settings");
-                const { defaultSettings: savedDefaults } =
-                    await chrome.storage.sync.get({
-                        defaultSettings: defaultSettings,
-                    });
-                console.log("Loaded default settings:", savedDefaults);
-                setSettings(savedDefaults);
-            }
-        };
-
-        loadAppropriateSettings();
-    }, [isCustomSettings, currentUrl, siteConfigs]);
+        setIsEnabled(!disabledSites.includes(currentUrl));
+    }, [disabledSites, currentUrl]);
 
     const getCurrentSettings = (): AudioSettings => {
         if (currentUrl && siteConfigs[currentUrl]?.settings) {
