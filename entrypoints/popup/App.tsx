@@ -183,9 +183,12 @@ function App() {
                 const newSiteConfigs = { ...siteConfigs };
                 newSiteConfigs[currentUrl] = {
                     ...newSiteConfigs[currentUrl],
+                    enabled: true,
                     settings: newSettings,
+                    lastUsedType: "custom",
                 };
                 await chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
+                setSiteConfigs(newSiteConfigs);
             } else {
                 await chrome.storage.sync.set({ defaultSettings: newSettings });
             }
@@ -223,20 +226,60 @@ function App() {
                         if (result.siteConfigs[url]) {
                             const siteConfig = result.siteConfigs[url];
                             const lastUsedType =
-                                siteConfig.lastUsedType ||
-                                (siteConfig.enabled
-                                    ? siteConfig.settings
-                                        ? "custom"
-                                        : "default"
-                                    : "disabled");
+                                siteConfig.lastUsedType || "default";
+                            setIsCustomSettings(lastUsedType === "custom");
+                            setIsEnabled(lastUsedType !== "disabled");
 
-                            // Automatically switch to the last used type
-                            handleSettingsToggle(lastUsedType);
+                            if (lastUsedType === "disabled") {
+                                const disabledSettings: AudioSettings = {
+                                    volume: 100,
+                                    bassBoost: 100,
+                                    voiceBoost: 100,
+                                    speed: 100,
+                                    mono: false,
+                                };
+                                setSettings(disabledSettings);
+                                chrome.tabs.sendMessage(tabs[0].id!, {
+                                    type: "UPDATE_SETTINGS",
+                                    settings: disabledSettings,
+                                    enabled: false,
+                                });
+                            } else if (
+                                lastUsedType === "custom" &&
+                                siteConfig.settings
+                            ) {
+                                setSettings(siteConfig.settings);
+                                chrome.tabs.sendMessage(tabs[0].id!, {
+                                    type: "UPDATE_SETTINGS",
+                                    settings: siteConfig.settings,
+                                    enabled: true,
+                                });
+                            } else {
+                                // Default settings
+                                setSettings(result.defaultSettings);
+                                chrome.tabs.sendMessage(tabs[0].id!, {
+                                    type: "UPDATE_SETTINGS",
+                                    settings: result.defaultSettings,
+                                    enabled: true,
+                                });
+                            }
                         } else {
                             // For new sites, start with default settings
                             setSettings(result.defaultSettings);
                             setIsEnabled(true);
                             setIsCustomSettings(false);
+
+                            // Store this as the site's first configuration
+                            const newSiteConfigs = { ...result.siteConfigs };
+                            newSiteConfigs[url] = {
+                                enabled: true,
+                                lastUsedType: "default",
+                            };
+                            setSiteConfigs(newSiteConfigs);
+                            chrome.storage.sync.set({
+                                siteConfigs: newSiteConfigs,
+                            });
+
                             chrome.tabs.sendMessage(tabs[0].id!, {
                                 type: "UPDATE_SETTINGS",
                                 settings: result.defaultSettings,
@@ -248,6 +291,10 @@ function App() {
             }
         );
     }, []);
+
+    useEffect(() => {
+        setIsEnabled(!disabledSites.includes(currentUrl));
+    }, [disabledSites, currentUrl]);
 
     useEffect(() => {
         const loadAppropriateSettings = async () => {
@@ -298,31 +345,40 @@ function App() {
         setSettings(newSettings);
 
         // Always update content script immediately
-        chrome.tabs.query(
-            { active: true, currentWindow: true },
-            async (tabs) => {
-                if (tabs[0]?.id) {
-                    console.log(
-                        "Updating content script with settings:",
-                        newSettings
-                    );
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                        type: "UPDATE_SETTINGS",
-                        settings: newSettings,
-                    });
-                }
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+            if (tabs[0]?.id) {
+                console.log("Updating content script with settings:", newSettings);
+                chrome.tabs.sendMessage(tabs[0].id, {
+                    type: "UPDATE_SETTINGS",
+                    settings: newSettings,
+                    enabled: true,
+                });
             }
-        );
+        });
 
         // If dragging, use debounced save, otherwise save immediately
         if (isDragging) {
-            debouncedSaveSettings(newSettings);
+            if (isCustomSettings && currentUrl) {
+                const newSiteConfigs = { ...siteConfigs };
+                newSiteConfigs[currentUrl] = {
+                    ...newSiteConfigs[currentUrl],
+                    enabled: true,
+                    settings: newSettings,
+                    lastUsedType: "custom",
+                };
+                setSiteConfigs(newSiteConfigs);
+                await chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
+            } else {
+                await chrome.storage.sync.set({ defaultSettings: newSettings });
+            }
         } else {
             if (isCustomSettings && currentUrl) {
                 const newSiteConfigs = { ...siteConfigs };
                 newSiteConfigs[currentUrl] = {
                     ...newSiteConfigs[currentUrl],
+                    enabled: true,
                     settings: newSettings,
+                    lastUsedType: "custom",
                 };
                 setSiteConfigs(newSiteConfigs);
                 await chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
@@ -477,10 +533,6 @@ function App() {
         if (diff === 0) return "0";
         return `${diff > 0 ? "" : ""}${diff}%`;
     };
-
-    useEffect(() => {
-        setIsEnabled(!disabledSites.includes(currentUrl));
-    }, [disabledSites, currentUrl]);
 
     return (
         <div className="container">
