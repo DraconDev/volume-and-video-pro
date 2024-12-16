@@ -1,239 +1,253 @@
-import { defineContentScript } from "wxt/sandbox";
-
-interface AudioSettings {
-    volume: number;
-    bassBoost: number;
-    voiceBoost: number;
-    mono: boolean;
-    speed: number;
-}
-
-export default defineContentScript({
+const content = {
     matches: ["<all_urls>"],
     runAt: "document_start",
-    async main() {
-        const defaultSettings: AudioSettings = {
+    async main(context: any) {
+        const defaultSettings = {
             volume: 100,
             bassBoost: 100,
             voiceBoost: 100,
             mono: false,
             speed: 100,
         };
+        let currentSettings = { ...defaultSettings };
+        const audioElementMap = new Map<
+            HTMLMediaElement,
+            {
+                context: AudioContext;
+                source: MediaElementAudioSourceNode;
+                gain: GainNode;
+                bassFilter: BiquadFilterNode;
+                voiceFilter: BiquadFilterNode;
+                merger: ChannelMergerNode;
+                splitter: ChannelSplitterNode;
+                element: HTMLMediaElement;
+            }
+        >();
 
-        let settings = { ...defaultSettings };
-        const audioContexts = new Map();
-        const audioNodes = [];
+        let audioContext: AudioContext | null = null;
 
-        // Function to setup audio context for an element
-        const setupAudioContext = (element: HTMLMediaElement) => {
-            if (!audioContexts.has(element)) {
+        const setupAudioContext = (mediaElement: HTMLMediaElement) => {
+            if (!audioElementMap.has(mediaElement)) {
                 try {
-                    const context = new AudioContext();
-                    const source = context.createMediaElementSource(element);
-
-                    // Create gain node for volume
-                    const gainNode = context.createGain();
-                    gainNode.gain.value = 1.0;
-
-                    // Create bass boost filter
-                    const bassFilter = context.createBiquadFilter();
+                    if (!audioContext) {
+                        audioContext = new AudioContext();
+                    }
+                    const source =
+                        audioContext.createMediaElementSource(mediaElement);
+                    const gainNode = audioContext.createGain();
+                    gainNode.gain.value = 1;
+                    const bassFilter = audioContext.createBiquadFilter();
                     bassFilter.type = "lowshelf";
                     bassFilter.frequency.value = 150;
                     bassFilter.gain.value = 0;
-
-                    // Create voice boost filter
-                    const voiceFilter = context.createBiquadFilter();
+                    const voiceFilter = audioContext.createBiquadFilter();
                     voiceFilter.type = "peaking";
                     voiceFilter.frequency.value = 2500;
                     voiceFilter.Q.value = 1.5;
                     voiceFilter.gain.value = 0;
-
-                    // Create channel merger for mono
-                    const merger = context.createChannelMerger(2);
-                    const splitter = context.createChannelSplitter(2);
-
-                    // Connect the audio graph with mono support
-                    source
-                        .connect(splitter);
-                    
-                    // Connect both channels to merger for mono capability
+                    const merger = audioContext.createChannelMerger(2);
+                    const splitter = audioContext.createChannelSplitter(2);
+                    source.connect(splitter);
                     splitter.connect(merger, 0, 0);
                     splitter.connect(merger, 0, 1);
-                    
                     merger
                         .connect(bassFilter)
                         .connect(voiceFilter)
                         .connect(gainNode)
-                        .connect(context.destination);
-
-                    // Store the nodes and element
-                    audioContexts.set(element, {
-                        context,
+                        .connect(audioContext.destination);
+                    audioElementMap.set(mediaElement, {
+                        context: audioContext,
                         source,
                         gain: gainNode,
                         bassFilter,
                         voiceFilter,
                         merger,
                         splitter,
-                        element, // Store the element for playback rate control
+                        element: mediaElement,
                     });
-
                     console.log("Content: Audio context setup complete", {
                         gain: gainNode.gain.value,
                         bassGain: bassFilter.gain.value,
                         voiceGain: voiceFilter.gain.value,
-                        mono: settings.mono,
-                        speed: settings.speed,
+                        mono: currentSettings.mono,
+                        speed: currentSettings.speed,
                     });
                 } catch (error) {
-                    console.error("Content: Error setting up audio context:", error);
+                    console.error(
+                        "Content: Error setting up audio context:",
+                        error
+                    );
                 }
             }
         };
 
-        // Function to update all audio effects
-        const updateAllEffects = () => {
-            console.log("Content: Updating all audio effects with settings:", settings);
-            const mediaElements = document.querySelectorAll("audio, video");
-            mediaElements.forEach((element) => {
-                if (element instanceof HTMLMediaElement) {
-                    setupAudioContext(element);
-                    const audioContext = audioContexts.get(element);
-                    if (audioContext) {
-                        // Update volume
-                        const volumeGain = settings.volume / 100;
-                        audioContext.gain.gain.value = volumeGain;
-
-                        // Update bass boost (max 30db boost, -15dB cut)
+        const updateAudioEffects = () => {
+            console.log(
+                "Content: Updating all audio effects with settings:",
+                currentSettings
+            );
+            document
+                .querySelectorAll<HTMLMediaElement>("audio, video")
+                .forEach((mediaElement) => {
+                    setupAudioContext(mediaElement);
+                    const audioElementData = audioElementMap.get(mediaElement);
+                    if (audioElementData) {
+                        const volume = currentSettings.volume / 100;
+                        audioElementData.gain.gain.value = volume;
                         const bassGain =
-                            ((settings.bassBoost - 100) / 100) * 15;
-                        audioContext.bassFilter.gain.value = bassGain;
-
-                        // Update voice boost (max 24dB boost, -12dB cut)
+                            ((currentSettings.bassBoost - 100) / 100) * 15;
+                        audioElementData.bassFilter.gain.value = bassGain;
                         const voiceGain =
-                            ((settings.voiceBoost - 100) / 100) * 24;
-                        audioContext.voiceFilter.gain.value = voiceGain;
-
-                        // Update mono setting
-                        if (settings.mono) {
-                            // Disconnect stereo path
-                            audioContext.source.disconnect();
-                            audioContext.source.connect(audioContext.splitter);
-                            audioContext.splitter.connect(audioContext.merger, 0, 0);
-                            audioContext.splitter.connect(audioContext.merger, 0, 1);
+                            ((currentSettings.voiceBoost - 100) / 100) * 24;
+                        audioElementData.voiceFilter.gain.value = voiceGain;
+                        if (currentSettings.mono) {
+                            audioElementData.source.disconnect();
+                            audioElementData.source.connect(
+                                audioElementData.splitter
+                            );
+                            audioElementData.splitter.connect(
+                                audioElementData.merger,
+                                0,
+                                0
+                            );
+                            audioElementData.splitter.connect(
+                                audioElementData.merger,
+                                0,
+                                1
+                            );
                         } else {
-                            // Restore stereo path
-                            audioContext.source.disconnect();
-                            audioContext.source.connect(audioContext.bassFilter);
+                            audioElementData.source.disconnect();
+                            audioElementData.source.connect(
+                                audioElementData.bassFilter
+                            );
                         }
-
-                        // Update playback speed
-                        const speedMultiplier = settings.speed / 100;
-                        audioContext.element.playbackRate = speedMultiplier;
-
-                        console.log("Content: Updated audio effects for element:", {
-                            volume: volumeGain,
-                            bassBoost: settings.bassBoost,
-                            bassGain,
-                            voiceBoost: settings.voiceBoost,
-                            voiceGain,
-                            mono: settings.mono,
-                            speed: settings.speed,
-                            playbackRate: audioContext.element.playbackRate,
-                        });
+                        const playbackRate = currentSettings.speed / 100;
+                        audioElementData.element.playbackRate = playbackRate;
+                        console.log(
+                            "Content: Updated audio effects for element:",
+                            {
+                                volume,
+                                bassBoost: currentSettings.bassBoost,
+                                bassGain,
+                                voiceBoost: currentSettings.voiceBoost,
+                                voiceGain,
+                                mono: currentSettings.mono,
+                                speed: currentSettings.speed,
+                                playbackRate:
+                                    audioElementData.element.playbackRate,
+                            }
+                        );
                     }
-                }
-            });
+                });
         };
 
-        // Listen for new media elements
-        const observer = new MutationObserver((mutations) => {
+        new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
                     if (node instanceof HTMLMediaElement) {
-                        console.log("Content: New media element found, applying settings");
+                        console.log(
+                            "Content: New media element found, applying settings"
+                        );
                         setupAudioContext(node);
-                        updateAllEffects();
+                        updateAudioEffects();
                     }
                 });
             });
-        });
-
-        observer.observe(document.documentElement, {
+        }).observe(document.documentElement, {
             childList: true,
             subtree: true,
         });
 
-        // Listen for settings update messages
         chrome.runtime.onMessage.addListener((message) => {
             console.log("Content: Received message:", message);
             if (message.type === "UPDATE_SETTINGS") {
-                console.log("Content: Updating settings from message:", message.settings);
-                settings = message.settings;
-                updateAllEffects();
+                console.log(
+                    "Content: Updating settings from message:",
+                    message.settings
+                );
+                currentSettings = message.settings;
+                updateAudioEffects();
             }
             return true;
         });
 
-        // Listen for enable/disable messages from popup
-        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            if (message.type === "TOGGLE_EXTENSION") {
-                if (!message.enabled) {
-                    // Clean up any existing audio nodes
-                    for (const [element, node] of audioContexts.entries()) {
-                        if (node.gain) {
-                            node.gain.disconnect();
-                        }
-                        if (node.bassFilter) {
-                            node.bassFilter.disconnect();
-                        }
-                        if (node.voiceFilter) {
-                            node.voiceFilter.disconnect();
-                        }
-                        if (node.merger) {
-                            node.merger.disconnect();
-                        }
-                        if (node.splitter) {
-                            node.splitter.disconnect();
-                        }
-                        
-                        // Restore original connections
-                        if (node.source && node.element) {
-                            node.source.connect(node.element);
-                        }
-                        audioContexts.delete(element);
+        chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
+            if (message.type === "TOGGLE_EXTENSION" && !message.enabled) {
+                for (const [
+                    mediaElement,
+                    audioElementData,
+                ] of audioElementMap.entries()) {
+                    if (audioElementData.gain)
+                        audioElementData.gain.disconnect();
+                    if (audioElementData.bassFilter)
+                        audioElementData.bassFilter.disconnect();
+                    if (audioElementData.voiceFilter)
+                        audioElementData.voiceFilter.disconnect();
+                    if (audioElementData.merger)
+                        audioElementData.merger.disconnect();
+                    if (audioElementData.splitter)
+                        audioElementData.splitter.disconnect();
+                    if (audioElementData.source) {
+                        audioElementData.source.disconnect();
+                        audioElementData.source.connect(
+                            audioElementData.context.destination
+                        );
                     }
+                    audioElementMap.delete(mediaElement);
                 }
-                // If enabled, new media elements will be processed automatically
-                // by the existing mutation observer
             }
         });
 
-        // Listen for storage changes
         chrome.storage.onChanged.addListener((changes) => {
             console.log("Content: Storage changed:", changes);
             if (changes.audioSettings) {
-                console.log("Content: Updating settings from storage:", changes.audioSettings.newValue);
-                settings = changes.audioSettings.newValue;
-                updateAllEffects();
+                console.log(
+                    "Content: Updating settings from storage:",
+                    changes.audioSettings.newValue
+                );
+                currentSettings = changes.audioSettings.newValue;
+                updateAudioEffects();
             }
         });
 
-        // Get initial settings
         console.log("Content: Loading initial settings from storage");
-        chrome.storage.sync.get(["audioSettings"], (result) => {
-            console.log("Content: Got initial settings from storage:", result);
-            if (result.audioSettings) {
-                console.log("Content: Applying initial settings:", result.audioSettings);
-                settings = result.audioSettings;
-                updateAllEffects();
+        chrome.storage.sync.get(["audioSettings"], (storage) => {
+            console.log("Content: Got initial settings from storage:", storage);
+            if (storage.audioSettings) {
+                console.log(
+                    "Content: Applying initial settings:",
+                    storage.audioSettings
+                );
+                currentSettings = storage.audioSettings;
+                updateAudioEffects();
             } else {
-                console.log("Content: No initial settings found, using defaults:", defaultSettings);
+                console.log(
+                    "Content: No initial settings found, using defaults:",
+                    defaultSettings
+                );
             }
         });
 
-        // Initial update with default settings
-        console.log("Content: Performing initial update with settings:", settings);
-        updateAllEffects();
+        console.log(
+            "Content: Performing initial update with settings:",
+            currentSettings
+        );
+        updateAudioEffects();
+
+        // Initialize AudioContext on first user interaction
+        const initAudioContext = () => {
+            if (!audioContext) {
+                audioContext = new AudioContext();
+                console.log(
+                    "Content: AudioContext initialized after user gesture"
+                );
+                document.removeEventListener("click", initAudioContext);
+                document.removeEventListener("keydown", initAudioContext);
+            }
+        };
+        document.addEventListener("click", initAudioContext);
+        document.addEventListener("keydown", initAudioContext);
     },
-});
+};
+
+export default content;
