@@ -1,10 +1,9 @@
 import React from "react";
-import "../entrypoints/popup/App.css";
 
 interface SettingsToggleProps {
     isUsingGlobalSettings: boolean;
     isSiteEnabled: boolean;
-    onToggle: (type: "global" | "site" | "disabled") => void;
+    onToggle: (mode: "global" | "site" | "disabled") => void;
 }
 
 export const SettingsToggle: React.FC<SettingsToggleProps> = ({
@@ -13,28 +12,30 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
     onToggle,
 }) => {
     return (
-        <div className="settings-toggle">
+        <div className="flex bg-gray-bg rounded p-0.5 mb-4 gap-1">
             <button
-                className={`toggle-button ${
+                className={`settings-button ${
                     isUsingGlobalSettings ? "active" : ""
-                }`}
+                } bg-primary/10 hover:bg-primary/20`}
                 onClick={() => onToggle("global")}
             >
                 Global
             </button>
             <button
-                className={`toggle-button ${
+                className={`settings-button ${
                     !isUsingGlobalSettings && isSiteEnabled ? "active" : ""
-                }`}
+                } bg-primary/10 hover:bg-primary/20`}
                 onClick={() => onToggle("site")}
             >
                 Site
             </button>
             <button
-                className={`toggle-button ${!isSiteEnabled ? "active" : ""}`}
+                className={`settings-button ${
+                    !isSiteEnabled ? "active" : ""
+                }  bg-primary/10 hover:bg-primary/20`}
                 onClick={() => onToggle("disabled")}
             >
-                Disabled
+                Disable
             </button>
         </div>
     );

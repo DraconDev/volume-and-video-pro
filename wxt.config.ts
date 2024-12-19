@@ -2,14 +2,9 @@ import { defineConfig } from "wxt";
 
 export default defineConfig({
     manifest: {
-        permissions: [
-            "storage",
-            "scripting",
-            "webNavigation",
-            "tabs"
-        ],
+        permissions: ["storage", "scripting", "webNavigation", "tabs"],
         host_permissions: ["<all_urls>"],
-        name: "Volume & Video Master",
+        name: "Volume & Video Master 1000%",
         version: "1.8.5",
         description: "Volume & Video Master",
         background: {
