@@ -28,7 +28,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
         const min = parseInt(input.min);
         const max = parseInt(input.max);
         const percentage = ((value - min) * 100) / (max - min);
-        input.style.backgroundSize = `${percentage}% 100%`;
+        input.style.setProperty('--range-progress', `${percentage}%`);
     };
 
     useEffect(() => {
@@ -40,12 +40,25 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
         });
     }, [settings, isEnabled]);
 
+    useEffect(() => {
+        // Initialize all range inputs
+        controls.forEach(({ key }) => {
+            const input = document.querySelector(
+                `input[type="range"][data-key="${key}"]`
+            ) as HTMLInputElement;
+            if (input) {
+                updateRangeProgress(input);
+            }
+        });
+    }, [settings]);
+
     const controls = [
         {
             key: "volume" as keyof AudioSettings,
             label: "Volume",
             min: 0,
             max: 1000,
+            defaultValue: 100,
             icon: (
                 <svg
                     className="w-[18px] h-[18px] mr-2 opacity-70"
@@ -54,7 +67,9 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                     strokeWidth="2"
                     fill="none"
                 >
-                    <path d="M12 5v14M8 9v6M4 11v2M16 9v6M20 11v2" />
+                    <path d="M12 6L8 10H4V14H8L12 18V6Z" />
+                    <path d="M17 7C17 7 19 9 19 12C19 15 17 17 17 17" />
+                    <path d="M15.5 9C15.5 9 16.5 10 16.5 12C16.5 14 15.5 15 15.5 15" />
                 </svg>
             ),
         },
@@ -63,6 +78,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
             label: "Speed",
             min: 0,
             max: 1000,
+            defaultValue: 100,
             icon: (
                 <svg
                     className="w-[18px] h-[18px] mr-2 opacity-70"
@@ -72,7 +88,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                     fill="none"
                 >
                     <circle cx="12" cy="12" r="10" />
-                    <path d="M12 8v4l3 3" />
+                    <path d="M12 8L12 12L16 14" />
                 </svg>
             ),
         },
@@ -81,6 +97,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
             label: "Bass Boost",
             min: 0,
             max: 200,
+            defaultValue: 100,
             icon: (
                 <svg
                     className="w-[18px] h-[18px] mr-2 opacity-70"
@@ -89,7 +106,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                     strokeWidth="2"
                     fill="none"
                 >
-                    <path d="M12 3v18M8 7v10M4 10v4M16 7v10M20 10v4" />
+                    <path d="M12 3V21M5.5 7V17M3 10V14M18.5 7V17M21 10V14M8.5 4V20M15.5 4V20" />
                 </svg>
             ),
         },
@@ -98,6 +115,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
             label: "Voice Boost",
             min: 0,
             max: 200,
+            defaultValue: 100,
             icon: (
                 <svg
                     className="w-[18px] h-[18px] mr-2 opacity-70"
@@ -106,69 +124,74 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                     strokeWidth="2"
                     fill="none"
                 >
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="23" />
-                    <line x1="8" y1="23" x2="16" y2="23" />
+                    <path d="M19 9V15" />
+                    <path d="M15 5V19" />
+                    <path d="M11 9V15" />
+                    <path d="M7 6V18" />
+                    <path d="M3 10V14" />
                 </svg>
             ),
         },
     ];
 
     return (
-        <>
-            {controls.map(({ key, label, min, max, icon }) => (
-                <div key={key} className="mb-4 relative">
-                    <div className="flex items-center justify-between text-[13px] mb-1 text-gray-dark font-normal">
+        <div className="space-y-6 mb-2">
+            {controls.map(({ key, label, min, max, icon, defaultValue }) => (
+                <div key={key} className="space-y-2">
+                    <div className="flex items-center justify-between">
                         <div className="flex items-center">
                             {icon}
-                            {label}
-                        </div>
-                        <div className="flex items-center">
-                            <span className="text-gray-text mr-4">
-                                {formatDiff(settings[key] as number)}
-                            </span>
-                            <button
-                                className="border-none text-primary text-[11px] cursor-pointer hover:underline bg-primary/15 px-1 rounded-sm"
-                                onClick={() => onSettingChange(key, 100)}
+                            <span
+                                className={`text-sm font-medium ${
+                                    !isEnabled ? "opacity-50" : ""
+                                }`}
                             >
-                                Reset
-                            </button>
+                                {label}
+                            </span>
                         </div>
+                        <span
+                            className={`text-sm font-medium ${
+                                !isEnabled ? "opacity-50" : ""
+                            }`}
+                        >
+                            {formatDiff(settings[key] as number)}
+                        </span>
                     </div>
                     <input
                         type="range"
                         min={min}
                         max={max}
                         value={settings[key] as number}
+                        data-key={key}
+                        className={`w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer ${
+                            !isEnabled ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
                         onChange={(e) => {
-                            onSettingChange(key, parseInt(e.target.value));
-                            updateRangeProgress(e.target);
+                            if (!isEnabled) return;
+                            const input = e.target;
+                            updateRangeProgress(input);
+                            onSettingChange(key, parseInt(input.value));
                         }}
-                        onInput={(e) =>
-                            updateRangeProgress(e.target as HTMLInputElement)
-                        }
-                        ref={(el) => {
-                            if (el) {
-                                updateRangeProgress(el);
-                            }
-                        }}
-                        className={!isEnabled ? "disabled" : ""}
                         disabled={!isEnabled}
+                        onInput={(e) => {
+                            if (!isEnabled) return;
+                            updateRangeProgress(e.target as HTMLInputElement);
+                        }}
                     />
                 </div>
             ))}
-
             <div
-                className={`  rounded  m-[2px] mb-[6px] p-1 ${
+                className={`  rounded  m-[2px] mb-[2px] p-1 ${
                     settings.mono
                         ? "bg-primary text-white"
                         : "bg-primary/10 hover:bg-primary/20 text-gray-text"
+                } appearance-none cursor-pointer ${
+                    !isEnabled ? "opacity-50 cursor-not-allowed" : ""
                 }`}
             >
                 <button
                     onClick={() => onSettingChange("mono", !settings.mono)}
-                    className={` flex items-center justify-center gap-2 py-2 px-4 rounded text-sm  mx-auto`}
+                    className={` flex items-center justify-center gap-2 py-2 px-4 rounded text-sm  mx-auto `}
                     disabled={!isEnabled}
                 >
                     <svg
@@ -184,6 +207,6 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                     Mono {settings.mono ? "On" : "Off"}
                 </button>
             </div>
-        </>
+        </div>
     );
 };

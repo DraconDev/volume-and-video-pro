@@ -12,11 +12,11 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
     onToggle,
 }) => {
     return (
-        <div className="flex bg-gray-bg rounded p-0.5 mb-4 gap-1">
+        <div className="flex bg-gray-bg rounded p-0.5 mb-2 gap-1">
             <button
-                className={`settings-button ${
+                className={`settings-button  ${
                     isUsingGlobalSettings ? "active" : ""
-                } bg-primary/10 hover:bg-primary/20`}
+                } bg-primary/10 hover:bg-primary/20 `}
                 onClick={() => onToggle("global")}
             >
                 Global

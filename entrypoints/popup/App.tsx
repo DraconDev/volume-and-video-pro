@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AudioSettings } from "../../src/types";
 
 import { SettingsToggle } from "../../components/SettingsToggle";
@@ -15,6 +15,48 @@ function App() {
 
     const [isUsingGlobalSettings, setIsUsingGlobalSettings] = useState(true);
     const [isSiteEnabled, setIsSiteEnabled] = useState(true);
+
+    // Load initial settings
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                // Get the current tab to get its hostname
+                const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                if (!tab?.url) return;
+
+                const hostname = new URL(tab.url).hostname;
+                console.log("Popup: Loading settings for hostname:", hostname);
+
+                // Get settings from storage
+                const storage = await chrome.storage.sync.get(["globalSettings", "siteSettings"]);
+                const siteConfig = storage.siteSettings?.[hostname];
+
+                console.log("Popup: Storage data:", {
+                    globalSettings: storage.globalSettings,
+                    siteConfig
+                });
+
+                // Set initial mode
+                if (siteConfig) {
+                    setIsUsingGlobalSettings(siteConfig.lastUsedType === "global");
+                    setIsSiteEnabled(siteConfig.lastUsedType !== "disabled");
+                    if (siteConfig.lastUsedType === "site" && siteConfig.settings) {
+                        setSettings(siteConfig.settings);
+                    } else if (storage.globalSettings) {
+                        setSettings(storage.globalSettings);
+                    }
+                } else if (storage.globalSettings) {
+                    setSettings(storage.globalSettings);
+                    setIsUsingGlobalSettings(true);
+                    setIsSiteEnabled(true);
+                }
+            } catch (error) {
+                console.error("Popup: Error loading settings:", error);
+            }
+        };
+
+        loadSettings();
+    }, []);
 
     const handleSettingChange = (
         key: keyof AudioSettings,
@@ -40,16 +82,33 @@ function App() {
         });
     };
 
-    const handleToggleMode = (mode: "global" | "site" | "disabled") => {
-        if (mode === "global") {
-            setIsUsingGlobalSettings(true);
-            setIsSiteEnabled(true);
-        } else if (mode === "site") {
-            setIsUsingGlobalSettings(false);
-            setIsSiteEnabled(true);
-        } else {
-            setIsUsingGlobalSettings(false);
-            setIsSiteEnabled(false);
+    const handleToggleMode = async (mode: "global" | "site" | "disabled") => {
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tab?.url) return;
+
+            const hostname = new URL(tab.url).hostname;
+            const storage = await chrome.storage.sync.get(["globalSettings", "siteSettings"]);
+
+            if (mode === "global") {
+                setIsUsingGlobalSettings(true);
+                setIsSiteEnabled(true);
+                if (storage.globalSettings) {
+                    setSettings(storage.globalSettings);
+                }
+            } else if (mode === "site") {
+                setIsUsingGlobalSettings(false);
+                setIsSiteEnabled(true);
+                const siteSettings = storage.siteSettings?.[hostname]?.settings;
+                if (siteSettings) {
+                    setSettings(siteSettings);
+                }
+            } else {
+                setIsUsingGlobalSettings(false);
+                setIsSiteEnabled(false);
+            }
+        } catch (error) {
+            console.error("Popup: Error toggling mode:", error);
         }
     };
 
@@ -60,6 +119,7 @@ function App() {
                 onSettingChange={handleSettingChange}
                 formatDiff={formatDiff}
                 onReset={handleReset}
+                isEnabled={isSiteEnabled}
             />
 
             <SettingsToggle
