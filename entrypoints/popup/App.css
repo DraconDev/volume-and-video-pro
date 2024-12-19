@@ -653,61 +653,59 @@ h1 {
     color: #333;
 }
 
-.settings-type-toggle {
+.settings-type-selector {
     display: flex;
-    gap: 4px;
-    background: #f3f4f6;
-    border-radius: 8px;
-}
-
-.settings-toggle-btn {
-    flex: 1;
-    padding: 12px;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    color: #4b5563;
-    background: transparent;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.settings-toggle-btn:hover:not(.active) {
-    background: #e5e7eb;
-}
-
-.settings-toggle-btn.active {
-    background: #1d4ed8;
-    color: white;
-}
-
-.donate-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 16px;
-    background: #2563eb;
-    border-radius: 6px;
-    font-size: 14px;
-    transition: background 0.2s ease;
-    border: none;
-    width: calc(100% - 32px);
-    margin: 16px auto 0;
-}
-
-.donate-button a {
-    color: white;
-    text-decoration: none;
-    width: 100%;
-    text-align: center;
-    display: flex;
-    align-items: center;
     justify-content: center;
     gap: 8px;
+    margin: 16px 0;
+    padding: 0 16px;
 }
 
-.donate-button:hover {
-    background: #1d4ed8;
+.settings-type-btn {
+    flex: 1;
+    padding: 8px 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: transparent;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.settings-type-btn:hover {
+    background: #f5f5f5;
+}
+
+.settings-type-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #0056b3;
+}
+
+.extension-status {
+    margin: 16px;
+    padding: 8px;
+    border-radius: 4px;
+    background: #f8f9fa;
+}
+
+.status-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #666;
+}
+
+.status-label select {
+    flex: 1;
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    color: #333;
 }
 
 .site-item-content {
