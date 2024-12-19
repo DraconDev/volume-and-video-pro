@@ -14,6 +14,16 @@ export const useAudioSettings = (defaultSettings: AudioSettings) => {
 
     const updateSettings = useCallback(
         (newSettings: AudioSettings, updateImmediately = true) => {
+            // Check if settings have actually changed
+            const hasChanged = Object.entries(newSettings).some(
+                ([key, value]) => settings[key as keyof AudioSettings] !== value
+            );
+
+            if (!hasChanged) {
+                console.log("Settings unchanged, skipping update");
+                return;
+            }
+
             setSettings(newSettings);
 
             if (updateImmediately) {
@@ -43,72 +53,82 @@ export const useAudioSettings = (defaultSettings: AudioSettings) => {
                 );
             }
         },
-        [currentUrl, isUsingGlobalSettings, siteConfigs]
+        [currentUrl, isUsingGlobalSettings, siteConfigs, settings]
     );
 
     const handleSettingsToggle = useCallback(
         (type: "global" | "site" | "disabled") => {
             if (!currentUrl) return;
 
+            const updateTab = (settings: AudioSettings, isGlobal: boolean, enabled: boolean) => {
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (tabs[0]?.id) {
+                        chrome.tabs.sendMessage(tabs[0].id, {
+                            type: "UPDATE_SETTINGS",
+                            settings,
+                            isGlobal,
+                            enabled,
+                        });
+                    }
+                });
+            };
+
             if (type === "global") {
                 chrome.storage.sync.get(["globalSettings"], (result) => {
-                    const globalSettings =
-                        result.globalSettings || defaultSettings;
-                    setSettings(globalSettings);
+                    const newGlobalSettings = result.globalSettings || defaultSettings;
+                    
+                    // Check if settings would actually change
+                    const hasChanged = Object.entries(newGlobalSettings).some(
+                        ([key, value]) => settings[key as keyof AudioSettings] !== value
+                    );
+
+                    if (!hasChanged && isUsingGlobalSettings) {
+                        console.log("Already using same global settings, skipping update");
+                        return;
+                    }
+
+                    setSettings(newGlobalSettings);
                     setIsUsingGlobalSettings(true);
 
                     const newSiteConfigs = { ...siteConfigs };
                     newSiteConfigs[currentUrl] = {
                         enabled: true,
-                        settings: globalSettings,
+                        settings: newGlobalSettings,
                         lastUsedType: "global",
                     };
                     setSiteConfigs(newSiteConfigs);
                     chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
 
-                    chrome.tabs.query(
-                        { active: true, currentWindow: true },
-                        (tabs) => {
-                            if (tabs[0]?.id) {
-                                chrome.tabs.sendMessage(tabs[0].id, {
-                                    type: "UPDATE_SETTINGS",
-                                    settings: globalSettings,
-                                    isGlobal: true,
-                                    enabled: true,
-                                });
-                            }
-                        }
-                    );
+                    updateTab(newGlobalSettings, true, true);
                 });
             } else if (type === "site") {
-                const siteSettings =
-                    siteConfigs[currentUrl]?.settings || settings;
-                setSettings(siteSettings);
+                const newSiteSettings = siteConfigs[currentUrl]?.settings || settings;
+                
+                // Check if settings would actually change
+                const hasChanged = Object.entries(newSiteSettings).some(
+                    ([key, value]) => settings[key as keyof AudioSettings] !== value
+                ) || isUsingGlobalSettings;
+
+                if (!hasChanged) {
+                    console.log("Already using same site settings, skipping update");
+                    return;
+                }
+
+                setSettings(newSiteSettings);
                 setIsUsingGlobalSettings(false);
 
                 const newSiteConfigs = { ...siteConfigs };
                 newSiteConfigs[currentUrl] = {
                     enabled: true,
-                    settings: siteSettings,
+                    settings: newSiteSettings,
                     lastUsedType: "site",
                 };
                 setSiteConfigs(newSiteConfigs);
                 chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
 
-                chrome.tabs.query(
-                    { active: true, currentWindow: true },
-                    (tabs) => {
-                        if (tabs[0]?.id) {
-                            chrome.tabs.sendMessage(tabs[0].id, {
-                                type: "UPDATE_SETTINGS",
-                                settings: siteSettings,
-                                isGlobal: false,
-                                enabled: true,
-                            });
-                        }
-                    }
-                );
+                updateTab(newSiteSettings, false, true);
             } else {
+                // Always update when disabling
                 const newSiteConfigs = { ...siteConfigs };
                 newSiteConfigs[currentUrl] = {
                     enabled: false,
@@ -118,22 +138,10 @@ export const useAudioSettings = (defaultSettings: AudioSettings) => {
                 setSiteConfigs(newSiteConfigs);
                 chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
 
-                chrome.tabs.query(
-                    { active: true, currentWindow: true },
-                    (tabs) => {
-                        if (tabs[0]?.id) {
-                            chrome.tabs.sendMessage(tabs[0].id, {
-                                type: "UPDATE_SETTINGS",
-                                settings: defaultSettings,
-                                isGlobal: false,
-                                enabled: false,
-                            });
-                        }
-                    }
-                );
+                updateTab(defaultSettings, false, false);
             }
         },
-        [currentUrl, settings, siteConfigs, defaultSettings]
+        [currentUrl, settings, siteConfigs, defaultSettings, isUsingGlobalSettings]
     );
 
     // Load initial settings
