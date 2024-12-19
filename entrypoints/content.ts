@@ -148,13 +148,22 @@ const content = {
         const updateAudioEffects = () => {
             console.log("Content: Updating all audio effects with settings:", currentSettings);
             
-            audioElementMap.forEach(({ element, gain, bassFilter, voiceFilter }) => {
+            if (audioElementMap.size === 0) {
+                console.log("Content: No audio elements found to update");
+                return;
+            }
+            
+            audioElementMap.forEach(({ element, gain, bassFilter, voiceFilter }, mediaElement) => {
                 try {
+                    console.log("Content: Updating audio effects for element:", mediaElement);
+                    
                     // Update volume
                     if (gain) {
                         const volumeMultiplier = currentSettings.volume / 100;
                         gain.gain.setValueAtTime(volumeMultiplier, gain.context.currentTime);
-                        console.log("Content: Set volume to", volumeMultiplier);
+                        console.log("Content: Set volume to", volumeMultiplier, "for element:", mediaElement);
+                    } else {
+                        console.warn("Content: Gain node not found for element:", mediaElement);
                     }
 
                     // Update filters
@@ -163,7 +172,9 @@ const content = {
                             ? (currentSettings.bassBoost - 100) / 2 
                             : (currentSettings.bassBoost - 100);
                         bassFilter.gain.setValueAtTime(bassBoostGain, bassFilter.context.currentTime);
-                        console.log("Content: Set bass boost to", bassBoostGain);
+                        console.log("Content: Set bass boost to", bassBoostGain, "for element:", mediaElement);
+                    } else {
+                        console.warn("Content: Bass filter not found for element:", mediaElement);
                     }
 
                     if (voiceFilter) {
@@ -171,27 +182,38 @@ const content = {
                             ? (currentSettings.voiceBoost - 100) / 2 
                             : (currentSettings.voiceBoost - 100);
                         voiceFilter.gain.setValueAtTime(voiceBoostGain, voiceFilter.context.currentTime);
-                        console.log("Content: Set voice boost to", voiceBoostGain);
+                        console.log("Content: Set voice boost to", voiceBoostGain, "for element:", mediaElement);
+                    } else {
+                        console.warn("Content: Voice filter not found for element:", mediaElement);
                     }
 
                     // Update speed
                     if (element) {
                         const speed = currentSettings.speed / 100;
                         safeSetPlaybackRate(element, currentSettings.speed);
-                        console.log("Content: Set playback rate to", speed);
+                        console.log("Content: Set playback rate to", speed, "for element:", mediaElement);
+                    } else {
+                        console.warn("Content: Media element not found for element:", mediaElement);
                     }
 
-                    console.log("Content: Updated audio effects for element:", {
+                    // Verify settings were applied
+                    console.log("Content: Verified audio effects for element:", {
+                        element: mediaElement,
                         volume: gain?.gain.value,
-                        bassBoost: currentSettings.bassBoost,
-                        bassGain: bassFilter?.gain.value,
-                        voiceBoost: currentSettings.voiceBoost,
-                        voiceGain: voiceFilter?.gain.value,
-                        speed: currentSettings.speed,
+                        bassBoost: bassFilter?.gain.value,
+                        voiceBoost: voiceFilter?.gain.value,
+                        speed: element?.playbackRate,
                         mono: currentSettings.mono
                     });
                 } catch (error) {
-                    console.error("Content: Error updating audio effects:", error);
+                    console.error("Content: Error updating audio effects for element:", mediaElement, error);
+                    // Try to reconnect audio nodes if there was an error
+                    try {
+                        setupAudioContext(mediaElement);
+                        console.log("Content: Reconnected audio nodes after error");
+                    } catch (reconnectError) {
+                        console.error("Content: Failed to reconnect audio nodes:", reconnectError);
+                    }
                 }
             });
         };
@@ -199,9 +221,20 @@ const content = {
         const setupAudioContext = (mediaElement: HTMLMediaElement) => {
             if (!audioElementMap.has(mediaElement)) {
                 try {
+                    console.log("Content: Setting up audio context for element:", mediaElement);
+
                     if (!audioContext) {
                         audioContext = new AudioContext();
-                        console.log("Content: Audio context setup complete", audioContext);
+                        console.log("Content: Created new audio context:", audioContext.state);
+                    }
+
+                    // Resume audio context if it's suspended
+                    if (audioContext.state === 'suspended') {
+                        audioContext.resume().then(() => {
+                            console.log("Content: Resumed audio context");
+                        }).catch(error => {
+                            console.error("Content: Failed to resume audio context:", error);
+                        });
                     }
 
                     const source = audioContext.createMediaElementSource(mediaElement);
@@ -211,17 +244,36 @@ const content = {
                     const merger = audioContext.createChannelMerger(2);
                     const splitter = audioContext.createChannelSplitter(2);
 
+                    // Configure filters
                     bassFilter.type = "lowshelf";
                     bassFilter.frequency.value = 100;
+                    bassFilter.gain.value = 0; // Start at neutral
 
                     voiceFilter.type = "highshelf";
                     voiceFilter.frequency.value = 3000;
+                    voiceFilter.gain.value = 0; // Start at neutral
+
+                    // Set initial gain to 1 (neutral)
+                    gain.gain.value = 1;
 
                     // Create the audio processing chain
-                    source.connect(bassFilter);
-                    bassFilter.connect(voiceFilter);
-                    voiceFilter.connect(gain);
+                    if (currentSettings.mono) {
+                        // Mono chain: source -> filters -> splitter -> merger -> gain -> destination
+                        source.connect(bassFilter);
+                        bassFilter.connect(voiceFilter);
+                        voiceFilter.connect(splitter);
+                        splitter.connect(merger, 0, 0);
+                        splitter.connect(merger, 0, 1);
+                        merger.connect(gain);
+                    } else {
+                        // Stereo chain: source -> filters -> gain -> destination
+                        source.connect(bassFilter);
+                        bassFilter.connect(voiceFilter);
+                        voiceFilter.connect(gain);
+                    }
                     gain.connect(audioContext.destination);
+
+                    console.log("Content: Audio nodes connected successfully");
 
                     audioElementMap.set(mediaElement, {
                         context: audioContext,
@@ -237,9 +289,11 @@ const content = {
                     // Apply current settings immediately
                     updateAudioEffects();
 
+                    console.log("Content: Audio context setup complete for element:", mediaElement);
+
                     // Add event listeners for media events
                     const handleMediaEvent = () => {
-                        console.log("Content: Media event triggered, ensuring settings are applied");
+                        console.log("Content: Media event triggered for element:", mediaElement);
                         updateAudioEffects();
                     };
 
@@ -248,18 +302,30 @@ const content = {
                     mediaElement.addEventListener('loadeddata', handleMediaEvent);
                     mediaElement.addEventListener('play', handleMediaEvent);
                     mediaElement.addEventListener('seeking', handleMediaEvent);
+                    mediaElement.addEventListener('ratechange', handleMediaEvent);
 
                     // Clean up when the element is removed
                     const observer = new MutationObserver((mutations) => {
                         mutations.forEach((mutation) => {
                             if (!document.contains(mediaElement)) {
-                                console.log("Content: Media element removed, cleaning up");
+                                console.log("Content: Media element removed, cleaning up:", mediaElement);
                                 observer.disconnect();
+                                const audioData = audioElementMap.get(mediaElement);
+                                if (audioData) {
+                                    // Disconnect all nodes
+                                    audioData.source.disconnect();
+                                    audioData.gain.disconnect();
+                                    audioData.bassFilter.disconnect();
+                                    audioData.voiceFilter.disconnect();
+                                    audioData.merger.disconnect();
+                                    audioData.splitter.disconnect();
+                                }
                                 audioElementMap.delete(mediaElement);
                                 mediaElement.removeEventListener('loadstart', handleMediaEvent);
                                 mediaElement.removeEventListener('loadeddata', handleMediaEvent);
                                 mediaElement.removeEventListener('play', handleMediaEvent);
                                 mediaElement.removeEventListener('seeking', handleMediaEvent);
+                                mediaElement.removeEventListener('ratechange', handleMediaEvent);
                             }
                         });
                     });
@@ -271,6 +337,21 @@ const content = {
 
                 } catch (error) {
                     console.error("Content: Error setting up audio context:", error);
+                    // If we failed to set up the audio context, try to clean up
+                    const audioData = audioElementMap.get(mediaElement);
+                    if (audioData) {
+                        try {
+                            audioData.source.disconnect();
+                            audioData.gain.disconnect();
+                            audioData.bassFilter.disconnect();
+                            audioData.voiceFilter.disconnect();
+                            audioData.merger.disconnect();
+                            audioData.splitter.disconnect();
+                            audioElementMap.delete(mediaElement);
+                        } catch (cleanupError) {
+                            console.error("Content: Error cleaning up after setup failure:", cleanupError);
+                        }
+                    }
                 }
             }
         };
