@@ -149,13 +149,24 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                                 {label}
                             </span>
                         </div>
-                        <span
-                            className={`text-sm font-medium ${
-                                !isEnabled ? "opacity-50" : ""
-                            }`}
-                        >
-                            {formatDiff(settings[key] as number)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <span
+                                className={`text-sm font-medium ${
+                                    !isEnabled ? "opacity-50" : ""
+                                }`}
+                            >
+                                {formatDiff(settings[key] as number)}
+                            </span>
+                            <button
+                                onClick={() => onSettingChange(key, defaultValue)}
+                                disabled={!isEnabled}
+                                className={`text-sm bg-primary/10 hover:bg-primary/20 text-gray-text px-2 py-0.5 rounded ${
+                                    !isEnabled ? "opacity-50 cursor-not-allowed" : ""
+                                }`}
+                            >
+                                Reset
+                            </button>
+                        </div>
                     </div>
                     <input
                         type="range"
