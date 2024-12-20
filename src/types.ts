@@ -32,11 +32,12 @@ export type StateType = {
 };
 
 export type MessageType = {
-    type: "UPDATE_SETTINGS" | "CONTENT_SCRIPT_READY";
+    type: "UPDATE_SETTINGS" | "CONTENT_SCRIPT_READY" | "UPDATE_SITE_MODE";
     settings?: AudioSettings;
     enabled?: boolean;
     isGlobal?: boolean;
     hostname?: string;
+    mode?: "global" | "site" | "disabled";
 };
 
 export type StorageData = {

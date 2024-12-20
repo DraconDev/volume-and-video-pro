@@ -129,91 +129,195 @@ export default defineBackground(() => {
                     // If message is from popup (no sender.tab), get the current active tab
                     let targetTabId = tabId;
                     let targetUrl = url;
-                    
+
                     if (!sender.tab) {
-                        console.log("Background: Message from popup, getting active tab");
-                        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                        console.log(
+                            "Background: Message from popup, getting active tab"
+                        );
+                        const [activeTab] = await chrome.tabs.query({
+                            active: true,
+                            currentWindow: true,
+                        });
                         if (!activeTab?.id || !activeTab.url) {
                             console.error("Background: No active tab found");
-                            sendResponse({ success: false, error: "No active tab found" });
+                            sendResponse({
+                                success: false,
+                                error: "No active tab found",
+                            });
                             return;
                         }
                         targetTabId = activeTab.id;
                         targetUrl = activeTab.url;
-                        console.log("Background: Found active tab:", targetTabId, targetUrl);
+                        console.log(
+                            "Background: Found active tab:",
+                            targetTabId,
+                            targetUrl
+                        );
                     }
 
                     if (targetUrl) {
                         const hostname = getHostname(targetUrl);
-                        const currentSettings = message.isGlobal
-                            ? globalSettings
-                            : siteSettings.get(hostname)?.settings;
 
-                        // Check if settings have actually changed
-                        const settingsChanged = !currentSettings ||
-                            Object.entries(message.settings).some(
-                                ([key, value]) =>
-                                    currentSettings[key as keyof AudioSettings] !==
-                                    value
-                            );
-
-                        if (settingsChanged) {
+                        // If disabled, use default settings for playback but don't modify stored settings
+                        if (!message.enabled) {
                             console.log(
-                                `Background: Updating ${
-                                    message.isGlobal ? "global" : "site"
-                                } settings for`,
-                                hostname
+                                "Background: Site disabled, using default settings for playback"
                             );
+                            const siteConfig = siteSettings.get(hostname) || {
+                                ...defaultSiteSettings,
+                            };
 
-                            if (message.isGlobal) {
-                                globalSettings = message.settings;
-                                chrome.storage.sync.set({
-                                    globalSettings: message.settings,
-                                });
-                            } else {
-                                const siteConfig = siteSettings.get(hostname) || {
-                                    ...defaultSiteSettings,
-                                };
-                                siteConfig.settings = message.settings;
-                                siteConfig.lastUsedType = message.enabled
-                                    ? "site"
-                                    : "disabled";
-                                siteSettings.set(hostname, siteConfig);
+                            // Only update the lastUsedType, preserve the settings
+                            siteConfig.lastUsedType = "disabled";
+                            siteSettings.set(hostname, siteConfig);
 
-                                const siteSettingsObj = Object.fromEntries(
-                                    siteSettings
-                                );
-                                chrome.storage.sync.set({
-                                    siteSettings: siteSettingsObj,
-                                });
-                            }
+                            const siteSettingsObj =
+                                Object.fromEntries(siteSettings);
+                            await chrome.storage.sync.set({
+                                siteSettings: siteSettingsObj,
+                            });
 
-                            // Send settings directly to the active tab
+                            // Send default settings to content script for playback
                             if (targetTabId) {
-                                console.log("Background: Sending settings directly to tab:", targetTabId);
+                                console.log(
+                                    "Background: Sending default settings to disabled tab:",
+                                    targetTabId
+                                );
                                 try {
                                     await chrome.tabs.sendMessage(targetTabId, {
                                         type: "UPDATE_SETTINGS",
-                                        settings: message.settings,
-                                        isGlobal: message.isGlobal,
-                                        enabled: true,
+                                        settings: defaultSettings,
+                                        isGlobal: false,
+                                        enabled: false,
                                     } as MessageType);
-                                    console.log("Background: Settings sent successfully to tab:", targetTabId);
+                                    console.log(
+                                        "Background: Default settings sent successfully to tab:",
+                                        targetTabId
+                                    );
                                 } catch (error) {
-                                    console.error("Background: Failed to send settings to tab:", targetTabId, error);
+                                    console.error(
+                                        "Background: Failed to send default settings to tab:",
+                                        targetTabId,
+                                        error
+                                    );
                                 }
                             }
-                        } else {
+                            sendResponse({ success: true });
+                            return;
+                        }
+
+                        // Handle settings update based on mode
+                        if (message.isGlobal) {
+                            // Only update global settings
+                            globalSettings = message.settings;
+                            await chrome.storage.sync.set({ globalSettings });
                             console.log(
-                                "Background: Settings unchanged, skipping update"
+                                "Background: Updated global settings:",
+                                globalSettings
+                            );
+
+                            // Don't modify site settings when using global settings
+                            const siteConfig = siteSettings.get(hostname);
+                            if (siteConfig) {
+                                siteConfig.lastUsedType = "global";
+                                siteSettings.set(hostname, siteConfig);
+                                const siteSettingsObj = Object.fromEntries(siteSettings);
+                                await chrome.storage.sync.set({ siteSettings: siteSettingsObj });
+                            }
+                        } else {
+                            // Update site-specific settings
+                            const siteConfig = siteSettings.get(hostname) || {
+                                ...defaultSiteSettings,
+                            };
+                            siteConfig.settings = message.settings;
+                            siteConfig.lastUsedType = "site";
+                            siteSettings.set(hostname, siteConfig);
+
+                            const siteSettingsObj =
+                                Object.fromEntries(siteSettings);
+                            await chrome.storage.sync.set({
+                                siteSettings: siteSettingsObj,
+                            });
+                            console.log(
+                                "Background: Updated site settings for",
+                                hostname,
+                                siteConfig
                             );
                         }
+
+                        // Forward settings to content script
+                        if (targetTabId) {
+                            try {
+                                await chrome.tabs.sendMessage(targetTabId, {
+                                    type: "UPDATE_SETTINGS",
+                                    settings: message.settings,
+                                    isGlobal: message.isGlobal,
+                                    enabled: true,
+                                } as MessageType);
+                                console.log(
+                                    "Background: Settings forwarded to content script"
+                                );
+                            } catch (error) {
+                                console.error(
+                                    "Background: Failed to forward settings to content script:",
+                                    error
+                                );
+                            }
+                        }
+
+                        sendResponse({ success: true });
                     }
-                    sendResponse({ success: true });
                 } catch (error) {
-                    console.error("Background: Error processing settings update:", error);
+                    console.error(
+                        "Background: Error processing settings update:",
+                        error
+                    );
                     sendResponse({ success: false, error: String(error) });
                 }
+            } else if (message.type === "UPDATE_SITE_MODE") {
+                const { hostname, mode } = message;
+                if (!hostname) {
+                    console.error(
+                        "Background: No hostname provided for site mode update"
+                    );
+                    sendResponse({
+                        success: false,
+                        error: "No hostname provided",
+                    });
+                    return;
+                }
+                if (
+                    mode !== "global" &&
+                    mode !== "site" &&
+                    mode !== "disabled"
+                ) {
+                    console.error(
+                        "Background: Invalid mode provided for site mode update"
+                    );
+                    sendResponse({
+                        success: false,
+                        error: "Invalid mode provided",
+                    });
+                    return;
+                }
+
+                // Get existing site config or create new one
+                const siteConfig = siteSettings.get(hostname) || {
+                    ...defaultSiteSettings,
+                };
+
+                // Only update the mode, preserve all other settings
+                siteConfig.lastUsedType = mode;
+                siteSettings.set(hostname, siteConfig);
+
+                const siteSettingsObj = Object.fromEntries(siteSettings);
+                await chrome.storage.sync.set({
+                    siteSettings: siteSettingsObj,
+                });
+
+                console.log(`Background: Updated site mode to ${mode} for ${hostname}`, siteConfig);
+                sendResponse({ success: true });
+                return;
             } else if (message.type === "CONTENT_SCRIPT_READY") {
                 if (tabId && url) {
                     console.log(
