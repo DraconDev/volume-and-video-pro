@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    input[type="range"] {
+        -webkit-appearance: none;
+        @apply w-full h-[3px] bg-[#e5e7eb] rounded-sm outline-none appearance-none cursor-pointer relative;
+        background-image: linear-gradient(#1a73e8, #1a73e8);
+        background-repeat: no-repeat;
+        background-size: calc(var(--range-progress, 0%) - 8px) 100%;
+        background-position: 4px center;
+        margin-top: 16px;
+        margin-bottom: 16px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        @apply appearance-none w-5 h-5 bg-primary rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.2)] relative;
+        margin-top: -2px;
+        border: 2px solid white;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+        -webkit-appearance: none;
+        @apply appearance-none w-12 h-12 bg-primary rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.2)] relative border-2 border-white;
+        margin-top: -5px;
+    }
+
+    input[type="range"]::-moz-range-progress {
+        @apply bg-primary h-[2px] rounded-sm;
+    }
+
+    input[type="range"]:disabled {
+        @apply opacity-50 cursor-not-allowed;
+    }
+
+    input[type="range"].disabled {
+        @apply opacity-50 cursor-not-allowed;
+    }
+
+    .slider {
+        @apply w-full;
+        --percentage: 50%;
+    }
+
+    .slider::-webkit-slider-runnable-track {
+        -webkit-appearance: none;
+        @apply bg-[#e6e6e6] h-[2px] rounded-sm;
+        background-image: linear-gradient(#1a73e8, #1a73e8);
+        background-size: var(--percentage) 100%;
+        background-repeat: no-repeat;
+    }
+
+    .slider::-moz-range-track {
+        -webkit-appearance: none;
+        @apply bg-[#e6e6e6] h-[2px] rounded-sm;
+    }
+
+    .slider::-moz-range-progress {
+        @apply bg-primary h-[2px] rounded-sm;
+    }
+
+    .slider.disabled {
+        @apply opacity-50 cursor-not-allowed;
+    }
+
+    .settings-button {
+        @apply flex-1 py-3 text-sm border-none outline-none cursor-pointer text-gray-text transition-colors duration-200 rounded bg-[#f8f9fa] hover:bg-[#f1f3f4];
+    }
+
+    .settings-button.active {
+        @apply bg-primary text-white hover:bg-primary;
+    }
+
+    .mono-button {
+        @apply w-full flex items-center justify-center gap-2 py-2 px-4 text-[13px] text-gray-dark border-none bg-transparent cursor-pointer transition-colors duration-200;
+    }
+
+    .mono-button.active {
+        @apply text-primary;
+    }
+
+    .mono-button.active svg {
+        @apply stroke-primary;
+    }
+}
+
+* {
+    font-size: 14px;
+    font-weight: 700 !important;
+}

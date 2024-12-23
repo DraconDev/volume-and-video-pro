@@ -1,0 +1,46 @@
+export interface AudioSettings {
+    volume: number;
+    bassBoost: number;
+    voiceBoost: number;
+    mono: boolean;
+    speed: number;
+}
+
+export interface SiteSettings {
+    enabled: boolean;
+    settings?: AudioSettings;
+    activeSetting: "global" | "site" | "default";
+}
+
+export const defaultSettings: AudioSettings = {
+    volume: 100,
+    bassBoost: 100,
+    voiceBoost: 100,
+    mono: false,
+    speed: 100,
+};
+
+export const defaultSiteSettings: SiteSettings = {
+    enabled: true,
+    settings: { ...defaultSettings },
+    activeSetting: "global",
+};
+
+export type StateType = {
+    globalSettings: AudioSettings;
+    siteSettings: Map<string, SiteSettings>;
+};
+
+export type MessageType = {
+    type: "UPDATE_SETTINGS" | "CONTENT_SCRIPT_READY" | "UPDATE_SITE_MODE";
+    settings?: AudioSettings;
+    enabled?: boolean;
+    isGlobal?: boolean;
+    hostname?: string;
+    mode?: "global" | "site" | "default";
+};
+
+export type StorageData = {
+    globalSettings?: AudioSettings;
+    siteSettings?: { [hostname: string]: SiteSettings };
+};
