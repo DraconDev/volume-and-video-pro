@@ -36,7 +36,7 @@ export class SettingsManager {
 
     getSettingsForSite(hostname: string): SiteSettings | null {
         const siteConfig = this.siteSettings.get(hostname);
-        if (!siteConfig || siteConfig.activeSetting === "disabled") {
+        if (!siteConfig || siteConfig.activeSetting === "default") {
             return null;
         }
         return siteConfig;
@@ -124,7 +124,7 @@ export class SettingsManager {
 
     async updateSiteMode(
         hostname: string,
-        mode: "global" | "site" | "disabled"
+        mode: "global" | "site" | "default"
     ) {
         let siteConfig = this.siteSettings.get(hostname);
         const oldMode = siteConfig?.activeSetting;
@@ -153,7 +153,7 @@ export class SettingsManager {
 
         // Update mode and enabled state
         siteConfig.activeSetting = mode;
-        siteConfig.enabled = mode !== "disabled";
+        siteConfig.enabled = mode !== "default";
         this.siteSettings.set(hostname, siteConfig);
 
         await this.persistSettings();
@@ -198,7 +198,7 @@ export class SettingsManager {
         };
 
         // Only update the activeSetting, preserve the settings
-        siteConfig.activeSetting = "disabled";
+        siteConfig.activeSetting = "default";
         this.siteSettings.set(hostname, siteConfig);
 
         await this.persistSettings();

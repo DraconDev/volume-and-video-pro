@@ -1,4 +1,4 @@
-import { AudioSettings, defaultSettings } from "@/src/types";
+import { AudioSettings, defaultSettings, MessageType } from "@/src/types";
 
 // Audio context and nodes map
 let audioContext: AudioContext | null = null;
@@ -67,23 +67,32 @@ export default defineContentScript({
             }
         };
 
-        // Update settings when received from background
+        // Listen for settings updates
         chrome.runtime.onMessage.addListener(
-            (message, sender, sendResponse) => {
-                if (message.type === "UPDATE_SETTINGS") {
-                    const settingsType = message.isGlobal
-                        ? "global"
-                        : "site-specific";
-                    console.log(
-                        `Content: Applying ${settingsType} settings:`,
-                        message.settings
-                    );
-
-                    currentSettings = message.settings;
-                    isUsingGlobalSettings = message.isGlobal;
-                    updateAudioEffects();
-
+            async (
+                message: MessageType,
+                _sender: chrome.runtime.MessageSender,
+                sendResponse: (response?: any) => void
+            ) => {
+                try {
+                    if (message.type === "UPDATE_SETTINGS") {
+                        console.log(
+                            "Content: Received settings update:",
+                            message.settings,
+                            "Global:",
+                            message.isGlobal,
+                            "Enabled:",
+                            message.enabled
+                        );
+                        if (message.settings) {
+                            currentSettings = message.settings;
+                            updateAudioEffects();
+                        }
+                    }
                     sendResponse({ success: true });
+                } catch (error) {
+                    console.error("Content: Error handling message:", error);
+                    sendResponse({ success: false, error });
                 }
                 return true;
             }
@@ -229,46 +238,67 @@ export default defineContentScript({
             // First pass: Update speed for all media elements
             mediaElements.forEach((element) => {
                 try {
-                    const speed = currentSettings.speed / 100;
-                    element.playbackRate = speed;
-                    element.defaultPlaybackRate = speed;
+                    if (currentSettings.speed !== 100) {
+                        const speed = currentSettings.speed / 100;
+                        element.playbackRate = speed;
+                        element.defaultPlaybackRate = speed;
+                    } else {
+                        // Reset to default speed
+                        element.playbackRate = 1;
+                        element.defaultPlaybackRate = 1;
+                    }
                     console.log(
                         "Content: Updated speed for element:",
                         element.src,
                         "Speed:",
-                        speed
+                        element.playbackRate
                     );
                 } catch (e) {
                     console.error("Content: Error setting speed:", e);
                 }
             });
 
-            // Second pass: Handle audio effects only if needed
+            // Second pass: Handle audio effects only if needed and enabled
             const needsAudioProcessing =
                 currentSettings.volume !== 100 ||
                 currentSettings.bassBoost !== 100 ||
                 currentSettings.voiceBoost !== 100 ||
                 currentSettings.mono;
 
-            // If we don't need audio processing, clean up all audio contexts
+            // Clean up audio processing if not needed
             if (!needsAudioProcessing) {
-                audioElementMap.forEach(({ source, gain, bassFilter, voiceFilter, merger, splitter }, element) => {
-                    try {
-                        source?.disconnect();
-                        gain?.disconnect();
-                        bassFilter?.disconnect();
-                        voiceFilter?.disconnect();
-                        if (merger) merger.disconnect();
-                        if (splitter) splitter.disconnect();
-                    } catch (e) {
-                        console.warn("Content: Error cleaning up audio nodes:", e);
+                audioElementMap.forEach(
+                    (
+                        {
+                            source,
+                            gain,
+                            bassFilter,
+                            voiceFilter,
+                            merger,
+                            splitter,
+                        },
+                        element
+                    ) => {
+                        try {
+                            // First disconnect all our audio nodes
+                            source?.disconnect();
+                            gain?.disconnect();
+                            bassFilter?.disconnect();
+                            voiceFilter?.disconnect();
+                            if (merger) merger.disconnect();
+                            if (splitter) splitter.disconnect();
+
+                            // Important: Don't reconnect or close the context, just remove our processing
+                        } catch (e) {
+                            console.warn(
+                                "Content: Error cleaning up audio nodes:",
+                                e
+                            );
+                        }
                     }
-                });
+                );
                 audioElementMap.clear();
-                if (audioContext) {
-                    audioContext.close();
-                    audioContext = null;
-                }
+                // Don't close the audio context, just clear our processing nodes
                 return;
             }
 
@@ -291,7 +321,10 @@ export default defineContentScript({
 
             // Update existing audio effects
             audioElementMap.forEach(
-                ({ gain, bassFilter, voiceFilter, source, merger, splitter }, mediaElement) => {
+                (
+                    { gain, bassFilter, voiceFilter, source, merger, splitter },
+                    mediaElement
+                ) => {
                     try {
                         console.log(
                             "Content: Updating audio effects for element:",
@@ -398,7 +431,9 @@ export default defineContentScript({
 
                         // Also check the parent element and its siblings
                         if (mutation.target instanceof Element) {
-                            const mediaElements = findMediaElements(mutation.target);
+                            const mediaElements = findMediaElements(
+                                mutation.target
+                            );
                             if (mediaElements.length > 0) {
                                 needsUpdate = true;
                             }
@@ -425,108 +460,87 @@ export default defineContentScript({
         };
 
         const setupAudioContext = async (mediaElement: HTMLMediaElement) => {
-            if (!mediaElement || !(mediaElement instanceof HTMLMediaElement)) {
-                throw new Error("Invalid media element provided");
-            }
-
-            // Check if extension context is still valid
-            if (!chrome.runtime?.id) {
-                throw new Error("Extension context invalid");
-            }
-
-            // Clean up existing audio context if any
-            if (audioElementMap.has(mediaElement)) {
-                const existing = audioElementMap.get(mediaElement)!;
-                try {
-                    existing.source?.disconnect();
-                    existing.gain?.disconnect();
-                    existing.bassFilter?.disconnect();
-                    existing.voiceFilter?.disconnect();
-                    if (existing.merger) existing.merger.disconnect();
-                    if (existing.splitter) existing.splitter.disconnect();
-                } catch (e) {
-                    console.warn("Content: Error during cleanup:", e);
-                }
-                audioElementMap.delete(mediaElement);
-            }
-
-            // Create/resume audio context
             try {
-                if (!audioContext || audioContext.state === "closed") {
+                // Initialize audio context if needed
+                if (!audioContext) {
                     audioContext = new AudioContext();
                 }
-                if (audioContext.state === "suspended") {
-                    await audioContext.resume();
+
+                // Create audio nodes
+                const source =
+                    audioContext.createMediaElementSource(mediaElement);
+                const gain = audioContext.createGain();
+                const bassFilter = audioContext.createBiquadFilter();
+                const voiceFilter = audioContext.createBiquadFilter();
+                const splitter = audioContext.createChannelSplitter(2);
+                const merger = audioContext.createChannelMerger(2);
+
+                // Configure filters
+                bassFilter.type = "lowshelf";
+                bassFilter.frequency.value = 100;
+                voiceFilter.type = "peaking";
+                voiceFilter.frequency.value = 2000;
+                voiceFilter.Q.value = 1;
+
+                // Connect nodes based on settings
+                if (currentSettings.mono) {
+                    source.connect(bassFilter);
+                    bassFilter.connect(voiceFilter);
+                    voiceFilter.connect(splitter);
+                    splitter.connect(merger, 0, 0);
+                    splitter.connect(merger, 0, 1);
+                    merger.connect(gain);
+                } else {
+                    source.connect(bassFilter);
+                    bassFilter.connect(voiceFilter);
+                    voiceFilter.connect(gain);
                 }
-            } catch (e) {
-                throw new Error(`Failed to create/resume AudioContext: ${e}`);
+                gain.connect(audioContext.destination);
+
+                // Set initial values
+                const volumeMultiplier = currentSettings.volume / 100;
+                gain.gain.setValueAtTime(
+                    volumeMultiplier,
+                    audioContext.currentTime
+                );
+
+                const bassBoostGain =
+                    ((currentSettings.bassBoost - 100) / 100) * 15;
+                bassFilter.gain.setValueAtTime(
+                    bassBoostGain,
+                    audioContext.currentTime
+                );
+
+                const voiceBoostGain =
+                    ((currentSettings.voiceBoost - 100) / 100) * 24;
+                voiceFilter.gain.setValueAtTime(
+                    voiceBoostGain,
+                    audioContext.currentTime
+                );
+
+                // Store nodes for later updates
+                audioElementMap.set(mediaElement, {
+                    context: audioContext,
+                    element: mediaElement,
+                    source,
+                    gain,
+                    bassFilter,
+                    voiceFilter,
+                    splitter,
+                    merger,
+                });
+
+                console.log(
+                    "Content: Audio processing setup complete for:",
+                    mediaElement.src
+                );
+            } catch (error) {
+                console.error(
+                    "Content: Error setting up audio context:",
+                    error
+                );
+                throw error;
             }
-
-            // Create audio nodes
-            const source = audioContext.createMediaElementSource(mediaElement);
-            const gain = audioContext.createGain();
-            const bassFilter = audioContext.createBiquadFilter();
-            const voiceFilter = audioContext.createBiquadFilter();
-            const merger = audioContext.createChannelMerger(2);
-            const splitter = audioContext.createChannelSplitter(2);
-
-            // Configure filters
-            bassFilter.type = "lowshelf";
-            bassFilter.frequency.value = 150;
-            bassFilter.gain.value = 0;
-
-            voiceFilter.type = "peaking";
-            voiceFilter.frequency.value = 2500;
-            voiceFilter.Q.value = 1.5;
-            voiceFilter.gain.value = 0;
-
-            // Connect nodes
-            if (currentSettings.mono) {
-                source.connect(bassFilter);
-                bassFilter.connect(voiceFilter);
-                voiceFilter.connect(splitter);
-                splitter.connect(merger, 0, 0);
-                splitter.connect(merger, 0, 1);
-                merger.connect(gain);
-            } else {
-                source.connect(bassFilter);
-                bassFilter.connect(voiceFilter);
-                voiceFilter.connect(gain);
-            }
-            gain.connect(audioContext.destination);
-
-            // Store audio nodes
-            audioElementMap.set(mediaElement, {
-                context: audioContext,
-                source,
-                gain,
-                bassFilter,
-                voiceFilter,
-                merger,
-                splitter,
-                element: mediaElement,
-            });
-
-            // Set initial values
-            const volumeMultiplier = currentSettings.volume / 100;
-            gain.gain.setValueAtTime(
-                volumeMultiplier,
-                audioContext.currentTime
-            );
-
-            const bassBoostGain =
-                ((currentSettings.bassBoost - 100) / 100) * 15;
-            bassFilter.gain.setValueAtTime(
-                bassBoostGain,
-                audioContext.currentTime
-            );
-
-            const voiceBoostGain =
-                ((currentSettings.voiceBoost - 100) / 100) * 24;
-            voiceFilter.gain.setValueAtTime(
-                voiceBoostGain,
-                audioContext.currentTime
-            );
         };
 
         // Initialize observers after settings are loaded

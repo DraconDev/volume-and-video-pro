@@ -9,7 +9,7 @@ export interface AudioSettings {
 export interface SiteSettings {
     enabled: boolean;
     settings?: AudioSettings;
-    activeSetting: "global" | "site" | "disabled";
+    activeSetting: "global" | "site" | "default";
 }
 
 export const defaultSettings: AudioSettings = {
@@ -37,7 +37,7 @@ export type MessageType = {
     enabled?: boolean;
     isGlobal?: boolean;
     hostname?: string;
-    mode?: "global" | "site" | "disabled";
+    mode?: "global" | "site" | "default";
 };
 
 export type StorageData = {

@@ -11,7 +11,7 @@ interface AudioControlsProps {
     onReset: () => void;
     isEnabled?: boolean;
     isCustomSettings?: boolean;
-    onSettingsToggle?: (type: "global" | "site" | "disabled") => void;
+    onSettingsToggle?: (type: "global" | "site" | "default") => void;
 }
 
 export const AudioControls: React.FC<AudioControlsProps> = ({

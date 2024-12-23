@@ -40,12 +40,12 @@ function App() {
 
                 // Set initial mode and settings
                 if (siteConfig) {
-                    const isDisabled = siteConfig.lastUsedType === "disabled";
-                    const isGlobal = siteConfig.lastUsedType === "global";
+                    const isDefault = siteConfig.activeSetting === "default";
+                    const isGlobal = siteConfig.activeSetting === "global";
                     setIsUsingGlobalSettings(isGlobal);
-                    setIsSiteEnabled(!isDisabled);
+                    setIsSiteEnabled(!isDefault);
 
-                    if (isDisabled) {
+                    if (isDefault) {
                         // Show default settings but keep actual settings in state
                         setSettings(
                             siteConfig.settings ||
@@ -73,9 +73,9 @@ function App() {
                 // Send initial settings to content script
                 if (tab.id) {
                     const settingsToApply =
-                        siteConfig?.lastUsedType === "disabled"
+                        siteConfig?.activeSetting === "default"
                             ? defaultSettings
-                            : siteConfig?.lastUsedType === "global"
+                            : siteConfig?.activeSetting === "global"
                             ? storage.globalSettings || defaultSettings
                             : siteConfig?.settings ||
                               storage.globalSettings ||
@@ -84,8 +84,8 @@ function App() {
                     await chrome.tabs.sendMessage(tab.id, {
                         type: "UPDATE_SETTINGS",
                         settings: settingsToApply,
-                        isGlobal: siteConfig?.lastUsedType === "global",
-                        enabled: siteConfig?.lastUsedType !== "disabled",
+                        isGlobal: siteConfig?.activeSetting === "global",
+                        enabled: siteConfig?.activeSetting !== "default",
                     });
                 }
             } catch (error) {
@@ -100,7 +100,7 @@ function App() {
         key: keyof AudioSettings,
         value: number | boolean
     ) => {
-        if (!isSiteEnabled) return; // Prevent changes when disabled
+        if (!isSiteEnabled) return; // Prevent changes when in default mode
 
         const newSettings = {
             ...settings,
@@ -109,7 +109,10 @@ function App() {
         setSettings(newSettings);
 
         try {
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            const [tab] = await chrome.tabs.query({
+                active: true,
+                currentWindow: true,
+            });
             if (!tab?.url || !tab.id) return;
 
             // Send settings update
@@ -117,7 +120,7 @@ function App() {
                 type: "UPDATE_SETTINGS",
                 settings: newSettings,
                 isGlobal: isUsingGlobalSettings,
-                enabled: true
+                enabled: true,
             });
 
             // Also send directly to content script for immediate effect
@@ -125,9 +128,8 @@ function App() {
                 type: "UPDATE_SETTINGS",
                 settings: newSettings,
                 isGlobal: isUsingGlobalSettings,
-                enabled: true
+                enabled: true,
             });
-
         } catch (error) {
             console.error("Popup: Error updating settings:", error);
         }
@@ -138,35 +140,41 @@ function App() {
     };
 
     const handleReset = () => {
-        if (!isSiteEnabled) return; // Prevent reset when disabled
+        if (!isSiteEnabled) return; // Prevent reset when in default mode
         setSettings(defaultSettings);
     };
 
     /**
-     * Handles switching between different modes (global, site-specific, or disabled)
+     * Handles switching between different modes (global, site-specific, or default)
      * and applies the appropriate settings for each mode.
-     * 
-     * @param mode - The mode to switch to ("global" | "site" | "disabled")
-     * 
+     *
+     * @param mode - The mode to switch to ("global" | "site" | "default")
+     *
      * Global mode: Uses shared global settings across all sites, preserves site settings
      * Site mode: Uses site-specific settings, starts with defaults if none exist
-     * Disabled mode: Uses default settings (100%) for playback
+     * Default mode: Uses default settings (100%) for playback
      */
-    const handleToggleMode = async (mode: "global" | "site" | "disabled") => {
+    const handleToggleMode = async (mode: "global" | "site" | "default") => {
         try {
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            const [tab] = await chrome.tabs.query({
+                active: true,
+                currentWindow: true,
+            });
             if (!tab?.url || !tab.id) {
                 console.error("Popup: No active tab found");
                 return;
             }
 
             const hostname = new URL(tab.url).hostname;
-            const storage = await chrome.storage.sync.get(["globalSettings", "siteSettings"]);
+            const storage = await chrome.storage.sync.get([
+                "globalSettings",
+                "siteSettings",
+            ]);
             const siteConfig = storage.siteSettings?.[hostname];
 
             let settingsToApply: AudioSettings;
-            
-            if (mode === "disabled") {
+
+            if (mode === "default") {
                 settingsToApply = defaultSettings;
                 setIsUsingGlobalSettings(false);
                 setIsSiteEnabled(false);
@@ -180,7 +188,7 @@ function App() {
                 await chrome.runtime.sendMessage({
                     type: "UPDATE_SITE_MODE",
                     hostname,
-                    mode: "global"
+                    mode: "global",
                 });
 
                 // Update UI with global settings
@@ -192,19 +200,25 @@ function App() {
                         type: "UPDATE_SETTINGS",
                         settings: settingsToApply,
                         isGlobal: true,
-                        enabled: true
+                        enabled: true,
                     });
                 }
 
                 return;
-            } else { // site mode
+            } else {
+                // site mode
                 if (siteConfig?.settings) {
                     // Use existing site settings
-                    console.log("Popup: Loading existing site settings:", siteConfig.settings);
+                    console.log(
+                        "Popup: Loading existing site settings:",
+                        siteConfig.settings
+                    );
                     settingsToApply = siteConfig.settings;
                 } else {
                     // Create new site settings with defaults
-                    console.log("Popup: Creating new site settings with defaults");
+                    console.log(
+                        "Popup: Creating new site settings with defaults"
+                    );
                     settingsToApply = { ...defaultSettings };
                 }
 
@@ -215,7 +229,7 @@ function App() {
                 await chrome.runtime.sendMessage({
                     type: "UPDATE_SITE_MODE",
                     hostname,
-                    mode: "site"
+                    mode: "site",
                 });
 
                 // Only send settings update if we're creating new site settings
@@ -224,7 +238,7 @@ function App() {
                         type: "UPDATE_SETTINGS",
                         settings: settingsToApply,
                         isGlobal: false,
-                        enabled: true
+                        enabled: true,
                     });
                 }
             }
@@ -238,7 +252,7 @@ function App() {
                     type: "UPDATE_SETTINGS",
                     settings: settingsToApply,
                     isGlobal: mode === "global",
-                    enabled: mode !== "disabled"
+                    enabled: mode !== "default",
                 });
             }
         } catch (error) {
@@ -246,12 +260,12 @@ function App() {
                 mode,
                 currentSettings: settings,
                 isUsingGlobalSettings,
-                isSiteEnabled
+                isSiteEnabled,
             });
         }
     };
 
-    // Display settings should show default values when disabled
+    // Display settings should show default values when in default mode
     const displaySettings = isSiteEnabled ? settings : defaultSettings;
 
     return (

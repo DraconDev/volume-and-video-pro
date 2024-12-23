@@ -3,7 +3,7 @@ import React from "react";
 interface SettingsToggleProps {
     isUsingGlobalSettings: boolean;
     isSiteEnabled: boolean;
-    onToggle: (mode: "global" | "site" | "disabled") => void;
+    onToggle: (mode: "global" | "site" | "default") => void;
 }
 
 export const SettingsToggle: React.FC<SettingsToggleProps> = ({
@@ -33,9 +33,9 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
                 className={`settings-button ${
                     !isSiteEnabled ? "active" : ""
                 }  bg-primary/10 hover:bg-primary/20`}
-                onClick={() => onToggle("disabled")}
+                onClick={() => onToggle("default")}
             >
-                Disable
+                Default
             </button>
         </div>
     );

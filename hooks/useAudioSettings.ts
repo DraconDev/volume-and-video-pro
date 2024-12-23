@@ -32,7 +32,7 @@ export const useAudioSettings = (defaultSettings: AudioSettings) => {
                     newSiteConfigs[currentUrl] = {
                         enabled: true,
                         settings: newSettings,
-                        lastUsedType: "site",
+                        activeSetting: "site",
                     };
                     setSiteConfigs(newSiteConfigs);
                     chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
@@ -57,33 +57,44 @@ export const useAudioSettings = (defaultSettings: AudioSettings) => {
     );
 
     const handleSettingsToggle = useCallback(
-        (type: "global" | "site" | "disabled") => {
+        (type: "global" | "site" | "default") => {
             if (!currentUrl) return;
 
-            const updateTab = (settings: AudioSettings, isGlobal: boolean, enabled: boolean) => {
-                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                    if (tabs[0]?.id) {
-                        chrome.tabs.sendMessage(tabs[0].id, {
-                            type: "UPDATE_SETTINGS",
-                            settings,
-                            isGlobal,
-                            enabled,
-                        });
+            const updateTab = (
+                settings: AudioSettings,
+                isGlobal: boolean,
+                enabled: boolean
+            ) => {
+                chrome.tabs.query(
+                    { active: true, currentWindow: true },
+                    (tabs) => {
+                        if (tabs[0]?.id) {
+                            chrome.tabs.sendMessage(tabs[0].id, {
+                                type: "UPDATE_SETTINGS",
+                                settings,
+                                isGlobal,
+                                enabled,
+                            });
+                        }
                     }
-                });
+                );
             };
 
             if (type === "global") {
                 chrome.storage.sync.get(["globalSettings"], (result) => {
-                    const newGlobalSettings = result.globalSettings || defaultSettings;
-                    
+                    const newGlobalSettings =
+                        result.globalSettings || defaultSettings;
+
                     // Check if settings would actually change
                     const hasChanged = Object.entries(newGlobalSettings).some(
-                        ([key, value]) => settings[key as keyof AudioSettings] !== value
+                        ([key, value]) =>
+                            settings[key as keyof AudioSettings] !== value
                     );
 
                     if (!hasChanged && isUsingGlobalSettings) {
-                        console.log("Already using same global settings, skipping update");
+                        console.log(
+                            "Already using same global settings, skipping update"
+                        );
                         return;
                     }
 
@@ -94,7 +105,7 @@ export const useAudioSettings = (defaultSettings: AudioSettings) => {
                     newSiteConfigs[currentUrl] = {
                         enabled: true,
                         settings: newGlobalSettings,
-                        lastUsedType: "global",
+                        activeSetting: "global",
                     };
                     setSiteConfigs(newSiteConfigs);
                     chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
@@ -102,15 +113,20 @@ export const useAudioSettings = (defaultSettings: AudioSettings) => {
                     updateTab(newGlobalSettings, true, true);
                 });
             } else if (type === "site") {
-                const newSiteSettings = siteConfigs[currentUrl]?.settings || settings;
-                
+                const newSiteSettings =
+                    siteConfigs[currentUrl]?.settings || settings;
+
                 // Check if settings would actually change
-                const hasChanged = Object.entries(newSiteSettings).some(
-                    ([key, value]) => settings[key as keyof AudioSettings] !== value
-                ) || isUsingGlobalSettings;
+                const hasChanged =
+                    Object.entries(newSiteSettings).some(
+                        ([key, value]) =>
+                            settings[key as keyof AudioSettings] !== value
+                    ) || isUsingGlobalSettings;
 
                 if (!hasChanged) {
-                    console.log("Already using same site settings, skipping update");
+                    console.log(
+                        "Already using same site settings, skipping update"
+                    );
                     return;
                 }
 
@@ -121,7 +137,7 @@ export const useAudioSettings = (defaultSettings: AudioSettings) => {
                 newSiteConfigs[currentUrl] = {
                     enabled: true,
                     settings: newSiteSettings,
-                    lastUsedType: "site",
+                    activeSetting: "site",
                 };
                 setSiteConfigs(newSiteConfigs);
                 chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
@@ -131,17 +147,23 @@ export const useAudioSettings = (defaultSettings: AudioSettings) => {
                 // Always update when disabling
                 const newSiteConfigs = { ...siteConfigs };
                 newSiteConfigs[currentUrl] = {
-                    enabled: false,
-                    settings: settings,
-                    lastUsedType: "disabled",
+                    enabled: true,
+                    settings: defaultSettings,
+                    activeSetting: "default",
                 };
                 setSiteConfigs(newSiteConfigs);
                 chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
 
-                updateTab(defaultSettings, false, false);
+                updateTab(defaultSettings, false, true);
             }
         },
-        [currentUrl, settings, siteConfigs, defaultSettings, isUsingGlobalSettings]
+        [
+            currentUrl,
+            settings,
+            siteConfigs,
+            defaultSettings,
+            isUsingGlobalSettings,
+        ]
     );
 
     // Load initial settings
@@ -164,14 +186,16 @@ export const useAudioSettings = (defaultSettings: AudioSettings) => {
 
                             const siteConfig = result.siteConfigs[url];
                             if (siteConfig) {
-                                const lastUsedType =
-                                    siteConfig.lastUsedType || "global";
+                                const activeSetting =
+                                    siteConfig.activeSetting || "global";
                                 setIsUsingGlobalSettings(
-                                    lastUsedType === "global"
+                                    activeSetting === "global"
                                 );
 
-                                if (lastUsedType === "global") {
+                                if (activeSetting === "global") {
                                     setSettings(result.globalSettings);
+                                } else if (activeSetting === "default") {
+                                    setSettings(defaultSettings);
                                 } else {
                                     setSettings(
                                         siteConfig.settings || defaultSettings

@@ -73,7 +73,7 @@ chrome.runtime.onMessage.addListener(
                     if (targetUrl) {
                         const hostname = getHostname(targetUrl);
 
-                        // Handle disabled state
+                        // Handle default state
                         if (!message.enabled) {
                             const defaultSettings =
                                 await settingsManager.disableSite(hostname);
@@ -155,7 +155,7 @@ chrome.runtime.onMessage.addListener(
                     if (
                         mode !== "global" &&
                         mode !== "site" &&
-                        mode !== "disabled"
+                        mode !== "default"
                     ) {
                         const error = `Invalid mode provided: ${mode}`;
                         console.error("Background:", error);
