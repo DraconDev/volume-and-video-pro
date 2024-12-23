@@ -117,24 +117,36 @@ export default defineContentScript({
             }
         });
 
+        // Function to find media elements, including in Shadow DOM
+        const findMediaElements = (root: ParentNode): HTMLMediaElement[] => {
+            const elements: HTMLMediaElement[] = [];
+
+            // Direct children
+            root.querySelectorAll('video, audio').forEach((el) => {
+                if (el instanceof HTMLMediaElement) {
+                    elements.push(el);
+                }
+            });
+
+            // Search in Shadow DOM
+            root.querySelectorAll('*').forEach((el) => {
+                if (el.shadowRoot) {
+                    elements.push(...findMediaElements(el.shadowRoot));
+                }
+            });
+
+            return elements;
+        };
+
         // Function to update audio effects with current settings
         const updateAudioEffects = () => {
-            console.log(
-                "Content: Updating audio effects with settings:",
-                currentSettings
-            );
+            console.log('Content: Updating audio effects with settings:', currentSettings);
 
-            // First, find any new media elements
-            const mediaElements = document.querySelectorAll("video, audio");
+            // Find any new media elements, including in Shadow DOM
+            const mediaElements = findMediaElements(document);
             mediaElements.forEach((element) => {
-                if (
-                    element instanceof HTMLMediaElement &&
-                    !audioElementMap.has(element)
-                ) {
-                    console.log(
-                        "Content: Found new media element, setting up:",
-                        element
-                    );
+                if (!audioElementMap.has(element)) {
+                    console.log('Content: Found new media element, setting up:', element);
                     setupAudioContext(element);
                 }
             });
@@ -167,7 +179,7 @@ export default defineContentScript({
                                 audioContextState: audioContext?.state,
                                 gainValue: gain.gain.value,
                                 bassBoostValue: bassFilter.gain.value,
-                                voiceBoostValue: voiceFilter.gain.value
+                                voiceBoostValue: voiceFilter.gain.value,
                             }
                         );
 
@@ -289,7 +301,7 @@ export default defineContentScript({
                             paused: mediaElement.paused,
                             currentTime: mediaElement.currentTime,
                             src: mediaElement.src,
-                            volume: mediaElement.volume
+                            volume: mediaElement.volume,
                         }
                     );
 
@@ -328,7 +340,7 @@ export default defineContentScript({
                     console.log("Content: Configured bass filter:", {
                         type: bassFilter.type,
                         frequency: bassFilter.frequency.value,
-                        gain: bassFilter.gain.value
+                        gain: bassFilter.gain.value,
                     });
 
                     voiceFilter.type = "peaking";
@@ -339,7 +351,7 @@ export default defineContentScript({
                         type: voiceFilter.type,
                         frequency: voiceFilter.frequency.value,
                         Q: voiceFilter.Q.value,
-                        gain: voiceFilter.gain.value
+                        gain: voiceFilter.gain.value,
                     });
 
                     // Initial connections based on mono setting
@@ -398,7 +410,7 @@ export default defineContentScript({
                                 readyState: mediaElement.readyState,
                                 paused: mediaElement.paused,
                                 currentTime: mediaElement.currentTime,
-                                volume: mediaElement.volume
+                                volume: mediaElement.volume,
                             }
                         );
                         updateAudioEffects();
@@ -456,34 +468,38 @@ export default defineContentScript({
             }
         };
 
-        // Watch for new media elements
+        // Setup mutation observer to detect new media elements
         const observer = new MutationObserver((mutations) => {
+            let needsUpdate = false;
+
             mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach((node) => {
-                    if (node instanceof HTMLMediaElement) {
-                        setupAudioContext(node);
-                    } else if (node instanceof Element) {
-                        node.querySelectorAll("video, audio").forEach(
-                            (mediaElement) => {
-                                setupAudioContext(
-                                    mediaElement as HTMLMediaElement
-                                );
+                if (mutation.type === 'childList') {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node instanceof Element) {
+                            const mediaElements = findMediaElements(node);
+                            if (mediaElements.length > 0) {
+                                needsUpdate = true;
+                                mediaElements.forEach((element) => {
+                                    if (!audioElementMap.has(element)) {
+                                        console.log('Content: Found new media element via MutationObserver:', element);
+                                        setupAudioContext(element);
+                                    }
+                                });
                             }
-                        );
-                    }
-                });
+                        }
+                    });
+                }
             });
+
+            if (needsUpdate) {
+                updateAudioEffects();
+            }
         });
 
-        // Start observing
+        // Start observing the whole document
         observer.observe(document.documentElement, {
             childList: true,
             subtree: true,
-        });
-
-        // Process existing media elements
-        document.querySelectorAll("video, audio").forEach((mediaElement) => {
-            setupAudioContext(mediaElement as HTMLMediaElement);
         });
 
         // Initialize settings
