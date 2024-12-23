@@ -242,19 +242,20 @@ function App() {
                     });
                 }
             }
+            if (tab.id) {
+                await chrome.tabs.sendMessage(tab.id, {
+                    type: "UPDATE_SETTINGS",
+                    settings: settingsToApply,
+                    // @ts-ignore
+                    isGlobal: mode === "global",
+                    enabled: mode !== "default",
+                });
+            }
 
             // Update UI
             setSettings(settingsToApply);
 
             // Update content script
-            if (tab.id) {
-                await chrome.tabs.sendMessage(tab.id, {
-                    type: "UPDATE_SETTINGS",
-                    settings: settingsToApply,
-                    isGlobal: mode === "global",
-                    enabled: mode !== "default",
-                });
-            }
         } catch (error) {
             console.error("Popup: Error toggling mode:", error, {
                 mode,
