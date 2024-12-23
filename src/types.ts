@@ -9,7 +9,7 @@ export interface AudioSettings {
 export interface SiteSettings {
     enabled: boolean;
     settings?: AudioSettings;
-    lastUsedType: "global" | "site" | "disabled";
+    activeSetting: "global" | "site" | "disabled";
 }
 
 export const defaultSettings: AudioSettings = {
@@ -23,7 +23,7 @@ export const defaultSettings: AudioSettings = {
 export const defaultSiteSettings: SiteSettings = {
     enabled: true,
     settings: { ...defaultSettings },
-    lastUsedType: "global",
+    activeSetting: "global",
 };
 
 export type StateType = {

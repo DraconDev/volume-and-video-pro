@@ -28,10 +28,10 @@ export default defineBackground(() => {
     // Helper function to get settings for a site
     const getSettingsForSite = (hostname: string): AudioSettings | null => {
         const siteConfig = siteSettings.get(hostname);
-        if (!siteConfig || siteConfig.lastUsedType === "disabled") {
+        if (!siteConfig || siteConfig.activeSetting === "disabled") {
             return null;
         }
-        if (siteConfig.lastUsedType === "site" && siteConfig.settings) {
+        if (siteConfig.activeSetting === "site" && siteConfig.settings) {
             return siteConfig.settings;
         }
         return globalSettings;
@@ -51,7 +51,7 @@ export default defineBackground(() => {
                         await chrome.tabs.sendMessage(tabId, {
                             type: "UPDATE_SETTINGS",
                             settings,
-                            isGlobal: siteConfig?.lastUsedType === "global",
+                            isGlobal: siteConfig?.activeSetting === "global",
                             enabled: true,
                         } as MessageType);
                     } else {
@@ -167,8 +167,8 @@ export default defineBackground(() => {
                                 ...defaultSiteSettings,
                             };
 
-                            // Only update the lastUsedType, preserve the settings
-                            siteConfig.lastUsedType = "disabled";
+                            // Only update the activeSetting, preserve the settings
+                            siteConfig.activeSetting = "disabled";
                             siteSettings.set(hostname, siteConfig);
 
                             const siteSettingsObj =
@@ -208,41 +208,61 @@ export default defineBackground(() => {
 
                         // Handle settings update based on mode
                         if (message.isGlobal) {
-                            // Only update global settings
-                            globalSettings = message.settings;
+                            console.log("Background: Updating global settings", {
+                                oldSettings: { ...globalSettings },
+                                newSettings: { ...message.settings }
+                            });
+                            
+                            // Update global settings
+                            globalSettings = { ...message.settings };
                             await chrome.storage.sync.set({ globalSettings });
-                            console.log(
-                                "Background: Updated global settings:",
-                                globalSettings
-                            );
 
-                            // Don't modify site settings when using global settings
-                            const siteConfig = siteSettings.get(hostname);
-                            if (siteConfig) {
-                                siteConfig.lastUsedType = "global";
-                                siteSettings.set(hostname, siteConfig);
-                                const siteSettingsObj = Object.fromEntries(siteSettings);
-                                await chrome.storage.sync.set({ siteSettings: siteSettingsObj });
-                            }
+                            // Update site config to reflect we're using global settings
+                            const siteConfig = siteSettings.get(hostname) || {
+                                enabled: true,
+                                activeSetting: "global",
+                                settings: undefined
+                            };
+                            siteConfig.activeSetting = "global";
+                            siteConfig.enabled = true;
+                            siteSettings.set(hostname, siteConfig);
+                            
+                            const siteSettingsObj = Object.fromEntries(siteSettings);
+                            await chrome.storage.sync.set({ siteSettings: siteSettingsObj });
+                            
+                            console.log("Background: Updated to global mode for", hostname, {
+                                siteConfig,
+                                globalSettings
+                            });
                         } else {
                             // Update site-specific settings
+                            console.log("Background: Updating site-specific settings for", hostname);
+                            
                             const siteConfig = siteSettings.get(hostname) || {
-                                ...defaultSiteSettings,
+                                enabled: true,
+                                activeSetting: "site",
+                                settings: undefined
                             };
-                            siteConfig.settings = message.settings;
-                            siteConfig.lastUsedType = "site";
+                            
+                            // Deep clone the settings
+                            siteConfig.settings = {
+                                volume: message.settings.volume,
+                                bassBoost: message.settings.bassBoost,
+                                voiceBoost: message.settings.voiceBoost,
+                                mono: message.settings.mono,
+                                speed: message.settings.speed
+                            };
+                            siteConfig.activeSetting = "site";
+                            siteConfig.enabled = true;
                             siteSettings.set(hostname, siteConfig);
 
-                            const siteSettingsObj =
-                                Object.fromEntries(siteSettings);
-                            await chrome.storage.sync.set({
-                                siteSettings: siteSettingsObj,
+                            const siteSettingsObj = Object.fromEntries(siteSettings);
+                            await chrome.storage.sync.set({ siteSettings: siteSettingsObj });
+                            
+                            console.log("Background: Updated site settings for", hostname, {
+                                oldConfig: siteSettings.get(hostname),
+                                newConfig: siteConfig
                             });
-                            console.log(
-                                "Background: Updated site settings for",
-                                hostname,
-                                siteConfig
-                            );
                         }
 
                         // Forward settings to content script
@@ -276,47 +296,172 @@ export default defineBackground(() => {
                 }
             } else if (message.type === "UPDATE_SITE_MODE") {
                 const { hostname, mode } = message;
+                
+                // Validate inputs
                 if (!hostname) {
-                    console.error(
-                        "Background: No hostname provided for site mode update"
-                    );
-                    sendResponse({
-                        success: false,
-                        error: "No hostname provided",
-                    });
+                    const error = "No hostname provided for site mode update";
+                    console.error("Background:", error);
+                    sendResponse({ success: false, error });
                     return;
                 }
-                if (
-                    mode !== "global" &&
-                    mode !== "site" &&
-                    mode !== "disabled"
-                ) {
-                    console.error(
-                        "Background: Invalid mode provided for site mode update"
-                    );
-                    sendResponse({
-                        success: false,
-                        error: "Invalid mode provided",
-                    });
+                
+                if (mode !== "global" && mode !== "site" && mode !== "disabled") {
+                    const error = `Invalid mode provided: ${mode}`;
+                    console.error("Background:", error);
+                    sendResponse({ success: false, error });
                     return;
                 }
 
-                // Get existing site config or create new one
-                const siteConfig = siteSettings.get(hostname) || {
-                    ...defaultSiteSettings,
-                };
+                try {
+                    console.log("Background: Starting site mode update", {
+                        hostname,
+                        mode,
+                        existingGlobalSettings: { ...globalSettings },
+                        existingSiteConfig: siteSettings.get(hostname) ? {
+                            activeSetting: siteSettings.get(hostname)?.activeSetting,
+                            enabled: siteSettings.get(hostname)?.enabled,
+                            hasSettings: !!siteSettings.get(hostname)?.settings,
+                            settings: siteSettings.get(hostname)?.settings ? 
+                                { ...siteSettings.get(hostname)!.settings! } : 
+                                undefined
+                        } : "none"
+                    });
 
-                // Only update the mode, preserve all other settings
-                siteConfig.lastUsedType = mode;
-                siteSettings.set(hostname, siteConfig);
+                    // Get existing site config or create new one
+                    let siteConfig = siteSettings.get(hostname);
+                    
+                    // If no site config exists, create a new one
+                    if (!siteConfig) {
+                        console.log("Background: Creating new site config");
+                        siteConfig = {
+                            enabled: true,
+                            activeSetting: mode,
+                            settings: undefined
+                        };
+                    }
 
-                const siteSettingsObj = Object.fromEntries(siteSettings);
-                await chrome.storage.sync.set({
-                    siteSettings: siteSettingsObj,
-                });
+                    const oldMode = siteConfig.activeSetting;
+                    console.log("Background: Mode transition", {
+                        oldMode,
+                        newMode: mode,
+                        hasExistingSettings: !!siteConfig.settings
+                    });
 
-                console.log(`Background: Updated site mode to ${mode} for ${hostname}`, siteConfig);
-                sendResponse({ success: true });
+                    if (mode === "site") {
+                        // When switching to site mode:
+                        // 1. If site settings exist, keep them
+                        // 2. If no site settings, initialize with current global settings
+                        if (!siteConfig.settings) {
+                            console.log("Background: No existing site settings, initializing with global:", { ...globalSettings });
+                            try {
+                                siteConfig.settings = {
+                                    volume: globalSettings.volume,
+                                    bassBoost: globalSettings.bassBoost,
+                                    voiceBoost: globalSettings.voiceBoost,
+                                    mono: globalSettings.mono,
+                                    speed: globalSettings.speed
+                                };
+                            } catch (error) {
+                                console.error("Background: Error copying global settings:", error);
+                                throw new Error("Failed to initialize site settings");
+                            }
+                        } else {
+                            console.log("Background: Keeping existing site settings:", { ...siteConfig.settings });
+                        }
+                    } else if (mode === "global") {
+                        // When switching to global mode:
+                        // 1. Keep site settings in storage for future use
+                        // 2. But use global settings for actual playback
+                        console.log("Background: Switching to global mode", {
+                            preservedSiteSettings: siteConfig.settings ? { ...siteConfig.settings } : "none",
+                            globalSettings: { ...globalSettings }
+                        });
+                    }
+
+                    // Update the mode and enabled state
+                    siteConfig.activeSetting = mode;
+                    siteConfig.enabled = mode !== "disabled";
+                    
+                    // Store updated config
+                    siteSettings.set(hostname, siteConfig);
+                    console.log("Background: Updated site config:", {
+                        oldMode,
+                        newMode: mode,
+                        enabled: siteConfig.enabled,
+                        settings: siteConfig.settings ? { ...siteConfig.settings } : undefined
+                    });
+
+                    // Save to storage
+                    const siteSettingsObj = Object.fromEntries(siteSettings);
+                    await chrome.storage.sync.set({ siteSettings: siteSettingsObj });
+
+                    // Determine which settings to use for playback
+                    let settingsToUse: AudioSettings;
+                    if (mode === "global") {
+                        console.log("Background: Using global settings for playback:", { ...globalSettings });
+                        settingsToUse = {
+                            volume: globalSettings.volume,
+                            bassBoost: globalSettings.bassBoost,
+                            voiceBoost: globalSettings.voiceBoost,
+                            mono: globalSettings.mono,
+                            speed: globalSettings.speed
+                        };
+                    } else if (mode === "site" && siteConfig.settings) {
+                        console.log("Background: Using site settings for playback:", { ...siteConfig.settings });
+                        settingsToUse = {
+                            volume: siteConfig.settings.volume,
+                            bassBoost: siteConfig.settings.bassBoost,
+                            voiceBoost: siteConfig.settings.voiceBoost,
+                            mono: siteConfig.settings.mono,
+                            speed: siteConfig.settings.speed
+                        };
+                    } else {
+                        console.log("Background: Using default settings for playback");
+                        settingsToUse = { ...defaultSettings };
+                    }
+
+                    // Verify settings integrity
+                    const settingsValid = [
+                        typeof settingsToUse.volume === 'number',
+                        typeof settingsToUse.bassBoost === 'number',
+                        typeof settingsToUse.voiceBoost === 'number',
+                        typeof settingsToUse.speed === 'number',
+                        typeof settingsToUse.mono === 'boolean'
+                    ].every(Boolean);
+
+                    if (!settingsValid) {
+                        throw new Error(`Invalid settings detected: ${JSON.stringify(settingsToUse)}`);
+                    }
+
+                    console.log("Background: Final settings to broadcast:", {
+                        mode,
+                        settings: { ...settingsToUse },
+                        isGlobal: mode === "global"
+                    });
+
+                    // Broadcast settings to the tab
+                    if (tabId) {
+                        await chrome.tabs.sendMessage(tabId, {
+                            type: "UPDATE_SETTINGS",
+                            settings: settingsToUse,
+                            isGlobal: mode === "global"
+                        });
+                        console.log("Background: Settings broadcast to tab:", tabId);
+                    } else {
+                        console.log("Background: No tab ID available for broadcast");
+                    }
+
+                    sendResponse({ success: true });
+                } catch (error) {
+                    const errorMsg = error instanceof Error ? error.message : String(error);
+                    console.error("Background: Error updating site mode:", {
+                        error: errorMsg,
+                        hostname,
+                        mode,
+                        stack: error instanceof Error ? error.stack : undefined
+                    });
+                    sendResponse({ success: false, error: errorMsg });
+                }
                 return;
             } else if (message.type === "CONTENT_SCRIPT_READY") {
                 if (tabId && url) {
@@ -342,7 +487,7 @@ export default defineBackground(() => {
                             .sendMessage(tabId, {
                                 type: "UPDATE_SETTINGS",
                                 settings,
-                                isGlobal: siteConfig?.lastUsedType === "global",
+                                isGlobal: siteConfig?.activeSetting === "global",
                                 enabled: true,
                             } as MessageType)
                             .catch((error) => {
