@@ -120,124 +120,220 @@ export default defineContentScript({
         // Function to find media elements, including in Shadow DOM
         const findMediaElements = (root: ParentNode): HTMLMediaElement[] => {
             const elements: HTMLMediaElement[] = [];
+            const debugInfo: string[] = [];
 
-            // Direct children
-            root.querySelectorAll('video, audio').forEach((el) => {
+            const processElement = (el: Element) => {
+                // Check if element itself is a media element
                 if (el instanceof HTMLMediaElement) {
+                    debugInfo.push(`Found direct media element: ${el.tagName}`);
                     elements.push(el);
+                    return;
+                }
+
+                // Check for video elements within the element
+                const mediaElements = el.getElementsByTagName("video");
+                if (mediaElements.length > 0) {
+                    debugInfo.push(
+                        `Found ${mediaElements.length} video elements in ${el.tagName}`
+                    );
+                    Array.from(mediaElements).forEach((media) => {
+                        if (media instanceof HTMLMediaElement) {
+                            elements.push(media);
+                        }
+                    });
+                }
+
+                // Check for plyr and other common video players
+                if (
+                    el.classList.contains("plyr") ||
+                    el.classList.contains("video-player") ||
+                    el.classList.contains("player") ||
+                    el.classList.contains("video-container") ||
+                    el.hasAttribute("data-player") ||
+                    el.id?.includes("player") ||
+                    el.id?.includes("video")
+                ) {
+                    debugInfo.push(
+                        `Found player container: ${el.tagName} with classes: ${el.className}`
+                    );
+                    const playerVideo = el.querySelector("video");
+                    if (playerVideo instanceof HTMLMediaElement) {
+                        elements.push(playerVideo);
+                    }
+                }
+
+                // Check for Shadow DOM
+                if (el.shadowRoot) {
+                    debugInfo.push(`Checking Shadow DOM of ${el.tagName}`);
+                    const shadowElements = findMediaElements(el.shadowRoot);
+                    elements.push(...shadowElements);
+                }
+
+                // Check for iframes
+                if (el.tagName === "IFRAME") {
+                    try {
+                        const iframeDoc = (el as HTMLIFrameElement)
+                            .contentDocument;
+                        if (iframeDoc) {
+                            debugInfo.push(`Checking iframe content`);
+                            const iframeElements = findMediaElements(iframeDoc);
+                            elements.push(...iframeElements);
+                        }
+                    } catch (e) {
+                        if (e instanceof DOMException) {
+                            debugInfo.push(
+                                `Cannot access iframe content: ${e.message}`
+                            );
+                        }
+                    }
+                }
+            };
+
+            // Process all elements in the root
+            const allElements = root.querySelectorAll("*");
+            debugInfo.push(
+                `Scanning ${allElements.length} elements in document`
+            );
+
+            allElements.forEach((el) => {
+                try {
+                    processElement(el);
+                } catch (e) {
+                    if (e instanceof DOMException) {
+                        debugInfo.push(
+                            `Cannot access iframe content: ${e.message}`
+                        );
+                    }
                 }
             });
 
-            // Search in Shadow DOM
-            root.querySelectorAll('*').forEach((el) => {
-                if (el.shadowRoot) {
-                    elements.push(...findMediaElements(el.shadowRoot));
-                }
-            });
+            // Log debug information if elements were found or if in debug mode
+            if (elements.length > 0 || debugInfo.length > 5) {
+                console.log("Content: Media element search results:", {
+                    elementsFound: elements.length,
+                    debugInfo: debugInfo,
+                });
+            }
 
             return elements;
         };
 
         // Function to update audio effects with current settings
         const updateAudioEffects = () => {
-            console.log('Content: Updating audio effects with settings:', currentSettings);
-
-            // Find any new media elements, including in Shadow DOM
+            console.log(
+                "Content: Updating audio effects with settings:",
+                currentSettings
+            );
             const mediaElements = findMediaElements(document);
+
+            // First pass: Update speed for all media elements
             mediaElements.forEach((element) => {
-                if (!audioElementMap.has(element)) {
-                    console.log('Content: Found new media element, setting up:', element);
-                    setupAudioContext(element);
+                try {
+                    const speed = currentSettings.speed / 100;
+                    element.playbackRate = speed;
+                    element.defaultPlaybackRate = speed;
+                    console.log(
+                        "Content: Updated speed for element:",
+                        element.src,
+                        "Speed:",
+                        speed
+                    );
+                } catch (e) {
+                    console.error("Content: Error setting speed:", e);
                 }
             });
 
-            // Update all audio elements
+            // Second pass: Handle audio effects only if needed
+            const needsAudioProcessing =
+                currentSettings.volume !== 100 ||
+                currentSettings.bassBoost !== 100 ||
+                currentSettings.voiceBoost !== 100 ||
+                currentSettings.mono;
+
+            // If we don't need audio processing, clean up all audio contexts
+            if (!needsAudioProcessing) {
+                audioElementMap.forEach(({ source, gain, bassFilter, voiceFilter, merger, splitter }, element) => {
+                    try {
+                        source?.disconnect();
+                        gain?.disconnect();
+                        bassFilter?.disconnect();
+                        voiceFilter?.disconnect();
+                        if (merger) merger.disconnect();
+                        if (splitter) splitter.disconnect();
+                    } catch (e) {
+                        console.warn("Content: Error cleaning up audio nodes:", e);
+                    }
+                });
+                audioElementMap.clear();
+                if (audioContext) {
+                    audioContext.close();
+                    audioContext = null;
+                }
+                return;
+            }
+
+            // Only process audio if we need to
+            mediaElements.forEach((element) => {
+                // Add audio processing if needed and not already set up
+                if (needsAudioProcessing && !audioElementMap.has(element)) {
+                    console.log(
+                        "Content: Setting up audio processing for:",
+                        element.src
+                    );
+                    setupAudioContext(element).catch((e) => {
+                        console.error(
+                            "Content: Failed to setup audio context:",
+                            e
+                        );
+                    });
+                }
+            });
+
+            // Update existing audio effects
             audioElementMap.forEach(
-                (
-                    {
-                        element,
-                        gain,
-                        bassFilter,
-                        voiceFilter,
-                        source,
-                        merger,
-                        splitter,
-                    },
-                    mediaElement
-                ) => {
+                ({ gain, bassFilter, voiceFilter, source, merger, splitter }, mediaElement) => {
                     try {
                         console.log(
                             "Content: Updating audio effects for element:",
-                            mediaElement.src,
-                            "Current state:",
-                            {
-                                readyState: mediaElement.readyState,
-                                paused: mediaElement.paused,
-                                currentTime: mediaElement.currentTime,
-                                volume: mediaElement.volume,
-                                settings: currentSettings,
-                                audioContextState: audioContext?.state,
-                                gainValue: gain.gain.value,
-                                bassBoostValue: bassFilter.gain.value,
-                                voiceBoostValue: voiceFilter.gain.value,
-                            }
+                            mediaElement.src
                         );
 
-                        // Disconnect existing connections
-                        console.log("Content: Disconnecting existing connections");
+                        // Update audio processing chain
                         source.disconnect();
                         bassFilter.disconnect();
                         voiceFilter.disconnect();
                         gain.disconnect();
 
-                        // Reconnect nodes based on mono setting
-                        console.log("Content: Reconnecting nodes, mono:", currentSettings.mono);
                         if (currentSettings.mono) {
                             source.connect(bassFilter);
-                            console.log("Content: Connected source -> bassFilter");
                             bassFilter.connect(voiceFilter);
-                            console.log("Content: Connected bassFilter -> voiceFilter");
                             voiceFilter.connect(splitter);
-                            console.log("Content: Connected voiceFilter -> splitter");
                             splitter.connect(merger, 0, 0);
                             splitter.connect(merger, 0, 1);
-                            console.log("Content: Connected splitter -> merger (both channels)");
                             merger.connect(gain);
-                            console.log("Content: Connected merger -> gain");
                         } else {
                             source.connect(bassFilter);
-                            console.log("Content: Connected source -> bassFilter");
                             bassFilter.connect(voiceFilter);
-                            console.log("Content: Connected bassFilter -> voiceFilter");
                             voiceFilter.connect(gain);
-                            console.log("Content: Connected voiceFilter -> gain");
                         }
 
-                        // Check if audioContext exists before using it
                         if (!audioContext) {
                             throw new Error("Audio context is not initialized");
                         }
                         gain.connect(audioContext.destination);
-                        console.log("Content: Connected gain -> destination");
 
-                        // Update volume
+                        // Update effect values
                         const volumeMultiplier = currentSettings.volume / 100;
                         gain.gain.setValueAtTime(
                             volumeMultiplier,
                             gain.context.currentTime
                         );
-                        console.log("Content: Set volume to", volumeMultiplier);
 
-                        // Update filters
                         const bassBoostGain =
                             ((currentSettings.bassBoost - 100) / 100) * 15;
                         bassFilter.gain.setValueAtTime(
                             bassBoostGain,
                             bassFilter.context.currentTime
-                        );
-                        console.log(
-                            "Content: Set bass boost to",
-                            bassBoostGain
                         );
 
                         const voiceBoostGain =
@@ -246,263 +342,195 @@ export default defineContentScript({
                             voiceBoostGain,
                             voiceFilter.context.currentTime
                         );
-                        console.log(
-                            "Content: Set voice boost to",
-                            voiceBoostGain
-                        );
-
-                        // Update speed
-                        const speed = currentSettings.speed / 100;
-                        element.playbackRate = speed;
-                        element.defaultPlaybackRate = speed;
-                        console.log("Content: Set playback rate to", speed);
-
-                        // Verify settings were applied
-                        setTimeout(() => {
-                            console.log(
-                                "Content: Verifying settings for element:",
-                                {
-                                    volume: gain.gain.value,
-                                    bassBoost: bassFilter.gain.value,
-                                    voiceBoost: voiceFilter.gain.value,
-                                    speed: element.playbackRate,
-                                    mono: currentSettings.mono,
-                                }
-                            );
-                        }, 100);
                     } catch (error) {
                         console.error(
                             "Content: Error updating audio effects:",
                             error
                         );
-                        // Try to reconnect if there was an error
-                        try {
-                            setupAudioContext(mediaElement);
-                        } catch (reconnectError) {
-                            console.error(
-                                "Content: Failed to reconnect:",
-                                reconnectError
-                            );
-                        }
                     }
                 }
             );
         };
 
-        const setupAudioContext = (mediaElement: HTMLMediaElement) => {
-            if (!audioElementMap.has(mediaElement)) {
-                try {
-                    console.log(
-                        "Content: Setting up new audio context for:",
-                        mediaElement,
-                        "Element state:",
-                        {
-                            readyState: mediaElement.readyState,
-                            paused: mediaElement.paused,
-                            currentTime: mediaElement.currentTime,
-                            src: mediaElement.src,
-                            volume: mediaElement.volume,
-                        }
-                    );
+        // Function to initialize media element observation
+        const initMediaElementObserver = () => {
+            console.log("Content: Setting up media element observer");
 
-                    if (!audioContext || audioContext.state === "closed") {
-                        audioContext = new AudioContext();
-                        console.log("Content: Created new AudioContext, state:", audioContext.state);
-                    }
+            // Initial check with delay to allow for dynamic content
+            setTimeout(() => {
+                const initialElements = findMediaElements(document);
+                const needsAudioProcessing =
+                    currentSettings.volume !== 100 ||
+                    currentSettings.bassBoost !== 100 ||
+                    currentSettings.voiceBoost !== 100 ||
+                    currentSettings.mono;
 
-                    // Resume audio context if suspended
-                    if (audioContext.state === "suspended") {
-                        console.log("Content: Resuming suspended AudioContext");
-                        audioContext.resume().catch((error) => {
-                            console.error("Content: Failed to resume AudioContext:", error);
-                        });
-                    }
-
-                    console.log("Content: Creating audio nodes");
-                    const source = audioContext.createMediaElementSource(mediaElement);
-                    console.log("Content: Created source node");
-                    const gain = audioContext.createGain();
-                    console.log("Content: Created gain node");
-                    const bassFilter = audioContext.createBiquadFilter();
-                    console.log("Content: Created bass filter node");
-                    const voiceFilter = audioContext.createBiquadFilter();
-                    console.log("Content: Created voice filter node");
-                    const merger = audioContext.createChannelMerger(2);
-                    console.log("Content: Created merger node");
-                    const splitter = audioContext.createChannelSplitter(2);
-                    console.log("Content: Created splitter node");
-
-                    // Configure filters
-                    console.log("Content: Configuring filters");
-                    bassFilter.type = "lowshelf";
-                    bassFilter.frequency.value = 150;
-                    bassFilter.gain.value = 0;
-                    console.log("Content: Configured bass filter:", {
-                        type: bassFilter.type,
-                        frequency: bassFilter.frequency.value,
-                        gain: bassFilter.gain.value,
-                    });
-
-                    voiceFilter.type = "peaking";
-                    voiceFilter.frequency.value = 2500;
-                    voiceFilter.Q.value = 1.5;
-                    voiceFilter.gain.value = 0;
-                    console.log("Content: Configured voice filter:", {
-                        type: voiceFilter.type,
-                        frequency: voiceFilter.frequency.value,
-                        Q: voiceFilter.Q.value,
-                        gain: voiceFilter.gain.value,
-                    });
-
-                    // Initial connections based on mono setting
-                    console.log("Content: Setting up audio node connections, mono:", currentSettings.mono);
-                    if (currentSettings.mono) {
-                        source.connect(bassFilter);
-                        console.log("Content: Connected source -> bassFilter");
-                        bassFilter.connect(voiceFilter);
-                        console.log("Content: Connected bassFilter -> voiceFilter");
-                        voiceFilter.connect(splitter);
-                        console.log("Content: Connected voiceFilter -> splitter");
-                        splitter.connect(merger, 0, 0);
-                        splitter.connect(merger, 0, 1);
-                        console.log("Content: Connected splitter -> merger (both channels)");
-                        merger.connect(gain);
-                        console.log("Content: Connected merger -> gain");
-                    } else {
-                        source.connect(bassFilter);
-                        console.log("Content: Connected source -> bassFilter");
-                        bassFilter.connect(voiceFilter);
-                        console.log("Content: Connected bassFilter -> voiceFilter");
-                        voiceFilter.connect(gain);
-                        console.log("Content: Connected voiceFilter -> gain");
-                    }
-
-                    // Check if audioContext exists before using it
-                    if (!audioContext) {
-                        throw new Error("Audio context is not initialized");
-                    }
-                    gain.connect(audioContext.destination);
-                    console.log("Content: Connected gain -> destination");
-
-                    console.log("Content: Setting up audio node map for element");
-                    audioElementMap.set(mediaElement, {
-                        context: audioContext,
-                        source,
-                        gain,
-                        bassFilter,
-                        voiceFilter,
-                        merger,
-                        splitter,
-                        element: mediaElement,
-                    });
-
-                    // Apply current settings
-                    console.log("Content: Applying initial audio effects");
-                    updateAudioEffects();
-
-                    // Add event listeners for media events
-                    const handleMediaEvent = () => {
-                        console.log(
-                            "Content: Media event triggered for element:",
-                            mediaElement.src,
-                            "State:",
-                            {
-                                readyState: mediaElement.readyState,
-                                paused: mediaElement.paused,
-                                currentTime: mediaElement.currentTime,
-                                volume: mediaElement.volume,
-                            }
-                        );
-                        updateAudioEffects();
-                    };
-
-                    console.log("Content: Adding media event listeners");
-                    mediaElement.addEventListener("play", handleMediaEvent);
-                    mediaElement.addEventListener("loadeddata", handleMediaEvent);
-                    mediaElement.addEventListener("ratechange", handleMediaEvent);
-
-                    // Cleanup on removal
-                    console.log("Content: Setting up mutation observer for cleanup");
-                    new MutationObserver((mutations) => {
-                        if (!document.contains(mediaElement)) {
+                if (needsAudioProcessing) {
+                    initialElements.forEach((element) => {
+                        if (!audioElementMap.has(element)) {
                             console.log(
-                                "Content: Cleaning up removed media element"
+                                "Content: Found initial media element:",
+                                element
                             );
-                            const audioData = audioElementMap.get(mediaElement);
-                            if (audioData) {
-                                try {
-                                    audioData.source.disconnect();
-                                    audioData.gain.disconnect();
-                                    audioData.bassFilter.disconnect();
-                                    audioData.voiceFilter.disconnect();
-                                    audioData.merger.disconnect();
-                                    audioData.splitter.disconnect();
-                                } catch (error) {
-                                    console.warn(
-                                        "Content: Cleanup error:",
-                                        error
-                                    );
+                            setupAudioContext(element);
+                        }
+                    });
+                }
+                // Always update speed settings
+                updateAudioEffects();
+            }, 1000); // 1 second delay
+
+            // Set up mutation observer for dynamic content
+            const observer = new MutationObserver((mutations) => {
+                let needsUpdate = false;
+
+                mutations.forEach((mutation) => {
+                    if (mutation.type === "childList") {
+                        // Check added nodes
+                        mutation.addedNodes.forEach((node) => {
+                            if (node instanceof Element) {
+                                const mediaElements = findMediaElements(node);
+                                if (mediaElements.length > 0) {
+                                    needsUpdate = true;
                                 }
                             }
-                            audioElementMap.delete(mediaElement);
-                            mediaElement.removeEventListener(
-                                "play",
-                                handleMediaEvent
-                            );
-                            mediaElement.removeEventListener(
-                                "loadeddata",
-                                handleMediaEvent
-                            );
-                            mediaElement.removeEventListener(
-                                "ratechange",
-                                handleMediaEvent
-                            );
-                        }
-                    }).observe(document.documentElement, {
-                        childList: true,
-                        subtree: true,
-                    });
-                } catch (error) {
-                    console.error("Content: Setup error:", error);
-                }
-            }
-        };
+                        });
 
-        // Setup mutation observer to detect new media elements
-        const observer = new MutationObserver((mutations) => {
-            let needsUpdate = false;
-
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node instanceof Element) {
-                            const mediaElements = findMediaElements(node);
+                        // Also check the parent element and its siblings
+                        if (mutation.target instanceof Element) {
+                            const mediaElements = findMediaElements(mutation.target);
                             if (mediaElements.length > 0) {
                                 needsUpdate = true;
-                                mediaElements.forEach((element) => {
-                                    if (!audioElementMap.has(element)) {
-                                        console.log('Content: Found new media element via MutationObserver:', element);
-                                        setupAudioContext(element);
-                                    }
-                                });
                             }
                         }
-                    });
+                    }
+                });
+
+                if (needsUpdate) {
+                    updateAudioEffects();
                 }
             });
 
-            if (needsUpdate) {
+            observer.observe(document.documentElement, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ["src", "class", "data-player"],
+            });
+
+            // Additional periodic check for dynamically loaded content
+            setInterval(() => {
                 updateAudioEffects();
+            }, 5000); // Check every 5 seconds
+        };
+
+        const setupAudioContext = async (mediaElement: HTMLMediaElement) => {
+            if (!mediaElement || !(mediaElement instanceof HTMLMediaElement)) {
+                throw new Error("Invalid media element provided");
             }
-        });
 
-        // Start observing the whole document
-        observer.observe(document.documentElement, {
-            childList: true,
-            subtree: true,
-        });
+            // Check if extension context is still valid
+            if (!chrome.runtime?.id) {
+                throw new Error("Extension context invalid");
+            }
 
-        // Initialize settings
+            // Clean up existing audio context if any
+            if (audioElementMap.has(mediaElement)) {
+                const existing = audioElementMap.get(mediaElement)!;
+                try {
+                    existing.source?.disconnect();
+                    existing.gain?.disconnect();
+                    existing.bassFilter?.disconnect();
+                    existing.voiceFilter?.disconnect();
+                    if (existing.merger) existing.merger.disconnect();
+                    if (existing.splitter) existing.splitter.disconnect();
+                } catch (e) {
+                    console.warn("Content: Error during cleanup:", e);
+                }
+                audioElementMap.delete(mediaElement);
+            }
+
+            // Create/resume audio context
+            try {
+                if (!audioContext || audioContext.state === "closed") {
+                    audioContext = new AudioContext();
+                }
+                if (audioContext.state === "suspended") {
+                    await audioContext.resume();
+                }
+            } catch (e) {
+                throw new Error(`Failed to create/resume AudioContext: ${e}`);
+            }
+
+            // Create audio nodes
+            const source = audioContext.createMediaElementSource(mediaElement);
+            const gain = audioContext.createGain();
+            const bassFilter = audioContext.createBiquadFilter();
+            const voiceFilter = audioContext.createBiquadFilter();
+            const merger = audioContext.createChannelMerger(2);
+            const splitter = audioContext.createChannelSplitter(2);
+
+            // Configure filters
+            bassFilter.type = "lowshelf";
+            bassFilter.frequency.value = 150;
+            bassFilter.gain.value = 0;
+
+            voiceFilter.type = "peaking";
+            voiceFilter.frequency.value = 2500;
+            voiceFilter.Q.value = 1.5;
+            voiceFilter.gain.value = 0;
+
+            // Connect nodes
+            if (currentSettings.mono) {
+                source.connect(bassFilter);
+                bassFilter.connect(voiceFilter);
+                voiceFilter.connect(splitter);
+                splitter.connect(merger, 0, 0);
+                splitter.connect(merger, 0, 1);
+                merger.connect(gain);
+            } else {
+                source.connect(bassFilter);
+                bassFilter.connect(voiceFilter);
+                voiceFilter.connect(gain);
+            }
+            gain.connect(audioContext.destination);
+
+            // Store audio nodes
+            audioElementMap.set(mediaElement, {
+                context: audioContext,
+                source,
+                gain,
+                bassFilter,
+                voiceFilter,
+                merger,
+                splitter,
+                element: mediaElement,
+            });
+
+            // Set initial values
+            const volumeMultiplier = currentSettings.volume / 100;
+            gain.gain.setValueAtTime(
+                volumeMultiplier,
+                audioContext.currentTime
+            );
+
+            const bassBoostGain =
+                ((currentSettings.bassBoost - 100) / 100) * 15;
+            bassFilter.gain.setValueAtTime(
+                bassBoostGain,
+                audioContext.currentTime
+            );
+
+            const voiceBoostGain =
+                ((currentSettings.voiceBoost - 100) / 100) * 24;
+            voiceFilter.gain.setValueAtTime(
+                voiceBoostGain,
+                audioContext.currentTime
+            );
+        };
+
+        // Initialize observers after settings are loaded
         await initializeSettings();
+        initMediaElementObserver();
     },
 });
