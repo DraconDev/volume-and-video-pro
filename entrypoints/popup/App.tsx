@@ -285,7 +285,7 @@ function App() {
             />
 
             <button
-                onClick={() => {}}
+                onClick={() => window.open("https://ko-fi.com/adamdracon")}
                 className="w-full bg-primary text-white rounded py-2.5 text-sm font-medium border-none cursor-pointer hover:bg-[#1557b0] transition-colors duration-200"
             >
                 Donate
