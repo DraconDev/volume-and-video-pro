@@ -9,32 +9,43 @@ export class MediaProcessor {
         this.audioProcessor = new AudioProcessor();
     }
 
-    private updatePlaybackSpeed(element: HTMLMediaElement, speed: number): void {
+    private updatePlaybackSpeed(
+        element: HTMLMediaElement,
+        speed: number
+    ): void {
         try {
             const wasPlaying = !element.paused;
             const currentTime = element.currentTime;
 
-            if (speed !== 100) {
-                element.playbackRate = speed / 100;
-                element.defaultPlaybackRate = speed / 100;
-            } else {
-                element.playbackRate = 1;
-                element.defaultPlaybackRate = 1;
-            }
+            element.playbackRate = speed / 100;
+            element.defaultPlaybackRate = speed / 100;
 
             // Restore state
             element.currentTime = currentTime;
             if (wasPlaying) {
-                element.play().catch(e => console.warn("MediaProcessor: Failed to resume playback:", e));
+                element
+                    .play()
+                    .catch((e) =>
+                        console.warn(
+                            "MediaProcessor: Failed to resume playback:",
+                            e
+                        )
+                    );
             }
         } catch (e) {
             console.error("MediaProcessor: Error setting speed:", e);
         }
     }
 
-    async processMediaElements(mediaElements: HTMLMediaElement[], settings: AudioSettings, needsProcessing: boolean): Promise<void> {
+    async processMediaElements(
+        mediaElements: HTMLMediaElement[],
+        settings: AudioSettings,
+        needsProcessing: boolean
+    ): Promise<void> {
         // Update speed for all elements
-        mediaElements.forEach(element => this.updatePlaybackSpeed(element, settings.speed));
+        mediaElements.forEach((element) =>
+            this.updatePlaybackSpeed(element, settings.speed)
+        );
 
         // Handle audio processing
         if (!needsProcessing) {
@@ -46,10 +57,16 @@ export class MediaProcessor {
         for (const element of mediaElements) {
             try {
                 if (!this.audioProcessor.hasProcessing(element)) {
-                    await this.audioProcessor.setupAudioContext(element, settings);
+                    await this.audioProcessor.setupAudioContext(
+                        element,
+                        settings
+                    );
                 }
             } catch (e) {
-                console.error("MediaProcessor: Failed to process media element:", e);
+                console.error(
+                    "MediaProcessor: Failed to process media element:",
+                    e
+                );
             }
         }
 

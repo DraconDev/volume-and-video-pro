@@ -27,6 +27,12 @@ export default defineConfig({
                 matches: ["<all_urls>"],
             },
         ],
+        // content_scripts: [
+        //     {
+        //         matches: ["<all_urls>"],
+        //         js: ["entrypoints/content.ts"],
+        //     },
+        // ],
     },
     modules: ["@wxt-dev/module-react"],
 });

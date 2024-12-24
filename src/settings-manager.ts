@@ -44,10 +44,15 @@ export class SettingsManager extends EventEmitter {
         return siteConfig;
     }
 
-    async updateGlobalSettings(settings: AudioSettings, hostname?: string) {
+    async updateGlobalSettings(
+        settings: AudioSettings,
+        tabId?: number,
+        hostname?: string
+    ) {
         console.log("SettingsManager: Updating global settings", {
             oldSettings: { ...this.globalSettings },
             newSettings: { ...settings },
+            tabId,
         });
 
         this.globalSettings = { ...settings };
@@ -76,11 +81,17 @@ export class SettingsManager extends EventEmitter {
         }
 
         await this.persistSettings();
-        this.emit("settingsUpdated", this.globalSettings, hostname);
+        this.emit("settingsUpdated", this.globalSettings, hostname, tabId);
     }
 
-    async updateSiteSettings(hostname: string, settings: AudioSettings) {
-        console.log("SettingsManager: Updating site settings for", hostname);
+    async updateSiteSettings(
+        hostname: string,
+        settings: AudioSettings,
+        tabId?: number
+    ) {
+        console.log("SettingsManager: Updating site settings for", hostname, {
+            tabId,
+        });
 
         if (!settings) {
             console.log("SettingsManager: No settings provided");
@@ -117,7 +128,7 @@ export class SettingsManager extends EventEmitter {
         this.siteSettings.set(hostname, siteConfig);
 
         await this.persistSettings();
-        this.emit("settingsUpdated", settings, hostname);
+        this.emit("settingsUpdated", settings, hostname, tabId);
 
         console.log("SettingsManager: Updated site settings", {
             isNewSite,
@@ -128,7 +139,8 @@ export class SettingsManager extends EventEmitter {
 
     async updateSiteMode(
         hostname: string,
-        mode: "global" | "site" | "default"
+        mode: "global" | "site" | "default",
+        tabId?: number
     ) {
         let siteConfig = this.siteSettings.get(hostname);
         const oldMode = siteConfig?.activeSetting;
@@ -145,6 +157,7 @@ export class SettingsManager extends EventEmitter {
             oldMode,
             newMode: mode,
             hasExistingSettings: !!siteConfig.settings,
+            tabId,
         });
 
         if (mode === "site" && !siteConfig.settings) {
@@ -164,7 +177,8 @@ export class SettingsManager extends EventEmitter {
         this.emit(
             "settingsUpdated",
             this.getSettingsForPlayback(hostname, mode, siteConfig),
-            hostname
+            hostname,
+            tabId
         );
 
         return {
@@ -201,7 +215,7 @@ export class SettingsManager extends EventEmitter {
         return { ...defaultSettings };
     }
 
-    async disableSite(hostname: string) {
+    async disableSite(hostname: string, tabId?: number) {
         const siteConfig = this.siteSettings.get(hostname) || {
             ...defaultSiteSettings,
         };
@@ -211,7 +225,7 @@ export class SettingsManager extends EventEmitter {
         this.siteSettings.set(hostname, siteConfig);
 
         await this.persistSettings();
-        this.emit("settingsUpdated", { ...defaultSettings }, hostname);
+        this.emit("settingsUpdated", { ...defaultSettings }, hostname, tabId);
         return { ...defaultSettings };
     }
 }

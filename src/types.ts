@@ -31,14 +31,29 @@ export type StateType = {
     siteSettings: Map<string, SiteSettings>;
 };
 
-export type MessageType = {
-    type: "UPDATE_SETTINGS" | "CONTENT_SCRIPT_READY" | "UPDATE_SITE_MODE";
-    settings?: AudioSettings;
+export interface UpdateSettingsMessage {
+    type: "UPDATE_SETTINGS";
+    settings: AudioSettings;
     enabled?: boolean;
     isGlobal?: boolean;
+}
+
+export interface ContentScriptReadyMessage {
+    type: "CONTENT_SCRIPT_READY";
+    hostname?: string;
+    usingGlobal?: boolean;
+}
+
+export interface UpdateSiteModeMessage {
+    type: "UPDATE_SITE_MODE";
     hostname?: string;
     mode?: "global" | "site" | "default";
-};
+}
+
+export type MessageType =
+    | UpdateSettingsMessage
+    | ContentScriptReadyMessage
+    | UpdateSiteModeMessage;
 
 export type StorageData = {
     globalSettings?: AudioSettings;

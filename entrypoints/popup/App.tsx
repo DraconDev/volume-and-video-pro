@@ -85,7 +85,8 @@ function App() {
         let settingsUpdateTimeout: number | null = null;
         const debouncedUpdateSettings = (
             updatedSettings: AudioSettings,
-            updatedHostname: string | undefined
+            updatedHostname: string | undefined,
+            updatedTabId: number | undefined
         ) => {
             if (settingsUpdateTimeout) {
                 clearTimeout(settingsUpdateTimeout);
@@ -94,7 +95,8 @@ function App() {
                 console.log(
                     "Popup: Settings updated",
                     updatedSettings,
-                    updatedHostname
+                    updatedHostname,
+                    updatedTabId
                 );
 
                 chrome.tabs.query(
@@ -111,7 +113,7 @@ function App() {
                             updatedHostname === currentHostname
                         ) {
                             setSettings(updatedSettings);
-                            if (updatedHostname) {
+                            if (updatedTabId) {
                                 // Site-specific settings updated, adjust mode accordingly
                                 setIsUsingGlobalSettings(false);
                                 setIsSiteEnabled(true);
@@ -123,14 +125,19 @@ function App() {
                         }
                     }
                 );
-            }, 250);
+            }, 500);
         };
 
         const handleSettingsUpdated = (
             updatedSettings: AudioSettings,
-            updatedHostname: string | undefined
+            updatedHostname: string | undefined,
+            updatedTabId: number | undefined
         ) => {
-            debouncedUpdateSettings(updatedSettings, updatedHostname);
+            debouncedUpdateSettings(
+                updatedSettings,
+                updatedHostname,
+                updatedTabId
+            );
         };
 
         settingsManager.on("settingsUpdated", handleSettingsUpdated);
@@ -154,16 +161,20 @@ function App() {
         setSettings(newSettings);
 
         // Update settings through settings manager
-        if (isUsingGlobalSettings) {
-            await settingsManager.updateGlobalSettings(newSettings);
-        } else {
-            const [tab] = await chrome.tabs.query({
-                active: true,
-                currentWindow: true,
-            });
-            if (tab?.url) {
-                const hostname = new URL(tab.url).hostname;
-                await settingsManager.updateSiteSettings(hostname, newSettings);
+        const [tab] = await chrome.tabs.query({
+            active: true,
+            currentWindow: true,
+        });
+        if (tab?.url && tab.id) {
+            const hostname = new URL(tab.url).hostname;
+            if (isUsingGlobalSettings) {
+                await settingsManager.updateGlobalSettings(newSettings, tab.id);
+            } else {
+                await settingsManager.updateSiteSettings(
+                    hostname,
+                    newSettings,
+                    tab.id
+                );
             }
         }
     };
@@ -193,16 +204,24 @@ function App() {
             if (mode === "default") {
                 setIsUsingGlobalSettings(false);
                 setIsSiteEnabled(false);
-                await settingsManager.disableSite(hostname);
+                await settingsManager.disableSite(hostname, tab.id);
             } else if (mode === "global") {
                 setIsUsingGlobalSettings(true);
                 setIsSiteEnabled(true);
-                await settingsManager.updateGlobalSettings(settings, hostname);
+                await settingsManager.updateGlobalSettings(
+                    settings,
+                    tab.id,
+                    hostname
+                );
             } else {
                 // site mode
                 setIsUsingGlobalSettings(false);
                 setIsSiteEnabled(true);
-                await settingsManager.updateSiteSettings(hostname, settings);
+                await settingsManager.updateSiteSettings(
+                    hostname,
+                    settings,
+                    tab.id
+                );
             }
         } catch (error) {
             console.error("Popup: Error toggling mode:", error, {

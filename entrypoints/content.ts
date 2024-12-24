@@ -1,13 +1,18 @@
-import { MediaProcessor } from "@/src/media-processor";
-import { MessageHandler } from "@/src/message-handler";
-import { SettingsHandler } from "@/src/settings-handler";
-import { settingsManager } from "@/src/settings-manager";
-import { MessageType, AudioSettings } from "@/src/types";
+import { defineContentScript } from "wxt/sandbox";
+import { MediaProcessor } from "./../src/media-processor";
+import { SettingsHandler } from "../src/settings-handler";
+import { MessageType, UpdateSettingsMessage } from "../src/types";
 
 export default defineContentScript({
     matches: ["<all_urls>"],
     main: async () => {
-        console.log("Content: Script starting");
+        console.log(
+            "Content: Script starting - This log should always appear",
+            window.location.href
+        );
+        if (window.location.hostname.includes("odysee.com")) {
+            console.log("Content: Running on odysee.com");
+        }
 
         // Initialize core components
         const settingsHandler = new SettingsHandler();
@@ -15,6 +20,7 @@ export default defineContentScript({
 
         // Process media with current settings
         const processMedia = async () => {
+            console.log("Content: processMedia called");
             const mediaElements = mediaProcessor.findMediaElements();
             console.log("Content: Found media elements:", mediaElements.length);
             const currentSettings = settingsHandler.getCurrentSettings();
@@ -52,37 +58,21 @@ export default defineContentScript({
             }, 1000);
         };
 
-        // Setup message handler
-        new MessageHandler({
-            onSettingsUpdate: async (message: MessageType) => {
-                if (message.mode === "default") {
-                    settingsHandler.resetToDefault();
-                    await mediaProcessor.resetToDefault();
-                } else if (message.settings) {
-                    settingsHandler.updateSettings(message.settings);
-                    await processMedia();
+        // Listen for settings updates from the background script
+        chrome.runtime.onMessage.addListener(
+            (message: MessageType, sender, sendResponse) => {
+                if (message.type === "UPDATE_SETTINGS") {
+                    const updateSettingsMessage =
+                        message as UpdateSettingsMessage;
+                    console.log(
+                        "Content: Received settings update:",
+                        updateSettingsMessage.settings
+                    );
+                    settingsHandler.updateSettings(
+                        updateSettingsMessage.settings
+                    );
+                    processMedia();
                 }
-            },
-        });
-
-        // Debounce settings updates
-        let settingsUpdateTimeout: number | null = null;
-        const debouncedProcessMedia = () => {
-            if (settingsUpdateTimeout) {
-                clearTimeout(settingsUpdateTimeout);
-            }
-            settingsUpdateTimeout = window.setTimeout(async () => {
-                await processMedia();
-            }, 250); // 250ms debounce time
-        };
-
-        // Listen for settings updates from settings manager
-        settingsManager.on(
-            "settingsUpdated",
-            async (settings: AudioSettings) => {
-                console.log("Content: Settings updated", settings);
-                settingsHandler.updateSettings(settings);
-                debouncedProcessMedia();
             }
         );
 
