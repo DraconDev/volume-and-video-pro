@@ -17,10 +17,18 @@ export default defineContentScript({
         const processMedia = async () => {
             const mediaElements = mediaProcessor.findMediaElements();
             console.log("Content: Found media elements:", mediaElements.length);
+            const currentSettings = settingsHandler.getCurrentSettings();
+            const needsProcessing = settingsHandler.needsAudioProcessing();
+            console.log(
+                "Content: Processing media with settings:",
+                currentSettings,
+                "needsProcessing:",
+                needsProcessing
+            );
             await mediaProcessor.processMediaElements(
                 mediaElements,
-                settingsHandler.getCurrentSettings(),
-                settingsHandler.needsAudioProcessing()
+                currentSettings,
+                needsProcessing
             );
         };
 
@@ -57,13 +65,24 @@ export default defineContentScript({
             },
         });
 
+        // Debounce settings updates
+        let settingsUpdateTimeout: number | null = null;
+        const debouncedProcessMedia = () => {
+            if (settingsUpdateTimeout) {
+                clearTimeout(settingsUpdateTimeout);
+            }
+            settingsUpdateTimeout = window.setTimeout(async () => {
+                await processMedia();
+            }, 250); // 250ms debounce time
+        };
+
         // Listen for settings updates from settings manager
         settingsManager.on(
             "settingsUpdated",
             async (settings: AudioSettings) => {
                 console.log("Content: Settings updated", settings);
                 settingsHandler.updateSettings(settings);
-                await processMedia();
+                debouncedProcessMedia();
             }
         );
 

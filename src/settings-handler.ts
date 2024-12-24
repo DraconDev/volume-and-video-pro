@@ -78,6 +78,10 @@ export class SettingsHandler {
     }
 
     getCurrentSettings(): AudioSettings {
+        console.log(
+            "Settings: Getting current settings:",
+            this.currentSettings
+        );
         return this.currentSettings;
     }
 
@@ -94,12 +98,13 @@ export class SettingsHandler {
     }
 
     needsAudioProcessing(): boolean {
-        return (
+        const needsProcessing =
             this.currentSettings.volume !== 100 ||
             this.currentSettings.bassBoost !== 100 ||
             this.currentSettings.voiceBoost !== 100 ||
-            this.currentSettings.mono
-        );
+            this.currentSettings.mono;
+        console.log("Settings: Needs audio processing:", needsProcessing);
+        return needsProcessing;
     }
 
     setupStorageListener(callback: (settings: AudioSettings) => void): void {

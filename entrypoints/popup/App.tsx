@@ -27,7 +27,10 @@ function App() {
                     active: true,
                     currentWindow: true,
                 });
-                if (!tab?.url) return;
+                if (!tab?.url) {
+                    console.error("Popup: No active tab found");
+                    return;
+                }
 
                 const hostname = new URL(tab.url).hostname;
                 console.log("Popup: Loading settings for hostname:", hostname);
@@ -66,30 +69,68 @@ function App() {
                     setIsSiteEnabled(true);
                 }
             } catch (error) {
-                console.error("Popup: Error loading settings:", error);
+                console.error("Popup: Error loading settings:", error, {
+                    currentSettings: settings,
+                    isUsingGlobalSettings,
+                    isSiteEnabled,
+                });
             }
         };
 
         loadSettings();
     }, []);
 
+    // Debounce settings updates
     useEffect(() => {
+        let settingsUpdateTimeout: number | null = null;
+        const debouncedUpdateSettings = (
+            updatedSettings: AudioSettings,
+            updatedHostname: string | undefined
+        ) => {
+            if (settingsUpdateTimeout) {
+                clearTimeout(settingsUpdateTimeout);
+            }
+            settingsUpdateTimeout = window.setTimeout(() => {
+                console.log(
+                    "Popup: Settings updated",
+                    updatedSettings,
+                    updatedHostname
+                );
+
+                chrome.tabs.query(
+                    { active: true, currentWindow: true },
+                    (tabs) => {
+                        if (!tabs[0]?.url) {
+                            console.error("Popup: No active tab found");
+                            return;
+                        }
+
+                        const currentHostname = new URL(tabs[0].url).hostname;
+                        if (
+                            updatedHostname === undefined ||
+                            updatedHostname === currentHostname
+                        ) {
+                            setSettings(updatedSettings);
+                            if (updatedHostname) {
+                                // Site-specific settings updated, adjust mode accordingly
+                                setIsUsingGlobalSettings(false);
+                                setIsSiteEnabled(true);
+                            } else {
+                                // Global settings updated
+                                setIsUsingGlobalSettings(true);
+                                setIsSiteEnabled(true);
+                            }
+                        }
+                    }
+                );
+            }, 250);
+        };
+
         const handleSettingsUpdated = (
             updatedSettings: AudioSettings,
             updatedHostname: string | undefined
         ) => {
-            console.log(
-                "Popup: Settings updated",
-                updatedSettings,
-                updatedHostname
-            );
-            const currentHostname = new URL(window.location.href).hostname;
-            if (
-                updatedHostname === undefined ||
-                updatedHostname === currentHostname
-            ) {
-                setSettings(updatedSettings);
-            }
+            debouncedUpdateSettings(updatedSettings, updatedHostname);
         };
 
         settingsManager.on("settingsUpdated", handleSettingsUpdated);
@@ -109,6 +150,8 @@ function App() {
             ...settings,
             [key]: value,
         };
+
+        setSettings(newSettings);
 
         // Update settings through settings manager
         if (isUsingGlobalSettings) {
