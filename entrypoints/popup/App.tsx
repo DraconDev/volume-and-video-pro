@@ -3,6 +3,7 @@ import { AudioSettings } from "../../src/types";
 
 import { SettingsToggle } from "../../components/SettingsToggle";
 import { AudioControls } from "../../components/AudioControls";
+import { settingsManager } from "../../src/settings-manager";
 
 function App() {
     const defaultSettings: AudioSettings = {
@@ -31,12 +32,11 @@ function App() {
                 const hostname = new URL(tab.url).hostname;
                 console.log("Popup: Loading settings for hostname:", hostname);
 
-                // Get settings from storage
-                const storage = await chrome.storage.sync.get([
-                    "globalSettings",
-                    "siteSettings",
-                ]);
-                const siteConfig = storage.siteSettings?.[hostname];
+                // Initialize settings manager
+                await settingsManager.initialize();
+
+                // Get settings from settings manager
+                const siteConfig = settingsManager.getSettingsForSite(hostname);
 
                 // Set initial mode and settings
                 if (siteConfig) {
@@ -47,46 +47,23 @@ function App() {
 
                     if (isDefault) {
                         // Show default settings but keep actual settings in state
-                        setSettings(
-                            siteConfig.settings ||
-                                storage.globalSettings ||
-                                defaultSettings
-                        );
+                        setSettings(siteConfig.settings || defaultSettings);
                     } else if (isGlobal) {
                         // Use global settings
-                        setSettings(storage.globalSettings || defaultSettings);
+                        setSettings(
+                            settingsManager.globalSettings || defaultSettings
+                        );
                     } else {
                         // Use site-specific settings
-                        setSettings(
-                            siteConfig.settings ||
-                                storage.globalSettings ||
-                                defaultSettings
-                        );
+                        setSettings(siteConfig.settings || defaultSettings);
                     }
                 } else {
                     // No site config exists, use global settings
-                    setSettings(storage.globalSettings || defaultSettings);
+                    setSettings(
+                        settingsManager.globalSettings || defaultSettings
+                    );
                     setIsUsingGlobalSettings(true);
                     setIsSiteEnabled(true);
-                }
-
-                // Send initial settings to content script
-                if (tab.id) {
-                    const settingsToApply =
-                        siteConfig?.activeSetting === "default"
-                            ? defaultSettings
-                            : siteConfig?.activeSetting === "global"
-                            ? storage.globalSettings || defaultSettings
-                            : siteConfig?.settings ||
-                              storage.globalSettings ||
-                              defaultSettings;
-
-                    await chrome.tabs.sendMessage(tab.id, {
-                        type: "UPDATE_SETTINGS",
-                        settings: settingsToApply,
-                        isGlobal: siteConfig?.activeSetting === "global",
-                        enabled: siteConfig?.activeSetting !== "default",
-                    });
                 }
             } catch (error) {
                 console.error("Popup: Error loading settings:", error);
@@ -94,6 +71,32 @@ function App() {
         };
 
         loadSettings();
+    }, []);
+
+    useEffect(() => {
+        const handleSettingsUpdated = (
+            updatedSettings: AudioSettings,
+            updatedHostname: string | undefined
+        ) => {
+            console.log(
+                "Popup: Settings updated",
+                updatedSettings,
+                updatedHostname
+            );
+            const currentHostname = new URL(window.location.href).hostname;
+            if (
+                updatedHostname === undefined ||
+                updatedHostname === currentHostname
+            ) {
+                setSettings(updatedSettings);
+            }
+        };
+
+        settingsManager.on("settingsUpdated", handleSettingsUpdated);
+
+        return () => {
+            settingsManager.off("settingsUpdated", handleSettingsUpdated);
+        };
     }, []);
 
     const handleSettingChange = async (
@@ -106,32 +109,19 @@ function App() {
             ...settings,
             [key]: value,
         };
-        setSettings(newSettings);
 
-        try {
+        // Update settings through settings manager
+        if (isUsingGlobalSettings) {
+            await settingsManager.updateGlobalSettings(newSettings);
+        } else {
             const [tab] = await chrome.tabs.query({
                 active: true,
                 currentWindow: true,
             });
-            if (!tab?.url || !tab.id) return;
-
-            // Send settings update
-            await chrome.runtime.sendMessage({
-                type: "UPDATE_SETTINGS",
-                settings: newSettings,
-                isGlobal: isUsingGlobalSettings,
-                enabled: true,
-            });
-
-            // Also send directly to content script for immediate effect
-            await chrome.tabs.sendMessage(tab.id, {
-                type: "UPDATE_SETTINGS",
-                settings: newSettings,
-                isGlobal: isUsingGlobalSettings,
-                enabled: true,
-            });
-        } catch (error) {
-            console.error("Popup: Error updating settings:", error);
+            if (tab?.url) {
+                const hostname = new URL(tab.url).hostname;
+                await settingsManager.updateSiteSettings(hostname, newSettings);
+            }
         }
     };
 
@@ -144,16 +134,6 @@ function App() {
         setSettings(defaultSettings);
     };
 
-    /**
-     * Handles switching between different modes (global, site-specific, or default)
-     * and applies the appropriate settings for each mode.
-     *
-     * @param mode - The mode to switch to ("global" | "site" | "default")
-     *
-     * Global mode: Uses shared global settings across all sites, preserves site settings
-     * Site mode: Uses site-specific settings, starts with defaults if none exist
-     * Default mode: Uses default settings (100%) for playback
-     */
     const handleToggleMode = async (mode: "global" | "site" | "default") => {
         try {
             const [tab] = await chrome.tabs.query({
@@ -166,96 +146,21 @@ function App() {
             }
 
             const hostname = new URL(tab.url).hostname;
-            const storage = await chrome.storage.sync.get([
-                "globalSettings",
-                "siteSettings",
-            ]);
-            const siteConfig = storage.siteSettings?.[hostname];
-
-            let settingsToApply: AudioSettings;
 
             if (mode === "default") {
-                settingsToApply = defaultSettings;
                 setIsUsingGlobalSettings(false);
                 setIsSiteEnabled(false);
+                await settingsManager.disableSite(hostname);
             } else if (mode === "global") {
-                // Load global settings without modifying site settings
-                settingsToApply = storage.globalSettings || defaultSettings;
                 setIsUsingGlobalSettings(true);
                 setIsSiteEnabled(true);
-
-                // Only update the mode
-                await chrome.runtime.sendMessage({
-                    type: "UPDATE_SITE_MODE",
-                    hostname,
-                    mode: "global",
-                });
-
-                // Update UI with global settings
-                setSettings(settingsToApply);
-
-                // Update content script with global settings
-                if (tab.id) {
-                    await chrome.tabs.sendMessage(tab.id, {
-                        type: "UPDATE_SETTINGS",
-                        settings: settingsToApply,
-                        isGlobal: true,
-                        enabled: true,
-                    });
-                }
-
-                return;
+                await settingsManager.updateGlobalSettings(settings, hostname);
             } else {
                 // site mode
-                if (siteConfig?.settings) {
-                    // Use existing site settings
-                    console.log(
-                        "Popup: Loading existing site settings:",
-                        siteConfig.settings
-                    );
-                    settingsToApply = siteConfig.settings;
-                } else {
-                    // Create new site settings with defaults
-                    console.log(
-                        "Popup: Creating new site settings with defaults"
-                    );
-                    settingsToApply = { ...defaultSettings };
-                }
-
                 setIsUsingGlobalSettings(false);
                 setIsSiteEnabled(true);
-
-                // Update mode and apply site settings
-                await chrome.runtime.sendMessage({
-                    type: "UPDATE_SITE_MODE",
-                    hostname,
-                    mode: "site",
-                });
-
-                // Only send settings update if we're creating new site settings
-                if (!siteConfig?.settings) {
-                    await chrome.runtime.sendMessage({
-                        type: "UPDATE_SETTINGS",
-                        settings: settingsToApply,
-                        isGlobal: false,
-                        enabled: true,
-                    });
-                }
+                await settingsManager.updateSiteSettings(hostname, settings);
             }
-            if (tab.id) {
-                await chrome.tabs.sendMessage(tab.id, {
-                    type: "UPDATE_SETTINGS",
-                    settings: settingsToApply,
-                    // @ts-ignore
-                    isGlobal: mode === "global",
-                    enabled: mode !== "default",
-                });
-            }
-
-            // Update UI
-            setSettings(settingsToApply);
-
-            // Update content script
         } catch (error) {
             console.error("Popup: Error toggling mode:", error, {
                 mode,

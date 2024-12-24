@@ -1,7 +1,8 @@
-import { MessageType } from "@/src/types";
-import { SettingsHandler } from "@/src/settings-handler";
 import { MediaProcessor } from "@/src/media-processor";
 import { MessageHandler } from "@/src/message-handler";
+import { SettingsHandler } from "@/src/settings-handler";
+import { settingsManager } from "@/src/settings-manager";
+import { MessageType, AudioSettings } from "@/src/types";
 
 export default defineContentScript({
     matches: ["<all_urls>"],
@@ -29,13 +30,16 @@ export default defineContentScript({
             if (initializationTimeout) {
                 window.clearTimeout(initializationTimeout);
             }
-            
+
             initializationTimeout = window.setTimeout(async () => {
                 try {
                     await settingsHandler.initialize();
                     await processMedia();
                 } catch (error) {
-                    console.error("Content: Error during delayed initialization:", error);
+                    console.error(
+                        "Content: Error during delayed initialization:",
+                        error
+                    );
                 }
             }, 1000);
         };
@@ -50,17 +54,25 @@ export default defineContentScript({
                     settingsHandler.updateSettings(message.settings);
                     await processMedia();
                 }
-            }
+            },
         });
 
-        // Setup storage listener
-        settingsHandler.setupStorageListener(async () => {
-            await processMedia();
-        });
+        // Listen for settings updates from settings manager
+        settingsManager.on(
+            "settingsUpdated",
+            async (settings: AudioSettings) => {
+                console.log("Content: Settings updated", settings);
+                settingsHandler.updateSettings(settings);
+                await processMedia();
+            }
+        );
 
         // Initial setup
         if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", debouncedInitialization);
+            document.addEventListener(
+                "DOMContentLoaded",
+                debouncedInitialization
+            );
         } else {
             debouncedInitialization();
         }

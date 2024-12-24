@@ -4,12 +4,14 @@ import {
     defaultSettings,
     defaultSiteSettings,
 } from "./types";
+import EventEmitter from "events";
 
-export class SettingsManager {
-    private globalSettings: AudioSettings;
+export class SettingsManager extends EventEmitter {
+    globalSettings: AudioSettings;
     private siteSettings: Map<string, SiteSettings>;
 
     constructor() {
+        super();
         this.globalSettings = { ...defaultSettings };
         this.siteSettings = new Map();
     }
@@ -74,6 +76,7 @@ export class SettingsManager {
         }
 
         await this.persistSettings();
+        this.emit("settingsUpdated", this.globalSettings, hostname);
     }
 
     async updateSiteSettings(hostname: string, settings: AudioSettings) {
@@ -114,6 +117,7 @@ export class SettingsManager {
         this.siteSettings.set(hostname, siteConfig);
 
         await this.persistSettings();
+        this.emit("settingsUpdated", settings, hostname);
 
         console.log("SettingsManager: Updated site settings", {
             isNewSite,
@@ -157,6 +161,11 @@ export class SettingsManager {
         this.siteSettings.set(hostname, siteConfig);
 
         await this.persistSettings();
+        this.emit(
+            "settingsUpdated",
+            this.getSettingsForPlayback(hostname, mode, siteConfig),
+            hostname
+        );
 
         return {
             settingsToUse: this.getSettingsForPlayback(
@@ -202,6 +211,7 @@ export class SettingsManager {
         this.siteSettings.set(hostname, siteConfig);
 
         await this.persistSettings();
+        this.emit("settingsUpdated", { ...defaultSettings }, hostname);
         return { ...defaultSettings };
     }
 }

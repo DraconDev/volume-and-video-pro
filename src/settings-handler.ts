@@ -1,12 +1,15 @@
 import { AudioSettings, defaultSettings, SiteSettings } from "./types";
+import { settingsManager } from "./settings-manager";
 
 export class SettingsHandler {
     private currentSettings: AudioSettings;
     private isUsingGlobalSettings: boolean;
+    private hostname: string;
 
     constructor() {
         this.currentSettings = defaultSettings;
         this.isUsingGlobalSettings = true;
+        this.hostname = window.location.hostname;
     }
 
     async initialize(): Promise<void> {
@@ -16,12 +19,14 @@ export class SettingsHandler {
                 "globalSettings",
                 "siteSettings",
             ]);
-            const hostname = window.location.hostname;
 
             // First check for site-specific settings
-            if (storage.siteSettings?.[hostname]) {
-                this.currentSettings = storage.siteSettings[hostname];
-                this.isUsingGlobalSettings = false;
+            if (storage.siteSettings?.[this.hostname]) {
+                this.currentSettings =
+                    storage.siteSettings[this.hostname].settings;
+                this.isUsingGlobalSettings =
+                    storage.siteSettings[this.hostname].activeSetting ===
+                    "global";
                 console.log("Settings: Using site-specific settings");
             } else if (storage.globalSettings) {
                 this.currentSettings = storage.globalSettings;
@@ -46,12 +51,28 @@ export class SettingsHandler {
             this.isUsingGlobalSettings = true;
             throw error;
         }
+
+        // Listen for settings updates
+        settingsManager.on(
+            "settingsUpdated",
+            (settings: AudioSettings, hostname: string | undefined) => {
+                if (this.isUsingGlobalSettings || hostname === this.hostname) {
+                    this.currentSettings = settings;
+                    this.isUsingGlobalSettings =
+                        hostname === undefined || hostname === this.hostname;
+                    console.log("Settings: Updated settings", {
+                        settings: this.currentSettings,
+                        isGlobal: this.isUsingGlobalSettings,
+                    });
+                }
+            }
+        );
     }
 
     private async notifyReady(): Promise<void> {
         await chrome.runtime.sendMessage({
             type: "CONTENT_SCRIPT_READY",
-            hostname: window.location.hostname,
+            hostname: this.hostname,
             usingGlobal: this.isUsingGlobalSettings,
         });
     }
@@ -83,18 +104,7 @@ export class SettingsHandler {
 
     setupStorageListener(callback: (settings: AudioSettings) => void): void {
         chrome.storage.onChanged.addListener((changes) => {
-            const hostname = window.location.hostname;
             console.log("Settings: Storage changes detected:", changes);
-
-            if (changes.siteSettings?.newValue?.[hostname] && !this.isUsingGlobalSettings) {
-                console.log("Settings: Site settings changed:", changes.siteSettings.newValue[hostname]);
-                this.currentSettings = changes.siteSettings.newValue[hostname];
-                callback(this.currentSettings);
-            } else if (changes.globalSettings?.newValue && this.isUsingGlobalSettings) {
-                console.log("Settings: Global settings changed:", changes.globalSettings.newValue);
-                this.currentSettings = changes.globalSettings.newValue;
-                callback(this.currentSettings);
-            }
         });
     }
 }
