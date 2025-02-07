@@ -162,11 +162,12 @@ export class SettingsManager extends EventEmitter {
         let siteConfig = this.siteSettings.get(hostname);
         const oldMode = siteConfig?.activeSetting;
 
+        // Initialize siteConfig if it doesn't exist
         if (!siteConfig) {
             siteConfig = {
                 enabled: true,
                 activeSetting: mode,
-                settings: undefined,
+                settings: mode === "site" ? { ...defaultSettings } : undefined,
             };
         }
 
@@ -177,35 +178,41 @@ export class SettingsManager extends EventEmitter {
             tabId,
         });
 
-        if (mode === "site" && !siteConfig.settings) {
-            // Initialize with default settings for new site mode
-            console.log(
-                "SettingsManager: Initializing site with default settings"
-            );
-            siteConfig.settings = { ...defaultSettings };
+        // Handle mode-specific initialization
+        if (mode === "site") {
+            if (!siteConfig.settings) {
+                // Initialize with default settings for new site mode
+                siteConfig.settings = { ...defaultSettings };
+            }
+            siteConfig.enabled = true;
+        } else if (mode === "global") {
+            // Keep site settings but use global mode
+            if (!siteConfig.settings) {
+                siteConfig.settings = { ...defaultSettings };
+            }
+            siteConfig.enabled = true;
+        } else {
+            // Default mode - disable site settings
+            siteConfig.enabled = false;
         }
 
-        // Update mode and enabled state
+        // Update mode
         siteConfig.activeSetting = mode;
-        siteConfig.enabled = mode !== "default";
         this.siteSettings.set(hostname, siteConfig);
 
         await this.persistSettings();
-        this.emit(
-            "settingsUpdated",
-            this.getSettingsForPlayback(hostname, mode, siteConfig),
-            hostname,
-            tabId
-        );
 
-        return {
-            settingsToUse: this.getSettingsForPlayback(
-                hostname,
-                mode,
-                siteConfig
-            ),
-            siteConfig,
-        };
+        // Get the appropriate settings based on mode
+        const settingsToUse = mode === "global" 
+            ? { ...this.globalSettings }
+            : mode === "site" && siteConfig.settings 
+                ? { ...siteConfig.settings }
+                : { ...defaultSettings };
+
+        // Emit settings update event
+        this.emit("settingsUpdated", settingsToUse, hostname, tabId);
+
+        return { settingsToUse, siteConfig };
     }
 
     private getSettingsForPlayback(
