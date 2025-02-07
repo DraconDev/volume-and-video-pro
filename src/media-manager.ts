@@ -3,6 +3,8 @@ import siteMediaSelectors from "../references/site-media-selectors.json";
 export class MediaManager {
   // Keep track of already processed elements to avoid duplicates
   private static processedElements = new WeakSet<HTMLElement>();
+  private static readonly DEBOUNCE_DELAY = 1000; // Increased debounce delay
+  private static readonly MAX_DEPTH = 10; // Increased max depth
 
   private static inIframe(): boolean {
     try {
@@ -36,15 +38,8 @@ export class MediaManager {
   // Add a helper to return extra selectors for known problematic sites
   private static getExtraSelectorsForSite(): string[] {
     const hostname = window.location.hostname;
-    if (hostname.includes("problematicsite.com")) {
-      // Add selectors based on references or manual inspection from the problematic site
-      return [
-        ".problem-player",
-        "div[data-player]",
-        'video[src*="specialstream"]',
-      ];
-    }
-    return [];
+    const extraSelectors = siteMediaSelectors[hostname] || [];
+    return extraSelectors;
   }
 
   // Updated custom player detection that includes extra site-specific selectors
