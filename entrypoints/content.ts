@@ -71,15 +71,14 @@ export default defineContentScript({
                     // Update internal settings
                     settingsHandler.updateSettings(updateSettingsMessage.settings);
 
-                    // Always reset and reapply settings with proper logging
+                    // Apply settings update with proper logging
                     console.log("Content: Processing settings update", {
                         settings: updateSettingsMessage.settings,
                         isGlobal: updateSettingsMessage.isGlobal,
                         enabled: updateSettingsMessage.enabled
                     });
 
-                    // Reset the current audio context and reapply
-                    await mediaProcessor.resetToDefault();
+                    // Update settings without resetting audio context
                     await processMedia();
                 }
                 // Keep message channel open for async response
