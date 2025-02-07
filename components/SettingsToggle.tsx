@@ -12,7 +12,7 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
   onToggle,
 }) => {
   return (
-    <div className="flex rounded mb-2 gap-2">
+    <div className="flex rounded  py-0.5 mb-2 gap-2">
       <button
         className={`settings-button ${
           isUsingGlobalSettings ? "active" : ""
