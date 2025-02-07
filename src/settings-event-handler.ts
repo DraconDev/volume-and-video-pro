@@ -2,10 +2,12 @@ import { settingsManager } from "./settings-manager";
 import { MessageType } from "./types";
 
 // Helper function to broadcast settings to all active tabs
+// Update the broadcastSettings function to accept hostname
 async function broadcastSettings(
     settings: any,
     isGlobal: boolean,
-    enabled: boolean
+    enabled: boolean,
+    hostname?: string
 ) {
     const tabs = await chrome.tabs.query({});
     for (const tab of tabs) {
@@ -16,13 +18,11 @@ async function broadcastSettings(
                     settings,
                     isGlobal,
                     enabled,
+                    hostname
                 } as MessageType);
             } catch (error) {
                 // Ignore errors for inactive tabs
                 console.debug(
-                    "Settings Event Handler: Could not send to tab:",
-                    tab.id,
-                    error
                 );
             }
         }
