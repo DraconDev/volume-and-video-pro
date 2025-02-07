@@ -205,7 +205,10 @@ export class AudioProcessor {
       safeDisconnect(nodes.source);
 
       this.audioElementMap.delete(element);
-      console.log("AudioProcessor: Disconnected nodes for element:", element.src);
+      console.log(
+        "AudioProcessor: Disconnected nodes for element:",
+        element.src
+      );
     } catch (error) {
       console.error("AudioProcessor: Error disconnecting nodes:", error);
     }
