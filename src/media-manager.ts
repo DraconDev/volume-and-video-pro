@@ -3,6 +3,8 @@ import mediaConfig from "../references/media-config.json";
 export class MediaManager {
   // Keep track of already processed elements to avoid duplicates
   private static processedElements = new WeakSet<HTMLElement>();
+  private static readonly DEBOUNCE_DELAY = 1000; // Increased debounce delay
+  private static readonly MAX_DEPTH = 10; // Increased max depth
 
   private static inIframe(): boolean {
     try {
@@ -36,38 +38,14 @@ export class MediaManager {
   // Add a helper to return extra selectors for known problematic sites
   private static getExtraSelectorsForSite(): string[] {
     const hostname = window.location.hostname;
-    if (hostname.includes("problematicsite.com")) {
-      // Add selectors based on references or manual inspection from the problematic site
-      return [
-        ".problem-player",
-        "div[data-player]",
-        'video[src*="specialstream"]',
-      ];
-    }
-    return [];
+    const siteSelectors = mediaConfig.siteSelectors[hostname] || [];
+    return siteSelectors;
   }
 
   // Updated custom player detection with fallback dynamic scanning
   private static findCustomPlayers(root: ParentNode): HTMLElement[] {
     const customPlayers: HTMLElement[] = [];
-    const baseSelectors = [
-      "video",
-      "audio",
-      '[class*="player"]',
-      '[class*="video"]',
-      '[class*="audio"]',
-      ".video-js",
-      ".jwplayer",
-      ".html5-video-player",
-      ".plyr",
-      "[data-media]",
-      'iframe[src*="youtube.com"]',
-      'iframe[src*="vimeo.com"]',
-      'iframe[src*="dailymotion.com"]',
-      'iframe[src*="twitch.tv"]',
-      'iframe[src*="facebook.com"]',
-    ];
-
+    const baseSelectors: string[] = mediaConfig.baseSelectors; // from reference file
     // Append extra selectors if needed
     const selectors = baseSelectors.concat(this.getExtraSelectorsForSite());
 
