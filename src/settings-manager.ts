@@ -28,12 +28,39 @@ export class SettingsManager extends EventEmitter {
         }
     }
 
+    private persistTimeout: NodeJS.Timeout | null = null;
+    private pendingSettings = {
+        globalSettings: null as AudioSettings | null,
+        siteSettings: null as { [hostname: string]: SiteSettings } | null
+    };
+
     private async persistSettings() {
-        const siteSettingsObj = Object.fromEntries(this.siteSettings);
-        await chrome.storage.sync.set({
-            globalSettings: this.globalSettings,
-            siteSettings: siteSettingsObj,
-        });
+        // Clear any existing timeout
+        if (this.persistTimeout) {
+            clearTimeout(this.persistTimeout);
+        }
+
+        // Queue the current settings
+        this.pendingSettings.globalSettings = { ...this.globalSettings };
+        this.pendingSettings.siteSettings = Object.fromEntries(this.siteSettings);
+
+        // Set a new timeout to batch write settings
+        this.persistTimeout = setTimeout(async () => {
+            try {
+                const settings = {
+                    globalSettings: this.pendingSettings.globalSettings,
+                    siteSettings: this.pendingSettings.siteSettings
+                };
+                await chrome.storage.sync.set(settings);
+                console.log("SettingsManager: Settings persisted successfully");
+                
+                // Clear pending settings
+                this.pendingSettings.globalSettings = null;
+                this.pendingSettings.siteSettings = null;
+            } catch (error) {
+                console.error("SettingsManager: Failed to persist settings:", error);
+            }
+        }, 1000); // Debounce for 1 second
     }
 
     getSettingsForSite(hostname: string): SiteSettings | null {
@@ -53,34 +80,44 @@ export class SettingsManager extends EventEmitter {
             oldSettings: { ...this.globalSettings },
             newSettings: { ...settings },
             tabId,
+            hostname
         });
 
+        // Update global settings
         this.globalSettings = { ...settings };
 
-        // If hostname provided, update site config mode
+        // If hostname provided, update all sites using global settings
         if (hostname) {
-            const siteConfig = this.siteSettings.get(hostname);
-            if (siteConfig) {
-                // Keep existing site settings, just ensure we're in global mode
-                siteConfig.activeSetting = "global";
-                siteConfig.enabled = true;
-                this.siteSettings.set(hostname, siteConfig);
+            // Update specific site to use global settings
+            const siteConfig = this.siteSettings.get(hostname) || {
+                enabled: true,
+                settings: { ...settings },
+                activeSetting: "global"
+            };
+            siteConfig.activeSetting = "global";
+            siteConfig.enabled = true;
+            this.siteSettings.set(hostname, siteConfig);
 
-                console.log(
-                    "SettingsManager: Updated to global mode for",
-                    hostname,
-                    {
-                        siteConfig: this.siteSettings.get(hostname),
-                        globalSettings: this.globalSettings,
-                        preservedSiteSettings: siteConfig?.settings
-                            ? { ...siteConfig.settings }
-                            : "none",
-                    }
-                );
+            console.log(
+                "SettingsManager: Updated to global mode for",
+                hostname,
+                {
+                    siteConfig,
+                    globalSettings: this.globalSettings
+                }
+            );
+        }
+
+        // Find and update all sites using global settings
+        for (const [site, config] of this.siteSettings.entries()) {
+            if (config.activeSetting === "global") {
+                console.log("SettingsManager: Updating global site:", site);
+                config.settings = { ...settings };
+                this.siteSettings.set(site, config);
             }
         }
 
-        await this.persistSettings();
+        this.persistSettings().catch(console.error);
         this.emit("settingsUpdated", this.globalSettings, hostname, tabId);
     }
 
