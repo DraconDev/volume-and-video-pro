@@ -247,14 +247,22 @@ function App() {
           setIsUsingGlobalSettings(true);
           setIsSiteEnabled(true);
           // Restore previous settings when switching to global
-          await settingsManager.updateGlobalSettings(previousSettings, tab.id, hostname);
+          await settingsManager.updateGlobalSettings(
+            previousSettings,
+            tab.id,
+            hostname
+          );
           break;
 
         case "site":
           setIsUsingGlobalSettings(false);
           setIsSiteEnabled(true);
           // Restore previous settings when switching to site mode
-          await settingsManager.updateSiteSettings(hostname, previousSettings, tab.id);
+          await settingsManager.updateSiteSettings(
+            hostname,
+            previousSettings,
+            tab.id
+          );
           break;
       }
     } catch (error) {

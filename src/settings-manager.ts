@@ -189,7 +189,10 @@ export class SettingsManager extends EventEmitter {
       siteConfig = {
         enabled: mode !== "disabled",
         activeSetting: mode,
-        settings: mode === "global" ? { ...this.globalSettings } : { ...defaultSettings },
+        settings:
+          mode === "global"
+            ? { ...this.globalSettings }
+            : { ...defaultSettings },
       };
     }
 
@@ -235,13 +238,22 @@ export class SettingsManager extends EventEmitter {
     await this.persistSettings(hostname);
 
     // Get the appropriate settings to display
-    const settingsToUse = mode === "disabled"
-      ? { ...defaultSettings }
-      : mode === "global"
-      ? { ...this.globalSettings }
-      : { ...siteConfig.settings };
+    const settingsToUse =
+      mode === "disabled"
+        ? { ...defaultSettings }
+        : mode === "global"
+        ? { ...this.globalSettings }
+        : { ...siteConfig.settings };
 
     // Emit settings update event
+    this.emit("settingsUpdated", settingsToUse, hostname, tabId);
+
+    return { settingsToUse, siteConfig };
+  }
+
+  private getSettingsForPlayback(
+    hostname: string,
+    mode: string,
     siteConfig: SiteSettings
   ): AudioSettings {
     if (mode === "global") {
