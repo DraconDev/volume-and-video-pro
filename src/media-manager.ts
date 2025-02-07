@@ -35,11 +35,17 @@ export class MediaManager {
     );
   }
 
-  // Update getExtraSelectorsForSite to use mediaConfig.siteSelectors
+  // Revert getExtraSelectorsForSite() to original implementation
   private static getExtraSelectorsForSite(): string[] {
     const hostname = window.location.hostname;
-    const siteSelectors = mediaConfig.siteSelectors[hostname] || [];
-    return siteSelectors;
+    if (hostname.includes("problematicsite.com")) {
+      return [
+        ".problem-player",
+        "div[data-player]",
+        'video[src*="specialstream"]'
+      ];
+    }
+    return [];
   }
 
   // Updated custom player detection with fallback dynamic scanning
