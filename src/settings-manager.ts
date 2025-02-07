@@ -182,33 +182,33 @@ export class SettingsManager extends EventEmitter {
   ) {
     let siteConfig = this.siteSettings.get(hostname);
     const oldMode = siteConfig?.activeSetting;
-    const previousSettings = siteConfig?.settings;
 
-    // Initialize siteConfig if it doesn't exist
     if (!siteConfig) {
+      // Initialize with current global settings if no config exists
       siteConfig = {
         enabled: mode !== "disabled",
         activeSetting: mode,
-        settings:
-          mode === "global"
-            ? { ...this.globalSettings }
-            : { ...defaultSettings },
+        settings: { ...this.globalSettings },
       };
     }
 
-    console.log("SettingsManager: Mode transition", {
-      oldMode,
-      newMode: mode,
-      hasExistingSettings: !!siteConfig.settings,
-      previousSettings,
-      tabId,
-    });
+    // Update mode and enabled state, but preserve settings
+    siteConfig.activeSetting = mode;
+    siteConfig.enabled = mode !== "disabled";
 
-    // Update mode-specific settings
-    switch (mode) {
-      case "site":
-        siteConfig.enabled = true;
-        // Restore previous settings if they exist
+    this.siteSettings.set(hostname, siteConfig);
+    await this.persistSettings(hostname);
+
+    // Determine which settings to display (not modify)
+    const displaySettings = mode === "disabled"
+      ? { ...defaultSettings }
+      : mode === "global"
+      ? { ...this.globalSettings }
+      : { ...siteConfig.settings };
+
+    this.emit("settingsUpdated", displaySettings, hostname, tabId);
+    return { settingsToUse: displaySettings, siteConfig };
+  }
         if (previousSettings) {
           siteConfig.settings = { ...previousSettings };
         }
