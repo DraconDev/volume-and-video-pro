@@ -33,25 +33,25 @@ export class MediaManager {
     );
   }
 
-  // Updated custom player detection with additional selectors for more sites
+  // Add a helper to return extra selectors for known problematic sites
+  private static getExtraSelectorsForSite(): string[] {
+    const hostname = window.location.hostname;
+    if (hostname.includes("problematicsite.com")) {
+      // Add selectors based on references or manual inspection from the problematic site
+      return [".problem-player", "div[data-player]", 'video[src*="specialstream"]'];
+    }
+    return [];
+  }
+
+  // Updated custom player detection that includes extra site-specific selectors
   private static findCustomPlayers(root: ParentNode): HTMLElement[] {
     const customPlayers: HTMLElement[] = [];
 
-    // Extended set of selectors to catch more media players, including popular video platforms
-    const selectors = [
+    // Extended set of selectors for common platforms
+    const baseSelectors = [
       "video",
       "audio",
       '[class*="player"]',
-      '[class*="video"]',
-      '[class*="audio"]',
-      ".video-js",
-      ".jwplayer",
-      ".html5-video-player",
-      ".plyr", // common in Plyr players
-      "[data-media]", // custom data attribute
-      'iframe[src*="youtube.com"]',
-      'iframe[src*="vimeo.com"]', // Vimeo embeds
-      'iframe[src*="dailymotion.com"]', // Dailymotion embeds
       'iframe[src*="twitch.tv"]', // Twitch embeds
       'iframe[src*="facebook.com"]', // Facebook video embeds
     ];
