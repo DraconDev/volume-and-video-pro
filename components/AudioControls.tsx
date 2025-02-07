@@ -28,7 +28,9 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
         const min = parseInt(input.min);
         const max = parseInt(input.max);
         const percentage = ((value - min) * 100) / (max - min);
-        input.style.setProperty('--range-progress', `${percentage}%`);
+        // Ensure the progress stays within bounds
+        const boundedPercentage = Math.max(0, Math.min(100, percentage));
+        input.style.setProperty('--range-progress', `${boundedPercentage}%`);
     };
 
     useEffect(() => {
