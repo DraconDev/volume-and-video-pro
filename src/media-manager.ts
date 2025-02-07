@@ -1,5 +1,3 @@
-import mediaConfig from "../references/media-config.json";
-
 export class MediaManager {
   // Keep track of already processed elements to avoid duplicates
   private static processedElements = new WeakSet<HTMLElement>();
