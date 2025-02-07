@@ -37,31 +37,34 @@ export function setupSettingsEventHandler() {
         "settingsUpdated",
         async (settings: any, hostname?: string, tabId?: number) => {
             console.log(
+                "Settings Event Handler: settingsUpdated event received",
+                {
                     settings,
                     hostname,
                     tabId,
                 }
             );
+
+            const isGlobal = hostname ? 
+                settingsManager.getSettingsForSite(hostname)?.activeSetting === "global" 
+                : false;
+
             if (tabId) {
-                chrome.tabs
-                    .sendMessage(tabId, {
-                        type: "UPDATE_SETTINGS",
-                        settings,
-                        isGlobal: hostname
-                            ? settingsManager.getSettingsForSite(hostname)
-                                  ?.activeSetting === "global"
-                            : false,
-                        enabled: true,
-                    } as MessageType)
-                    .catch((error) =>
-                        console.error(
-                            "Settings Event Handler: Error sending settings to tab",
-                            tabId,
-                            error
-                        )
-                    );
+                await chrome.tabs.sendMessage(tabId, {
+                    type: "UPDATE_SETTINGS",
+                    settings,
+                    isGlobal,
+                    enabled: true,
+                    hostname
+                } as MessageType).catch((error) =>
+                    console.error(
+                        "Settings Event Handler: Error sending settings to tab",
+                        tabId,
+                        error
+                    )
+                );
             } else {
-                broadcastSettings(settings, false, true).catch(console.error);
+                await broadcastSettings(settings, isGlobal, true, hostname).catch(console.error);
             }
         }
     );
