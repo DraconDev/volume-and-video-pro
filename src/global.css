@@ -4,12 +4,12 @@
 @layer base {
     :root {
         --color-bg: #1a1b1e;
-        --color-text: #e4e5e7;
-        --color-text-secondary: #9ca3af;
-        --color-primary: #3b82f6;
-        --color-primary-hover: #2563eb;
+        --color-text: #ffffff;
+        --color-text-secondary: #a1a8b3;
+        --color-primary: #60a5fa;
+        --color-primary-hover: #3b82f6;
         --color-surface: #2a2b2e;
-        --color-surface-hover: #323438;
+        --color-surface-hover: #3a3b3e;
         --color-border: #374151;
         --color-slider-bg: #4b5563;
     }
@@ -88,7 +88,7 @@
     }
 
     .settings-button.active {
-        @apply bg-primary text-white hover:bg-primary;
+        @apply bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)];
     }
 
     .mono-button {
