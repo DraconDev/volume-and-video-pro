@@ -47,11 +47,9 @@ export class MediaManager {
     return [];
   }
 
-  // Updated custom player detection that includes extra site-specific selectors
+  // Updated custom player detection with fallback dynamic scanning
   private static findCustomPlayers(root: ParentNode): HTMLElement[] {
     const customPlayers: HTMLElement[] = [];
-
-    // Extended set of selectors for common platforms
     const baseSelectors = [
       "video",
       "audio",
@@ -67,12 +65,12 @@ export class MediaManager {
       'iframe[src*="vimeo.com"]',
       'iframe[src*="dailymotion.com"]',
       'iframe[src*="twitch.tv"]',
-      'iframe[src*="facebook.com"]',
+      'iframe[src*="facebook.com"]'
     ];
 
     // Append extra selectors if needed
     const selectors = baseSelectors.concat(this.getExtraSelectorsForSite());
-
+    
     try {
       const elements = root.querySelectorAll(selectors.join(","));
       elements.forEach((element) => {
@@ -86,7 +84,25 @@ export class MediaManager {
         }
       });
     } catch (e) {
-      console.warn("Error finding custom players:", e);
+      console.warn("Error finding custom players using selectors:", e);
+    }
+
+    // Fallback: if no custom players found, scan all visible elements for descendant media
+    if (customPlayers.length === 0) {
+      const allElements = Array.from(root.getElementsByTagName("*"));
+      allElements.forEach((elem) => {
+        if (
+          elem instanceof HTMLElement &&
+          !this.processedElements.has(elem) &&
+          this.isElementVisible(elem) &&
+          // Check if the element is not a media element itself but contains one
+          !(elem.tagName === "VIDEO" || elem.tagName === "AUDIO") &&
+          elem.querySelector("video, audio")
+        ) {
+          this.processedElements.add(elem);
+          customPlayers.push(elem);
+        }
+      });
     }
 
     return customPlayers;
@@ -94,22 +110,6 @@ export class MediaManager {
 
   static findMediaElements(
     root: ParentNode = document,
-    depth: number = 0
-  ): HTMLMediaElement[] {
-    if (this.isExtensionContext() || depth > this.MAX_DEPTH) {
-      return [];
-    }
-
-    const elements: HTMLMediaElement[] = [];
-    const processedNodes = new Set<Node>();
-
-    try {
-      // Direct media elements
-      const mediaElements = root.querySelectorAll("video, audio");
-      mediaElements.forEach((element) => {
-        if (
-          element instanceof HTMLMediaElement &&
-          !processedNodes.has(element) &&
           this.isElementVisible(element)
         ) {
           elements.push(element);
