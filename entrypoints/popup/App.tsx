@@ -243,7 +243,11 @@ function App() {
         case "global":
           setIsUsingGlobalSettings(true);
           setIsSiteEnabled(true);
-          await settingsManager.updateGlobalSettings(settings, tab.id, hostname);
+          await settingsManager.updateGlobalSettings(
+            settings,
+            tab.id,
+            hostname
+          );
           break;
         case "site":
           setIsUsingGlobalSettings(false);
@@ -252,13 +256,11 @@ function App() {
           break;
       }
     } catch (error) {
-        isUsingGlobalSettings,
-        isSiteEnabled,
-      });
+      console.error("Popup: Error toggling mode:", error);
     }
   };
 
-  // Display settings should show disabled values when in disabled mode
+  // Display settings should show disabled state settings when site is disabled
   const displaySettings = isSiteEnabled ? settings : defaultSettings;
 
   return (

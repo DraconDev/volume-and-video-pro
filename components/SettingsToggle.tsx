@@ -18,8 +18,16 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
   return (
     <div className="settings-toggle">
       <select
-        value={!isSiteEnabled ? "disabled" : isUsingGlobalSettings ? "global" : "site"}
-        onChange={(e) => handleModeChange(e.target.value as "global" | "site" | "disabled")}
+        value={
+          !isSiteEnabled
+            ? "disabled"
+            : isUsingGlobalSettings
+            ? "global"
+            : "site"
+        }
+        onChange={(e) =>
+          handleModeChange(e.target.value as "global" | "site" | "disabled")
+        }
       >
         <option value="global">Global Settings</option>
         <option value="site">Site Settings</option>
