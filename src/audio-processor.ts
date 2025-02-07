@@ -90,44 +90,10 @@ export class AudioProcessor {
         };
     }
 
-    private async connectNodes(nodes: AudioNodes, settings: AudioSettings): Promise<void> {
-        const { source, bassFilter, voiceFilter, gain, splitter, merger, context } = nodes;
+    private async updateNodeSettings(nodes: AudioNodes, settings: AudioSettings): Promise<void> {
+        const { gain, bassFilter, voiceFilter, context } = nodes;
 
         try {
-            // Safely disconnect all nodes
-            const disconnectNode = (node: AudioNode) => {
-                try {
-                    node.disconnect();
-                } catch (err) {
-                    console.log("AudioProcessor: Node disconnect failed (normal if not connected):", err);
-                }
-            };
-
-            disconnectNode(source);
-            disconnectNode(bassFilter);
-            disconnectNode(voiceFilter);
-            disconnectNode(gain);
-            disconnectNode(splitter);
-            disconnectNode(merger);
-
-            // Connect based on settings
-            if (settings.mono) {
-                // Verify connections in mono mode
-                await this.verifyConnection(() => source.connect(bassFilter));
-                await this.verifyConnection(() => bassFilter.connect(voiceFilter));
-                await this.verifyConnection(() => voiceFilter.connect(splitter));
-                await this.verifyConnection(() => splitter.connect(merger, 0, 0));
-                await this.verifyConnection(() => splitter.connect(merger, 0, 1));
-                await this.verifyConnection(() => merger.connect(gain));
-            } else {
-                // Verify connections in stereo mode
-                await this.verifyConnection(() => source.connect(bassFilter));
-                await this.verifyConnection(() => bassFilter.connect(voiceFilter));
-                await this.verifyConnection(() => voiceFilter.connect(gain));
-            }
-            await this.verifyConnection(() => gain.connect(context.destination));
-
-            // Update parameters with time validation
             const safeTimeValue = isFinite(context.currentTime) ? context.currentTime : 0;
             
             // Clamp values to prevent invalid audio settings
@@ -135,16 +101,48 @@ export class AudioProcessor {
             const clampedBass = Math.max(-15, Math.min(((settings.bassBoost - 100) / 100) * 15, 15));
             const clampedVoice = Math.max(-24, Math.min(((settings.voiceBoost - 100) / 100) * 24, 24));
 
-            gain.gain.setValueAtTime(clampedVolume, safeTimeValue);
-            bassFilter.gain.setValueAtTime(clampedBass, safeTimeValue);
-            voiceFilter.gain.setValueAtTime(clampedVoice, safeTimeValue);
+            // Update parameters smoothly
+            gain.gain.linearRampToValueAtTime(clampedVolume, safeTimeValue + 0.1);
+            bassFilter.gain.linearRampToValueAtTime(clampedBass, safeTimeValue + 0.1);
+            voiceFilter.gain.linearRampToValueAtTime(clampedVoice, safeTimeValue + 0.1);
 
-            console.log("AudioProcessor: Nodes connected successfully", {
+            console.log("AudioProcessor: Settings updated successfully", {
                 volume: clampedVolume,
                 bass: clampedBass,
                 voice: clampedVoice,
                 mono: settings.mono
             });
+        } catch (error) {
+            console.error("AudioProcessor: Failed to update settings:", error);
+            throw error;
+        }
+    }
+
+    private async connectNodes(nodes: AudioNodes, settings: AudioSettings): Promise<void> {
+        const { source, bassFilter, voiceFilter, gain, splitter, merger, context } = nodes;
+
+        try {
+            // Only set up connections if not already connected
+            if (!this.hasProcessing(nodes.element)) {
+                if (settings.mono) {
+                    // Connect in mono mode
+                    source.connect(bassFilter);
+                    bassFilter.connect(voiceFilter);
+                    voiceFilter.connect(splitter);
+                    splitter.connect(merger, 0, 0);
+                    splitter.connect(merger, 0, 1);
+                    merger.connect(gain);
+                } else {
+                    // Connect in stereo mode
+                    source.connect(bassFilter);
+                    bassFilter.connect(voiceFilter);
+                    voiceFilter.connect(gain);
+                }
+                gain.connect(context.destination);
+            }
+
+            // Always update settings values
+            await this.updateNodeSettings(nodes, settings);
         } catch (error) {
             console.error("AudioProcessor: Failed to connect nodes:", error);
             throw error;
