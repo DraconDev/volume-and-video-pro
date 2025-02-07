@@ -36,7 +36,6 @@ export interface UpdateSettingsMessage {
     settings: AudioSettings;
     enabled?: boolean;
     isGlobal?: boolean;
-    forceUpdate?: boolean;
 }
 
 export interface ContentScriptReadyMessage {
