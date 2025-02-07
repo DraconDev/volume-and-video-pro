@@ -36,6 +36,13 @@ export class SettingsHandler {
                     // Only use site settings if specifically in site mode
                     this.currentSettings = siteConfig.settings;
                     this.isUsingGlobalSettings = false;
+                    console.log("Settings: Using site-specific settings");
+                } else {
+                    // For global or default mode, use global settings
+                    console.log("Settings: Using global settings (site in global mode)");
+                }
+            } else {
+                console.log("Settings: Using global settings (no site config)");
             }
 
             // Notify background script
