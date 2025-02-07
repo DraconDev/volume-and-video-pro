@@ -183,7 +183,7 @@ export class SettingsManager extends EventEmitter {
     // Initialize siteConfig if it doesn't exist
     if (!siteConfig) {
       siteConfig = {
-        enabled: mode !== 'disabled',
+        enabled: mode !== "disabled",
         activeSetting: mode,
         settings: { ...defaultSettings }, // Always initialize with settings
       };
@@ -198,19 +198,19 @@ export class SettingsManager extends EventEmitter {
 
     // Update mode-specific settings
     switch (mode) {
-      case 'site':
+      case "site":
         siteConfig.enabled = true;
         // Use existing site settings or initialize with defaults
         siteConfig.settings = siteConfig.settings || { ...defaultSettings };
         break;
-      
-      case 'global':
+
+      case "global":
         siteConfig.enabled = true;
         // Keep existing site settings but use global settings for now
         siteConfig.settings = siteConfig.settings || { ...defaultSettings };
         break;
-      
-      case 'disabled':
+
+      case "disabled":
         siteConfig.enabled = false;
         // Preserve site settings even when disabled
         break;
@@ -223,11 +223,12 @@ export class SettingsManager extends EventEmitter {
     await this.persistSettings(hostname);
 
     // Get the appropriate settings based on mode
-    const settingsToUse = mode === "global"
-      ? { ...this.globalSettings }
-      : mode === "site"
-      ? { ...siteConfig.settings }
-      : { ...defaultSettings };
+    const settingsToUse =
+      mode === "global"
+        ? { ...this.globalSettings }
+        : mode === "site"
+        ? { ...siteConfig.settings }
+        : { ...defaultSettings };
 
     // Emit settings update event
     this.emit("settingsUpdated", settingsToUse, hostname, tabId);

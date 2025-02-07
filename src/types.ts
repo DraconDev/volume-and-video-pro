@@ -1,61 +1,61 @@
 export interface AudioSettings {
-    volume: number;
-    bassBoost: number;
-    voiceBoost: number;
-    mono: boolean;
-    speed: number;
+  volume: number;
+  bassBoost: number;
+  voiceBoost: number;
+  mono: boolean;
+  speed: number;
 }
 
 export interface SiteSettings {
-    enabled: boolean;
-    settings?: AudioSettings;
-    activeSetting: "global" | "site" | "disabled";
+  enabled: boolean;
+  settings?: AudioSettings;
+  activeSetting: "global" | "site" | "disabled";
 }
 
 export const defaultSettings: AudioSettings = {
-    volume: 100,
-    bassBoost: 100,
-    voiceBoost: 100,
-    mono: false,
-    speed: 100,
+  volume: 100,
+  bassBoost: 100,
+  voiceBoost: 100,
+  mono: false,
+  speed: 100,
 };
 
 export const defaultSiteSettings: SiteSettings = {
-    enabled: true,
-    settings: { ...defaultSettings },
-    activeSetting: "global",
+  enabled: true,
+  settings: { ...defaultSettings },
+  activeSetting: "global",
 };
 
 export type StateType = {
-    globalSettings: AudioSettings;
-    siteSettings: Map<string, SiteSettings>;
+  globalSettings: AudioSettings;
+  siteSettings: Map<string, SiteSettings>;
 };
 
 export interface UpdateSettingsMessage {
-    type: "UPDATE_SETTINGS";
-    settings: AudioSettings;
-    enabled?: boolean;
-    isGlobal?: boolean;
+  type: "UPDATE_SETTINGS";
+  settings: AudioSettings;
+  enabled?: boolean;
+  isGlobal?: boolean;
 }
 
 export interface ContentScriptReadyMessage {
-    type: "CONTENT_SCRIPT_READY";
-    hostname?: string;
-    usingGlobal?: boolean;
+  type: "CONTENT_SCRIPT_READY";
+  hostname?: string;
+  usingGlobal?: boolean;
 }
 
 export interface UpdateSiteModeMessage {
-    type: "UPDATE_SITE_MODE";
-    hostname?: string;
-    mode?: "global" | "site" | "disabled";
+  type: "UPDATE_SITE_MODE";
+  hostname?: string;
+  mode?: "global" | "site" | "disabled";
 }
 
 export type MessageType =
-    | UpdateSettingsMessage
-    | ContentScriptReadyMessage
-    | UpdateSiteModeMessage;
+  | UpdateSettingsMessage
+  | ContentScriptReadyMessage
+  | UpdateSiteModeMessage;
 
 export type StorageData = {
-    globalSettings?: AudioSettings;
-    siteSettings?: { [hostname: string]: SiteSettings };
+  globalSettings?: AudioSettings;
+  siteSettings?: { [hostname: string]: SiteSettings };
 };

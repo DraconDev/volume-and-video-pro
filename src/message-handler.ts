@@ -155,7 +155,8 @@ async function handleUpdateSiteMode(
     return;
   }
 
-  if (mode !== "global" && mode !== "site" && mode !== "disabled") { // Updated validation
+  if (mode !== "global" && mode !== "site" && mode !== "disabled") {
+    // Updated validation
     const error = `Invalid mode provided: ${mode}`;
     console.error("Message Handler:", error);
     sendResponse({ success: false, error });
