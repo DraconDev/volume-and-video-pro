@@ -1,0 +1,26 @@
+{
+  "baseSelectors": [
+    "video",
+    "audio",
+    "[class*='player']",
+    "[class*='video']",
+    "[class*='audio']",
+    ".video-js",
+    ".jwplayer",
+    ".html5-video-player",
+    ".plyr",
+    "[data-media]",
+    "iframe[src*='youtube.com']",
+    "iframe[src*='vimeo.com']",
+    "iframe[src*='dailymotion.com']",
+    "iframe[src*='twitch.tv']",
+    "iframe[src*='facebook.com']"
+  ],
+  "siteSelectors": {
+    "problematicsite.com": [
+      ".problem-player",
+      "div[data-player]",
+      "video[src*='specialstream']"
+    ]
+  }
+}
