@@ -92,10 +92,11 @@ async function handleUpdateSettings(
 
         // Update settings based on mode
         if (message.isGlobal || isCurrentlyGlobal) {
+            // Always pass hostname for global updates so sites using global get updated
             await settingsManager.updateGlobalSettings(
                 message.settings,
                 targetTabId,
-                hostname
+                hostname // Pass hostname for global updates
             );
         } else {
             await settingsManager.updateSiteSettings(
