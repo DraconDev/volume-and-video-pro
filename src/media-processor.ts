@@ -52,14 +52,11 @@ export class MediaProcessor {
         // Setup or update audio processing for each element
         for (const element of mediaElements) {
             try {
-                // Force re-setup of audio context if it exists but isn't working
-                if (this.audioProcessor.hasProcessing(element)) {
-                    await this.audioProcessor.resetToDefault(element);
+                // Only set up audio context if it doesn't exist
+                if (!this.audioProcessor.hasProcessing(element)) {
+                    await this.audioProcessor.setupAudioContext(element, settings);
+                    console.log("MediaProcessor: Setup audio context for element:", element.src);
                 }
-                
-                // Setup new audio context
-                await this.audioProcessor.setupAudioContext(element, settings);
-                console.log("MediaProcessor: Setup audio context for element:", element.src);
             } catch (e) {
                 console.error(
                     "MediaProcessor: Failed to process media element:",
@@ -68,7 +65,7 @@ export class MediaProcessor {
             }
         }
 
-        // Update effects for all elements
+        // Update effects for all elements with new settings
         await this.audioProcessor.updateAudioEffects(settings);
     }
 
