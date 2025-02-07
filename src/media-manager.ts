@@ -1,3 +1,39 @@
+const mediaConfig = {
+  baseSelectors: [
+    "video",
+    "audio",
+    "[class*='player']",
+    "[class*='video']",
+    "[class*='audio']",
+    ".video-js",
+    ".jwplayer",
+    ".html5-video-player",
+    ".plyr",
+    "[data-media]",
+    "iframe[src*='youtube.com']",
+    "iframe[src*='vimeo.com']",
+    "iframe[src*='dailymotion.com']",
+    "iframe[src*='twitch.tv']",
+    "iframe[src*='facebook.com']",
+  ],
+  siteSelectors: {
+    "problematicsite.com": [
+      ".problem-player",
+      "div[data-player]",
+      "video[src*='specialstream']",
+    ],
+    "youtube.com": [
+      ".ytp-chrome-top",
+      ".ytp-show-cards-title",
+      ".ytp-toggle-button",
+    ],
+    "netflix.com": ["[data-uia='video-player']", ".PlayerControls"],
+    "hulu.com": ["video", ".HuluPlayer"],
+    "amazon.com": ["[data-player='AmazonVideo']", ".avc-container"],
+    "disneyplus.com": [".dp-video-player", "[data-testid='video-player']"],
+  },
+};
+
 export class MediaManager {
   // Keep track of already processed elements to avoid duplicates
   private static processedElements = new WeakSet<HTMLElement>();
