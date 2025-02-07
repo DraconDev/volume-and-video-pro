@@ -174,7 +174,7 @@ export class SettingsManager extends EventEmitter {
 
   async updateSiteMode(
     hostname: string,
-    mode: "global" | "site" | "default",
+    mode: "global" | "site" | "disabled", // changed from 'default'
     tabId?: number
   ) {
     let siteConfig = this.siteSettings.get(hostname);
@@ -183,9 +183,9 @@ export class SettingsManager extends EventEmitter {
     // Initialize siteConfig if it doesn't exist
     if (!siteConfig) {
       siteConfig = {
-        enabled: true,
+        enabled: mode !== 'disabled',
         activeSetting: mode,
-        settings: mode === "site" ? { ...defaultSettings } : undefined,
+        settings: { ...defaultSettings }, // Always initialize with settings
       };
     }
 
