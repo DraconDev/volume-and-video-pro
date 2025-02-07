@@ -1,5 +1,5 @@
 export class MediaManager {
-    private static observedElements = new Set<HTMLMediaElement>();
+    // Keep track of already processed elements to avoid duplicates
     private static processedElements = new WeakSet<HTMLElement>();
     private static readonly DEBOUNCE_DELAY = 1000; // Increased debounce delay
     private static readonly MAX_DEPTH = 5; // Reduced max depth
@@ -62,66 +62,128 @@ export class MediaManager {
         return customPlayers;
     }
 
-    static findMediaElements(): HTMLMediaElement[] {
-        return Array.from(this.observedElements);
+    static findMediaElements(
+        root: ParentNode = document,
+        depth: number = 0
+    ): HTMLMediaElement[] {
+        if (this.isExtensionContext() || depth > this.MAX_DEPTH) {
+            return [];
+        }
+
+        const elements: HTMLMediaElement[] = [];
+        const processedNodes = new Set<Node>();
+
+        try {
+            // Direct media elements
+            const mediaElements = root.querySelectorAll("video, audio");
+            mediaElements.forEach(element => {
+                if (element instanceof HTMLMediaElement && 
+                    !processedNodes.has(element) && 
+                    this.isElementVisible(element)) {
+                    elements.push(element);
+                    processedNodes.add(element);
+                }
+            });
+
+            // Handle Shadow DOM
+            if (root instanceof Element && root.shadowRoot) {
+                elements.push(...this.findMediaElements(root.shadowRoot, depth + 1));
+            }
+
+            // Handle iframes only in top frame
+            if (!this.inIframe() && depth === 0) {
+                const iframes = root.querySelectorAll("iframe");
+                iframes.forEach(iframe => {
+                    try {
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                        if (iframeDoc && !processedNodes.has(iframeDoc)) {
+                            elements.push(...this.findMediaElements(iframeDoc, depth + 1));
+                            processedNodes.add(iframeDoc);
+                        }
+                    } catch (e) {
+                        // Silently handle cross-origin iframes
+                    }
+                });
+            }
+
+            // Custom players (only at top level)
+            if (depth === 0) {
+                const customPlayers = this.findCustomPlayers(root);
+                customPlayers.forEach(player => {
+                    const mediaInPlayer = player.querySelectorAll("video, audio");
+                    mediaInPlayer.forEach(element => {
+                        if (element instanceof HTMLMediaElement && 
+                            !processedNodes.has(element) && 
+                            this.isElementVisible(element)) {
+                            elements.push(element);
+                            processedNodes.add(element);
+                        }
+                    });
+                });
+            }
+        } catch (e) {
+            if (!this.isExtensionContext()) {
+                console.warn("Error finding media elements:", e);
+            }
+        }
+
+        return Array.from(new Set(elements));
     }
 
-    static setupMediaElementObserver(callback: () => Promise<void>) {
-        // Watch for dynamically added media elements
-        const observer = new MutationObserver((mutations) => {
-            let mediaAdded = false;
-            
-            mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach((node) => {
-                    if (node instanceof HTMLMediaElement) {
-                        this.observedElements.add(node);
-                        mediaAdded = true;
-                    }
-                    // Check for media elements inside added nodes
-                    if (node instanceof Element) {
-                        node.querySelectorAll('video, audio').forEach(media => {
-                            this.observedElements.add(media as HTMLMediaElement);
-                            mediaAdded = true;
-                        });
-                    }
-                });
-            });
+    static setupMediaElementObserver(
+        callback: (elements: HTMLMediaElement[]) => void
+    ): MutationObserver {
+        let debounceTimeout: NodeJS.Timeout | null = null;
+        let lastCheck = Date.now();
 
-            if (mediaAdded) {
-                callback();
+        const debouncedCheck = () => {
+            const now = Date.now();
+            if (now - lastCheck < this.DEBOUNCE_DELAY) {
+                return;
+            }
+
+            if (debounceTimeout) {
+                clearTimeout(debounceTimeout);
+            }
+
+            debounceTimeout = setTimeout(() => {
+                lastCheck = now;
+                const elements = this.findMediaElements();
+                if (elements.length > 0) {
+                    callback(elements);
+                }
+            }, this.DEBOUNCE_DELAY);
+        };
+
+        // Initial check
+        if (!this.isExtensionContext()) {
+            debouncedCheck();
+        }
+
+        // Simplified mutation observer
+        const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+                    const hasMediaElement = Array.from(mutation.addedNodes).some(
+                        node => node instanceof Element && (
+                            node.tagName === "VIDEO" ||
+                            node.tagName === "AUDIO" ||
+                            node.querySelector?.("video, audio")
+                        )
+                    );
+                    
+                    if (hasMediaElement) {
+                        debouncedCheck();
+                        break;
+                    }
+                }
             }
         });
 
-        // Observe the entire document including shadow DOM
         observer.observe(document.documentElement, {
             childList: true,
-            subtree: true,
+            subtree: true
         });
-
-        // Also look for media elements in shadow DOM
-        const scanShadowDOM = (root: Element) => {
-            if (root.shadowRoot) {
-                root.shadowRoot.querySelectorAll('video, audio').forEach(media => {
-                    this.observedElements.add(media as HTMLMediaElement);
-                });
-                root.shadowRoot.querySelectorAll('*').forEach(scanShadowDOM);
-            }
-        };
-
-        // Initial scan for media elements
-        const initialScan = () => {
-            document.querySelectorAll('video, audio').forEach(media => {
-                this.observedElements.add(media as HTMLMediaElement);
-            });
-            document.querySelectorAll('*').forEach(scanShadowDOM);
-            if (this.observedElements.size > 0) {
-                callback();
-            }
-        };
-
-        // Run initial scan and setup periodic rescans for troublesome sites
-        initialScan();
-        setInterval(initialScan, 1000);
 
         return observer;
     }

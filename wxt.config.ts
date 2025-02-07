@@ -2,10 +2,10 @@ import { defineConfig } from "wxt";
 
 export default defineConfig({
     manifest: {
-        permissions: ["storage", "tabs", "activeTab"],
+        permissions: ["storage", "tabs"],
         host_permissions: ["<all_urls>"],
         name: "Volume & Video Master 1000%",
-        version: "1.3.2",
+        version: "1.3.3",
         description: "Volume & Video Master",
         background: {
             service_worker: "entrypoints/background.ts",
@@ -27,14 +27,12 @@ export default defineConfig({
                 matches: ["<all_urls>"],
             },
         ],
-        content_scripts: [
-            {
-                matches: ["<all_urls>"],
-                js: ["entrypoints/content.ts"],
-                run_at: "document_start", // Inject early to catch all media elements
-                all_frames: true, // Run in all frames to catch embedded media
-            },
-        ],
+        // content_scripts: [
+        //     {
+        //         matches: ["<all_urls>"],
+        //         js: ["entrypoints/content.ts"],
+        //     },
+        // ],
     },
     modules: ["@wxt-dev/module-react"],
 });
