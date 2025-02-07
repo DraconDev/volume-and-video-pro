@@ -3,113 +3,117 @@
 @tailwind utilities;
 
 @layer base {
-    :root {
-        --color-bg: #1a1b1e;
-        --color-text: #ffffff;
-        --color-text-secondary: #a1a8b3;
-        --color-primary: #60a5fa;
-        --color-primary-hover: #3b82f6;
-        --color-surface: #2a2b2e;
-        --color-surface-hover: #3a3b3e;
-        --color-border: #374151;
-        --color-slider-bg: #4b5563;
-    }
+  :root {
+    --color-bg: #1a1b1e;
+    --color-text: #ffffff;
+    --color-text-secondary: #a1a8b3;
+    --color-primary: #60a5fa;
+    --color-primary-hover: #3b82f6;
+    --color-surface: #2a2b2e;
+    --color-surface-hover: #3a3b3e;
+    --color-border: #374151;
+    --color-slider-bg: #4b5563;
+  }
 
-    input[type="range"] {
-        -webkit-appearance: none;
-        @apply w-full h-[3px] rounded-sm outline-none appearance-none cursor-pointer relative;
-        background-color: var(--color-slider-bg);
-        background-image: linear-gradient(var(--color-primary), var(--color-primary));
-        background-repeat: no-repeat;
-        background-size: var(--range-progress, 0%) 100%;
-        background-position: 4px center;
-        margin-top: 16px;
-        margin-bottom: 16px;
-    }
+  input[type="range"] {
+    -webkit-appearance: none;
+    @apply w-full h-[3px] rounded-sm outline-none appearance-none cursor-pointer relative;
+    background-color: var(--color-slider-bg);
+    background-image: linear-gradient(
+      var(--color-primary),
+      var(--color-primary)
+    );
+    background-repeat: no-repeat;
+    background-size: var(--range-progress, 0%) 100%;
+    background-position: 4px center;
+    margin-top: 16px;
+    margin-bottom: 16px;
+  }
 
-    input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        @apply appearance-none w-5 h-5 rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.4)] relative;
-        margin-top: -2px;
-        border: 2px solid var(--color-bg);
-        background-color: var(--color-primary);
-    }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    @apply appearance-none w-5 h-5 bg-primary rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.4)] relative;
+    margin-top: -2px;
+    border: 2px solid var(--color-surface);
+  }
 
-    input[type="range"]::-moz-range-thumb {
-        -webkit-appearance: none;
-        @apply appearance-none w-12 h-12 rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.4)] relative;
-        border: 2px solid var(--color-bg);
-        background-color: var(--color-primary);
-        margin-top: -5px;
-    }
+  input[type="range"]::-moz-range-thumb {
+    -webkit-appearance: none;
+    @apply appearance-none w-12 h-12 bg-primary rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.4)] relative;
+    border: 2px solid var(--color-surface);
+    margin-top: -5px;
+  }
 
-    input[type="range"]::-moz-range-progress {
-        @apply h-[2px] rounded-sm;
-        background-color: var(--color-primary);
-    }
+  input[type="range"]::-moz-range-progress {
+    @apply h-[2px] rounded-sm;
+    background-color: var(--color-primary);
+  }
 
-    input[type="range"]:disabled {
-        @apply opacity-50 cursor-not-allowed;
-    }
+  input[type="range"]:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
 
-    input[type="range"].disabled {
-        @apply opacity-50 cursor-not-allowed;
-    }
+  input[type="range"].disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
 
-    .slider {
-        @apply w-full;
-        --percentage: 50%;
-    }
+  .slider {
+    @apply w-full;
+    --percentage: 50%;
+  }
 
-    .slider::-webkit-slider-runnable-track {
-        -webkit-appearance: none;
-        @apply h-[2px] rounded-sm;
-        background-color: var(--color-slider-bg);
-        background-image: linear-gradient(var(--color-primary), var(--color-primary));
-        background-size: var(--percentage) 100%;
-        background-repeat: no-repeat;
-    }
+  .slider::-webkit-slider-runnable-track {
+    -webkit-appearance: none;
+    @apply h-[2px] rounded-sm;
+    background-color: var(--color-slider-bg);
+    background-image: linear-gradient(
+      var(--color-primary),
+      var(--color-primary)
+    );
+    background-size: var(--percentage) 100%;
+    background-repeat: no-repeat;
+  }
 
-    .slider::-moz-range-track {
-        -webkit-appearance: none;
-        @apply h-[2px] rounded-sm;
-        background-color: var(--color-slider-bg);
-    }
+  .slider::-moz-range-track {
+    -webkit-appearance: none;
+    @apply h-[2px] rounded-sm;
+    background-color: var(--color-slider-bg);
+  }
 
-    .slider::-moz-range-progress {
-        @apply bg-primary h-[2px] rounded-sm;
-    }
+  .slider::-moz-range-progress {
+    @apply bg-primary h-[2px] rounded-sm;
+  }
 
-    .slider.disabled {
-        @apply opacity-50 cursor-not-allowed;
-    }
+  .slider.disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
 
-    .settings-button {
-        @apply flex-1 py-3 text-sm border-none outline-none cursor-pointer transition-colors duration-200 rounded;
-        background-color: var(--color-surface);
-        color: var(--color-text);
-    }
+  .settings-button {
+    @apply flex-1 py-3 text-sm border-none outline-none cursor-pointer transition-colors duration-200 rounded;
+    background-color: var(--color-surface);
+    color: var(--color-text);
+  }
 
-    .settings-button.active {
-        @apply bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)];
-    }
+  .settings-button.active {
+    @apply bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)];
+  }
 
-    .mono-button {
-        @apply w-full flex items-center justify-center gap-2 py-2 px-4 text-[13px] border-none cursor-pointer transition-colors duration-200;
-        color: var(--color-text);
-        background-color: var(--color-surface);
-    }
+  .mono-button {
+    @apply w-full flex items-center justify-center gap-2 py-2 px-4 text-[13px] border-none cursor-pointer transition-colors duration-200;
+    color: var(--color-text);
+    background-color: var(--color-surface);
+  }
 
-    .mono-button.active {
-        @apply text-primary;
-    }
+  .mono-button.active {
+    @apply text-primary;
+  }
 
-    .mono-button.active svg {
-        @apply stroke-primary;
-    }
+  .mono-button.active svg {
+    @apply stroke-primary;
+  }
 }
 
 * {
-    font-size: 14px;
-    font-weight: 700 !important;
+  font-size: 14px;
+  font-weight: 700 !important;
 }
