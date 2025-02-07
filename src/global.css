@@ -17,7 +17,7 @@
 
   input[type="range"] {
     -webkit-appearance: none;
-    @apply w-full h-[3px] rounded-sm outline-none appearance-none cursor-pointer relative my-3;
+    @apply w-full h-1 rounded-sm outline-none appearance-none cursor-pointer relative my-3;
     background-color: var(--color-slider-bg);
     background-image: linear-gradient(
       var(--color-primary),
