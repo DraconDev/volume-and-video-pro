@@ -16,10 +16,30 @@ async function handleUpdateSettings(
     sender: chrome.runtime.MessageSender,
     sendResponse: (response?: any) => void
 ) {
-    const targetTabId = sender.tab?.id;
-    const targetUrl = sender.tab?.url;
+    try {
+        // If sender is popup (no tab), get active tab info
+        let targetTabId: number | undefined;
+        let targetUrl: string | undefined;
+        
+        if (!sender.tab) {
+            // Message from popup - get active tab
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tabs[0]) {
+                targetTabId = tabs[0].id;
+                targetUrl = tabs[0].url;
+            }
+        } else {
+            // Message from content script
+            targetTabId = sender.tab.id;
+            targetUrl = sender.tab.url;
+        }
 
-    if (targetUrl) {
+        if (!targetUrl) {
+            console.error("Message Handler: No target URL available");
+            sendResponse({ success: false, error: "No target URL" });
+            return;
+        }
+
         const hostname = getHostname(targetUrl);
 
         // Handle default state
@@ -88,12 +108,28 @@ async function handleUpdateSettings(
         // Forward settings to content script
         if (targetTabId) {
             console.log(
-                "Message Handler: Settings forwarded to content script"
+                "Message Handler: Settings forwarded to content script",
+                {
+                    tabId: targetTabId,
+                    settings: message.settings,
+                    isGlobal: message.isGlobal
+                }
             );
-            await chrome.tabs.sendMessage(targetTabId, message);
+            try {
+                await chrome.tabs.sendMessage(targetTabId, {
+                    ...message,
+                    forceUpdate: true // Add flag to ensure content script applies the update
+                });
+                console.log("Message Handler: Settings successfully forwarded");
+            } catch (error) {
+                console.error("Message Handler: Failed to forward settings:", error);
+            }
         }
 
         sendResponse({ success: true });
+    } catch (error) {
+        console.error("Message Handler: Error in handleUpdateSettings:", error);
+        sendResponse({ success: false, error: String(error) });
     }
 }
 
@@ -170,42 +206,6 @@ async function handleContentScriptReady(
                     settings,
                     isGlobal:
                         (await settingsManager.getSettingsForSite(hostname))
-                            ?.activeSetting === "global",
-                    enabled: true,
-                } as MessageType)
-                .catch((error) => {
-                    console.warn(
-                        "Message Handler: Failed to send settings to tab:",
-                        tabId,
-                        error
-                    );
-                });
-        } else {
-            console.log(
-                "Message Handler: Sending default settings to tab",
-                tabId
-            );
-            chrome.tabs
-                .sendMessage(tabId, {
-                    type: "UPDATE_SETTINGS",
-                    settings: defaultSettings,
-                    enabled: false,
-                } as MessageType)
-                .catch((error) => {
-                    console.warn(
-                        "Message Handler: Failed to send settings to tab:",
-                        tabId,
-                        error
-                    );
-                });
-        }
-        sendResponse({ success: true });
-    }
-}
-
-export function setupMessageHandler() {
-    chrome.runtime.onMessage.addListener(
-        (message: MessageType, sender, sendResponse) => {
             console.log(
                 "Message Handler: Received message:",
                 message,
