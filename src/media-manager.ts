@@ -1,3 +1,15 @@
+  // Updated getExtraSelectorsForSite() to support additional site-specific selectors 
+  // from the reference media-config.
+  private static getExtraSelectorsForSite(): string[] {
+    const hostname = window.location.hostname;
+    let extraSelectors: string[] = [];
+    for (const site in mediaConfig.siteSelectors) {
+      if (hostname.includes(site)) {
+        extraSelectors = extraSelectors.concat(mediaConfig.siteSelectors[site]);
+      }
+    }
+    return extraSelectors;
+  }
 const mediaConfig = {
   baseSelectors: [
     "video",
