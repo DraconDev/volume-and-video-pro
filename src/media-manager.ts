@@ -1,5 +1,3 @@
-import siteMediaSelectors from "../references/site-media-selectors.json";
-
 export class MediaManager {
   // Keep track of already processed elements to avoid duplicates
   private static processedElements = new WeakSet<HTMLElement>();
@@ -38,8 +36,15 @@ export class MediaManager {
   // Add a helper to return extra selectors for known problematic sites
   private static getExtraSelectorsForSite(): string[] {
     const hostname = window.location.hostname;
-    const extraSelectors = siteMediaSelectors[hostname] || [];
-    return extraSelectors;
+    if (hostname.includes("problematicsite.com")) {
+      // Add selectors based on references or manual inspection from the problematic site
+      return [
+        ".problem-player",
+        "div[data-player]",
+        'video[src*="specialstream"]',
+      ];
+    }
+    return [];
   }
 
   // Updated custom player detection that includes extra site-specific selectors
