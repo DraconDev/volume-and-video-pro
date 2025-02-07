@@ -84,18 +84,10 @@ export class AudioProcessor {
             const clampedBass = Math.max(-15, Math.min(((settings.bassBoost - 100) / 100) * 15, 15));
             const clampedVoice = Math.max(-24, Math.min(((settings.voiceBoost - 100) / 100) * 24, 24));
 
-            // Update parameters smoothly
-            gain.gain.cancelScheduledValues(safeTimeValue);
-            bassFilter.gain.cancelScheduledValues(safeTimeValue);
-            voiceFilter.gain.cancelScheduledValues(safeTimeValue);
-
-            gain.gain.setValueAtTime(gain.gain.value, safeTimeValue);
-            bassFilter.gain.setValueAtTime(bassFilter.gain.value, safeTimeValue);
-            voiceFilter.gain.setValueAtTime(voiceFilter.gain.value, safeTimeValue);
-
-            gain.gain.linearRampToValueAtTime(clampedVolume, safeTimeValue + 0.1);
-            bassFilter.gain.linearRampToValueAtTime(clampedBass, safeTimeValue + 0.1);
-            voiceFilter.gain.linearRampToValueAtTime(clampedVoice, safeTimeValue + 0.1);
+            // Update parameters immediately without transitions to avoid audio glitches
+            gain.gain.setValueAtTime(clampedVolume, safeTimeValue);
+            bassFilter.gain.setValueAtTime(clampedBass, safeTimeValue);
+            voiceFilter.gain.setValueAtTime(clampedVoice, safeTimeValue);
 
             console.log("AudioProcessor: Settings updated successfully", {
                 volume: clampedVolume,
@@ -113,17 +105,28 @@ export class AudioProcessor {
         const { source, bassFilter, voiceFilter, gain, splitter, merger, context } = nodes;
 
         try {
+            const wasPlaying = !nodes.element.paused;
+            const currentTime = nodes.element.currentTime;
+
+            // Use try/catch for each disconnect to handle cases where nodes aren't connected
+            const safeDisconnect = (node: AudioNode) => {
+                try {
+                    node.disconnect();
+                } catch (e) {
+                    // Ignore disconnect errors
+                }
+            };
+
             // Disconnect existing connections
-            source.disconnect();
-            bassFilter.disconnect();
-            voiceFilter.disconnect();
-            gain.disconnect();
-            splitter.disconnect();
-            merger.disconnect();
+            safeDisconnect(gain);
+            safeDisconnect(voiceFilter);
+            safeDisconnect(bassFilter);
+            safeDisconnect(splitter);
+            safeDisconnect(merger);
+            safeDisconnect(source);
 
             // Create new connections based on settings
             if (settings.mono) {
-                // Connect in mono mode
                 source.connect(bassFilter);
                 bassFilter.connect(voiceFilter);
                 voiceFilter.connect(splitter);
@@ -131,7 +134,6 @@ export class AudioProcessor {
                 splitter.connect(merger, 0, 1);
                 merger.connect(gain);
             } else {
-                // Connect in stereo mode
                 source.connect(bassFilter);
                 bassFilter.connect(voiceFilter);
                 voiceFilter.connect(gain);
@@ -140,6 +142,15 @@ export class AudioProcessor {
 
             // Apply settings
             await this.updateNodeSettings(nodes, settings);
+
+            // Restore playback state
+            if (wasPlaying) {
+                try {
+                    await nodes.element.play();
+                } catch (e) {
+                    console.error("AudioProcessor: Failed to restore playback:", e);
+                }
+            }
 
             console.log("AudioProcessor: Nodes connected successfully");
         } catch (error) {
@@ -153,8 +164,7 @@ export class AudioProcessor {
         
         for (const [element, nodes] of this.audioElementMap.entries()) {
             try {
-                // Reconnect nodes with new settings to handle mono/stereo changes
-                await this.connectNodes(nodes, settings);
+                await this.updateNodeSettings(nodes, settings);
                 console.log("AudioProcessor: Updated effects for element:", element.src);
             } catch (error) {
                 console.error("AudioProcessor: Update failed for element:", element.src, error);
@@ -166,17 +176,36 @@ export class AudioProcessor {
         const nodes = this.audioElementMap.get(mediaElement);
         if (!nodes) return;
 
+        const wasPlaying = !mediaElement.paused;
+        const currentTime = mediaElement.currentTime;
+
         try {
+            const safeDisconnect = (node: AudioNode) => {
+                try {
+                    node.disconnect();
+                } catch (e) {
+                    // Ignore disconnect errors
+                }
+            };
+
             // Disconnect all nodes
-            nodes.source.disconnect();
-            nodes.bassFilter.disconnect();
-            nodes.voiceFilter.disconnect();
-            nodes.gain.disconnect();
-            nodes.splitter.disconnect();
-            nodes.merger.disconnect();
+            safeDisconnect(nodes.source);
+            safeDisconnect(nodes.bassFilter);
+            safeDisconnect(nodes.voiceFilter);
+            safeDisconnect(nodes.gain);
+            safeDisconnect(nodes.splitter);
+            safeDisconnect(nodes.merger);
+
+            // Connect source directly to destination
+            nodes.source.connect(nodes.context.destination);
 
             // Remove from tracking
             this.audioElementMap.delete(mediaElement);
+
+            // Restore playback state
+            if (wasPlaying) {
+                await mediaElement.play();
+            }
 
             console.log("AudioProcessor: Reset completed for element:", mediaElement.src);
         } catch (error) {
