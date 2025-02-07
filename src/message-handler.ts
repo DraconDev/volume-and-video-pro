@@ -194,37 +194,37 @@ async function handleContentScriptReady(
             url
         );
         const hostname = message.hostname || getHostname(url);
-        const settings = (await settingsManager.getSettingsForSite(hostname))
-            ?.settings;
+        const siteConfig = await settingsManager.getSettingsForSite(hostname);
+        const settingsToSend = siteConfig ? siteConfig.settings : defaultSettings;
+        const isGlobal = siteConfig ? siteConfig.activeSetting === "global" : false;
 
-        if (settings) {
-            console.log(
-                "Message Handler: Sending initial settings to tab",
-                tabId,
-                ":",
-                settings
-            );
-            chrome.tabs
-                .sendMessage(tabId, {
-                    type: "UPDATE_SETTINGS",
-                    settings,
-                    isGlobal:
-                        (await settingsManager.getSettingsForSite(hostname))
-                            ?.activeSetting === "global",
-                    enabled: true,
-                } as MessageType)
-                .catch((error) => {
-                    console.warn(
-                        "Message Handler: Failed to send settings to tab:",
-                        tabId,
-                        error
-                    );
-                });
-        } else {
-            console.log(
-                "Message Handler: Sending default settings to tab",
-                tabId
-            );
+        console.log(
+            "Message Handler: Sending initial settings to tab",
+            tabId,
+            ":",
+            settingsToSend
+        );
+        chrome.tabs
+            .sendMessage(tabId, {
+                type: "UPDATE_SETTINGS",
+                settings: settingsToSend,
+                isGlobal,
+                enabled: !!siteConfig,
+                hostname, // sending hostname
+            } as MessageType)
+            .catch((error) => {
+                console.warn(
+                    "Message Handler: Failed to send settings to tab:",
+                    tabId,
+                    error
+                );
+            });
+        sendResponse({ success: true });
+    }
+}
+
+export function setupMessageHandler() {
+    chrome.runtime.onMessage.addListener(
             chrome.tabs
                 .sendMessage(tabId, {
                     type: "UPDATE_SETTINGS",

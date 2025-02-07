@@ -5,7 +5,8 @@ import { MessageType } from "./types";
 async function broadcastSettings(
     settings: any,
     isGlobal: boolean,
-    enabled: boolean
+    enabled: boolean,
+    hostname?: string
 ) {
     const tabs = await chrome.tabs.query({});
     for (const tab of tabs) {
@@ -16,6 +17,7 @@ async function broadcastSettings(
                     settings,
                     isGlobal,
                     enabled,
+                    hostname, // passing hostname along
                 } as MessageType);
             } catch (error) {
                 // Ignore errors for inactive tabs
@@ -42,16 +44,19 @@ export function setupSettingsEventHandler() {
                     tabId,
                 }
             );
+
+            const isGlobal = hostname
+                ? settingsManager.getSettingsForSite(hostname)?.activeSetting === "global"
+                : false;
+
             if (tabId) {
                 chrome.tabs
                     .sendMessage(tabId, {
                         type: "UPDATE_SETTINGS",
                         settings,
-                        isGlobal: hostname
-                            ? settingsManager.getSettingsForSite(hostname)
-                                  ?.activeSetting === "global"
-                            : false,
+                        isGlobal,
                         enabled: true,
+                        hostname, // include hostname here, too
                     } as MessageType)
                     .catch((error) =>
                         console.error(
@@ -61,7 +66,7 @@ export function setupSettingsEventHandler() {
                         )
                     );
             } else {
-                broadcastSettings(settings, false, true).catch(console.error);
+                broadcastSettings(settings, isGlobal, true, hostname).catch(console.error);
             }
         }
     );
