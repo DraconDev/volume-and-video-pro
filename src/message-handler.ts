@@ -225,26 +225,6 @@ async function handleContentScriptReady(
 
 export function setupMessageHandler() {
     chrome.runtime.onMessage.addListener(
-            chrome.tabs
-                .sendMessage(tabId, {
-                    type: "UPDATE_SETTINGS",
-                    settings: defaultSettings,
-                    enabled: false,
-                } as MessageType)
-                .catch((error) => {
-                    console.warn(
-                        "Message Handler: Failed to send settings to tab:",
-                        tabId,
-                        error
-                    );
-                });
-        }
-        sendResponse({ success: true });
-    }
-}
-
-export function setupMessageHandler() {
-    chrome.runtime.onMessage.addListener(
         (message: MessageType, sender, sendResponse) => {
             console.log(
                 "Message Handler: Received message:",
