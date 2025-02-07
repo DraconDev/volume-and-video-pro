@@ -35,7 +35,7 @@ export class MediaManager {
     );
   }
 
-  // Add a helper to return extra selectors for known problematic sites
+  // Update getExtraSelectorsForSite to use mediaConfig.siteSelectors
   private static getExtraSelectorsForSite(): string[] {
     const hostname = window.location.hostname;
     const siteSelectors = mediaConfig.siteSelectors[hostname] || [];
