@@ -80,18 +80,18 @@ export class SettingsManager extends EventEmitter {
       };
     }
 
-    // For disabled sites
-    if (siteConfig.activeSetting === "disabled" || !siteConfig.enabled) {
-      return null;
+    // For disabled sites, return config but with disabled flag
+    if (siteConfig.activeSetting === "disabled") {
+      return {
+        ...siteConfig,
+        enabled: false,
+      };
     }
 
     return siteConfig;
   }
 
   async updateGlobalSettings(
-    settings: Partial<AudioSettings>,
-    tabId?: number,
-    hostname?: string
   ) {
     console.log("SettingsManager: Updating global settings", {
       oldSettings: { ...this.globalSettings },

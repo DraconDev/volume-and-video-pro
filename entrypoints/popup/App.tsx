@@ -234,37 +234,37 @@ function App() {
 
       const hostname = new URL(tab.url).hostname;
 
-      if (mode === "disabled") {
-        setIsUsingGlobalSettings(false);
-        setIsSiteEnabled(false);
-        await settingsManager.disableSite(hostname, tab.id);
-      } else if (mode === "global") {
-        setIsUsingGlobalSettings(true);
-        setIsSiteEnabled(true);
-        await settingsManager.updateGlobalSettings(settings, tab.id, hostname);
-      } else {
-        // site mode
-        setIsUsingGlobalSettings(false);
-        setIsSiteEnabled(true);
-        await settingsManager.updateSiteSettings(hostname, settings, tab.id);
+      switch (mode) {
+        case "disabled":
+          setIsUsingGlobalSettings(false);
+          setIsSiteEnabled(false);
+          // Don't update settings state, just disable the site
+          await settingsManager.disableSite(hostname, tab.id);
+          break;
+        
+        case "global":
+          setIsUsingGlobalSettings(true);
+          setIsSiteEnabled(true);
+          // Use existing settings when switching to global
+          await settingsManager.updateGlobalSettings(settings, tab.id, hostname);
+          break;
+        
+        case "site":
+          setIsUsingGlobalSettings(false);
+          setIsSiteEnabled(true);
+          // Use existing settings when switching to site mode
+          await settingsManager.updateSiteSettings(hostname, settings, tab.id);
+          break;
       }
     } catch (error) {
-      console.error("Popup: Error toggling mode:", error, {
-        mode,
-        currentSettings: settings,
-        isUsingGlobalSettings,
-        isSiteEnabled,
-      });
+      console.error("Popup: Error toggling mode:", error);
     }
   };
 
-  // Display settings should show disabled state settings when site is disabled
+  // Display default settings only when disabled, but keep actual settings in state
   const displaySettings = isSiteEnabled ? settings : defaultSettings;
 
   return (
-    <div className="w-[280px] p-4 font-sans bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col space-y-4">
-      <AudioControls
-        settings={displaySettings}
         onSettingChange={handleSettingChange}
         formatDiff={formatDiff}
         onReset={handleReset}
