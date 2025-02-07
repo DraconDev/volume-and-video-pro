@@ -278,7 +278,7 @@ function App() {
     const displaySettings = isSiteEnabled ? settings : defaultSettings;
 
     return (
-        <div className="w-[280px] p-4 font-sans">
+        <div className="w-[280px] p-4 font-sans bg-[var(--color-bg)] text-[var(--color-text)]">
             <AudioControls
                 settings={displaySettings}
                 onSettingChange={handleSettingChange}
@@ -295,7 +295,7 @@ function App() {
 
             <button
                 onClick={() => window.open("https://ko-fi.com/adamdracon")}
-                className="w-full bg-primary text-white rounded py-2.5 text-sm font-medium border-none cursor-pointer hover:bg-[#1557b0] transition-colors duration-200"
+                className="w-full bg-[var(--color-primary)] text-[var(--color-text)] rounded py-2.5 text-sm font-medium border-none cursor-pointer hover:bg-[var(--color-primary-hover)] transition-colors duration-200"
             >
                 Donate
             </button>
