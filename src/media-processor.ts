@@ -42,6 +42,8 @@ export class MediaProcessor {
         settings: AudioSettings,
         needsProcessing: boolean
     ): Promise<void> {
+        console.log("MediaProcessor: Processing elements with settings:", settings);
+        
         // Update speed for all elements
         mediaElements.forEach((element) =>
             this.updatePlaybackSpeed(element, settings.speed)
@@ -50,12 +52,14 @@ export class MediaProcessor {
         // Setup or update audio processing for each element
         for (const element of mediaElements) {
             try {
-                if (!this.audioProcessor.hasProcessing(element)) {
-                    await this.audioProcessor.setupAudioContext(
-                        element,
-                        settings
-                    );
+                // Force re-setup of audio context if it exists but isn't working
+                if (this.audioProcessor.hasProcessing(element)) {
+                    await this.audioProcessor.resetToDefault(element);
                 }
+                
+                // Setup new audio context
+                await this.audioProcessor.setupAudioContext(element, settings);
+                console.log("MediaProcessor: Setup audio context for element:", element.src);
             } catch (e) {
                 console.error(
                     "MediaProcessor: Failed to process media element:",
