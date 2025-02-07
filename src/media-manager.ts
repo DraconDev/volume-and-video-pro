@@ -42,7 +42,7 @@ export class MediaManager {
       return [
         ".problem-player",
         "div[data-player]",
-        'video[src*="specialstream"]'
+        'video[src*="specialstream"]',
       ];
     }
     return [];
