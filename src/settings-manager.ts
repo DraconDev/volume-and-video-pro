@@ -82,20 +82,23 @@ export class SettingsManager extends EventEmitter {
             tabId,
             hostname
         });
-
-        // Only update global settings
-        console.log("SettingsManager: Updating global settings", {
-            oldSettings: { ...this.globalSettings },
-            newSettings: { ...settings }
-        });
         
         this.globalSettings = { ...settings };
 
-        // Note: We do NOT update site configs here, as they will automatically 
-        // use the new global settings when in global mode via getSettingsForPlayback
+        // For sites using global settings, we need to emit update events
+        this.siteSettings.forEach((siteConfig, site) => {
+            if (siteConfig.activeSetting === "global") {
+                // Emit for each site using global settings
+                this.emit("settingsUpdated", this.globalSettings, site, undefined);
+            }
+        });
 
-        this.persistSettings().catch(console.error);
-        this.emit("settingsUpdated", this.globalSettings, hostname, tabId);
+        // Finally emit for the current site if specified
+        if (hostname) {
+            this.emit("settingsUpdated", this.globalSettings, hostname, tabId);
+        }
+
+        await this.persistSettings();
     }
 
     async updateSiteSettings(
