@@ -38,7 +38,11 @@ export class MediaManager {
     const hostname = window.location.hostname;
     if (hostname.includes("problematicsite.com")) {
       // Add selectors based on references or manual inspection from the problematic site
-      return [".problem-player", "div[data-player]", 'video[src*="specialstream"]'];
+      return [
+        ".problem-player",
+        "div[data-player]",
+        'video[src*="specialstream"]',
+      ];
     }
     return [];
   }
@@ -63,7 +67,7 @@ export class MediaManager {
       'iframe[src*="vimeo.com"]',
       'iframe[src*="dailymotion.com"]',
       'iframe[src*="twitch.tv"]',
-      'iframe[src*="facebook.com"]'
+      'iframe[src*="facebook.com"]',
     ];
 
     // Append extra selectors if needed
@@ -71,7 +75,7 @@ export class MediaManager {
 
     try {
       const elements = root.querySelectorAll(selectors.join(","));
-      elements.forEach(element => {
+      elements.forEach((element) => {
         if (
           element instanceof HTMLElement &&
           !this.processedElements.has(element) &&
