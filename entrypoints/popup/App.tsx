@@ -160,7 +160,7 @@ function App() {
     key: keyof AudioSettings,
     value: number | boolean
   ) => {
-    if (!isSiteEnabled) return; // Prevent changes when disabled
+    if (!isSiteEnabled) return; // Prevent changes when site is disabled
 
     const newSettings = {
       ...settings,
@@ -217,7 +217,7 @@ function App() {
   };
 
   const handleReset = () => {
-    if (!isSiteEnabled) return; // Prevent reset when disabled
+    if (!isSiteEnabled) return; // Prevent reset when site is disabled
     setSettings(defaultSettings);
   };
 
@@ -234,24 +234,24 @@ function App() {
 
       const hostname = new URL(tab.url).hostname;
 
-      if (mode === "disabled") {
-        setIsUsingGlobalSettings(false);
-        setIsSiteEnabled(false);
-        await settingsManager.disableSite(hostname, tab.id);
-      } else if (mode === "global") {
-        setIsUsingGlobalSettings(true);
-        setIsSiteEnabled(true);
-        await settingsManager.updateGlobalSettings(settings, tab.id, hostname);
-      } else {
-        // site mode
-        setIsUsingGlobalSettings(false);
-        setIsSiteEnabled(true);
-        await settingsManager.updateSiteSettings(hostname, settings, tab.id);
+      switch (mode) {
+        case "disabled":
+          setIsUsingGlobalSettings(false);
+          setIsSiteEnabled(false);
+          await settingsManager.disableSite(hostname, tab.id);
+          break;
+        case "global":
+          setIsUsingGlobalSettings(true);
+          setIsSiteEnabled(true);
+          await settingsManager.updateGlobalSettings(settings, tab.id, hostname);
+          break;
+        case "site":
+          setIsUsingGlobalSettings(false);
+          setIsSiteEnabled(true);
+          await settingsManager.updateSiteSettings(hostname, settings, tab.id);
+          break;
       }
     } catch (error) {
-      console.error("Popup: Error toggling mode:", error, {
-        mode,
-        currentSettings: settings,
         isUsingGlobalSettings,
         isSiteEnabled,
       });
