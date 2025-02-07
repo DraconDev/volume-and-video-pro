@@ -65,23 +65,17 @@ export default defineContentScript({
                     const updateSettingsMessage = message as UpdateSettingsMessage;
                     console.log(
                         "Content: Received settings update:",
-                        updateSettingsMessage.settings,
-                        "force update:",
-                        updateSettingsMessage.forceUpdate
+                        updateSettingsMessage.settings
                     );
 
-                    // Always update internal settings
+                    // Update internal settings
                     settingsHandler.updateSettings(updateSettingsMessage.settings);
 
-                    // Force reprocess media elements if requested
-                    if (updateSettingsMessage.forceUpdate) {
-                        console.log("Content: Force updating media elements");
-                        mediaProcessor.resetToDefault().then(() => {
-                            processMedia();
-                        });
-                    } else {
+                    // Always reset and reapply settings
+                    console.log("Content: Resetting and reapplying settings");
+                    mediaProcessor.resetToDefault().then(() => {
                         processMedia();
-                    }
+                    });
                 }
             }
         );
