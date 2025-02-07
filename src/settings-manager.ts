@@ -158,7 +158,7 @@ export class SettingsManager extends EventEmitter {
         siteConfig.enabled = true;
         this.siteSettings.set(hostname, siteConfig);
 
-        await this.persistSettings();
+        await this.persistSettings(hostname);
         this.emit("settingsUpdated", settings, hostname, tabId);
 
         console.log("SettingsManager: Updated site settings", {
@@ -214,7 +214,7 @@ export class SettingsManager extends EventEmitter {
         siteConfig.activeSetting = mode;
         this.siteSettings.set(hostname, siteConfig);
 
-        await this.persistSettings();
+        await this.persistSettings(hostname);
 
         // Get the appropriate settings based on mode
         const settingsToUse = mode === "global" 
@@ -262,9 +262,27 @@ export class SettingsManager extends EventEmitter {
         siteConfig.activeSetting = "default";
         this.siteSettings.set(hostname, siteConfig);
 
-        await this.persistSettings();
+        await this.persistSettings(hostname);
         this.emit("settingsUpdated", { ...defaultSettings }, hostname, tabId);
         return { ...defaultSettings };
+    }
+
+    public updateSettings(newSettings: Partial<Settings>, tabId?: number, hostname?: string) {
+        console.log('SettingsManager: Updating global settings', {
+            oldSettings: this.settings,
+            newSettings,
+            tabId,
+            hostname
+        });
+        
+        // Update the settings
+        this.settings = {
+            ...this.settings,
+            ...newSettings
+        };
+
+        // Persist the settings with hostname
+        this.persistSettings(hostname);
     }
 }
 
