@@ -172,53 +172,13 @@ export class AudioProcessor {
         }
     }
 
-    async resetToDefault(mediaElement: HTMLMediaElement): Promise<void> {
-        const nodes = this.audioElementMap.get(mediaElement);
-        if (!nodes) return;
-
-        const wasPlaying = !mediaElement.paused;
-        const currentTime = mediaElement.currentTime;
-
-        try {
-            const safeDisconnect = (node: AudioNode) => {
-                try {
-                    node.disconnect();
-                } catch (e) {
-                    // Ignore disconnect errors
-                }
-            };
-
-            // Disconnect all nodes
-            safeDisconnect(nodes.source);
-            safeDisconnect(nodes.bassFilter);
-            safeDisconnect(nodes.voiceFilter);
-            safeDisconnect(nodes.gain);
-            safeDisconnect(nodes.splitter);
-            safeDisconnect(nodes.merger);
-
-            // Connect source directly to destination
-            nodes.source.connect(nodes.context.destination);
-
-            // Remove from tracking
-            this.audioElementMap.delete(mediaElement);
-
-            // Restore playback state
-            if (wasPlaying) {
-                await mediaElement.play();
-            }
-
-            console.log("AudioProcessor: Reset completed for element:", mediaElement.src);
-        } catch (error) {
-            console.error("AudioProcessor: Reset failed for element:", mediaElement.src, error);
-        }
-    }
-
-    async resetAllToDefault(): Promise<void> {
-        for (const [element] of this.audioElementMap) {
-            await this.resetToDefault(element);
-        }
+    async resetAllToDisabled(): Promise<void> {
+        // Reset all audio contexts and disconnect nodes
+        this.audioElementMap.forEach((nodes, element) => {
+            this.disconnectAudioNodes(element);
+            nodes.context.close();
+        });
         this.audioElementMap.clear();
-        console.log("AudioProcessor: All elements reset to default");
     }
 
     hasProcessing(mediaElement: HTMLMediaElement): boolean {

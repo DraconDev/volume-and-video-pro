@@ -255,6 +255,7 @@ export class SettingsManager extends EventEmitter {
       return { ...siteConfig.settings };
     }
 
+    // Simplify to just return disabled settings
     console.log("SettingsManager: Using disabled settings for playback");
     return { ...defaultSettings };
   }
