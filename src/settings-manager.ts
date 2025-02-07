@@ -92,6 +92,9 @@ export class SettingsManager extends EventEmitter {
   }
 
   async updateGlobalSettings(
+    settings: Partial<AudioSettings>,
+    tabId?: number,
+    hostname?: string
   ) {
     console.log("SettingsManager: Updating global settings", {
       oldSettings: { ...this.globalSettings },
@@ -263,16 +266,18 @@ export class SettingsManager extends EventEmitter {
   async disableSite(hostname: string, tabId?: number) {
     const siteConfig = this.siteSettings.get(hostname) || {
       ...defaultSiteSettings,
+      settings: { ...this.globalSettings }, // Initialize with current global settings
     };
 
-    // Preserve the settings but mark as disabled
+    // Keep the existing settings but mark as disabled
     siteConfig.activeSetting = "disabled";
     siteConfig.enabled = false;
     this.siteSettings.set(hostname, siteConfig);
 
     await this.persistSettings(hostname);
+    // Emit default settings for display, but keep actual settings in storage
     this.emit("settingsUpdated", { ...defaultSettings }, hostname, tabId);
-    return { ...defaultSettings };
+    return { actualSettings: siteConfig.settings, displaySettings: { ...defaultSettings } };
   }
 }
 
