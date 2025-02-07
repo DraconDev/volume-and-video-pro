@@ -89,7 +89,7 @@ export class MediaManager {
 
     // Fallback: if no custom players found, scan all visible elements for descendant media
     if (customPlayers.length === 0) {
-      const allElements = Array.from(root.getElementsByTagName("*"));
+      const allElements = root instanceof Element ? Array.from(root.getElementsByTagName("*")) : [];
       allElements.forEach((elem) => {
         if (
           elem instanceof HTMLElement &&
