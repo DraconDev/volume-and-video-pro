@@ -27,21 +27,9 @@
       ".ytp-show-cards-title",
       ".ytp-toggle-button"
     ],
-    "netflix.com": [
-      "[data-uia='video-player']",
-      ".PlayerControls"
-    ],
-    "hulu.com": [
-      "video",
-      ".HuluPlayer"
-    ],
-    "amazon.com": [
-      "[data-player='AmazonVideo']",
-      ".avc-container"
-    ],
-    "disneyplus.com": [
-      ".dp-video-player",
-      "[data-testid='video-player']"
-    ]
+    "netflix.com": ["[data-uia='video-player']", ".PlayerControls"],
+    "hulu.com": ["video", ".HuluPlayer"],
+    "amazon.com": ["[data-player='AmazonVideo']", ".avc-container"],
+    "disneyplus.com": [".dp-video-player", "[data-testid='video-player']"]
   }
 }
