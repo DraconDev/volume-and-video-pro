@@ -200,11 +200,12 @@ export class SettingsManager extends EventEmitter {
     await this.persistSettings(hostname);
 
     // Determine which settings to display (not modify)
-    const displaySettings = mode === "disabled"
-      ? { ...defaultSettings }
-      : mode === "global"
-      ? { ...this.globalSettings }
-      : { ...siteConfig.settings };
+    const displaySettings =
+      mode === "disabled"
+        ? { ...defaultSettings }
+        : mode === "global"
+        ? { ...this.globalSettings }
+        : { ...siteConfig.settings };
 
     this.emit("settingsUpdated", displaySettings, hostname, tabId);
     return { settingsToUse: displaySettings, siteConfig };
@@ -236,7 +237,7 @@ export class SettingsManager extends EventEmitter {
 
   async disableSite(hostname: string, tabId?: number) {
     let siteConfig = this.siteSettings.get(hostname);
-    
+
     if (!siteConfig) {
       // If no config exists, create one with current global settings
       siteConfig = {
@@ -249,13 +250,13 @@ export class SettingsManager extends EventEmitter {
       siteConfig.enabled = false;
       siteConfig.activeSetting = "disabled";
     }
-  
+
     this.siteSettings.set(hostname, siteConfig);
     await this.persistSettings(hostname);
-  
+
     // Emit default settings for display only, actual settings remain unchanged
     this.emit("settingsUpdated", { ...defaultSettings }, hostname, tabId);
-    
+
     return {
       actualSettings: siteConfig.settings,
       displaySettings: { ...defaultSettings },
