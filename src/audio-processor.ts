@@ -137,6 +137,45 @@ export class AudioProcessor {
 
             gain.gain.setValueAtTime(clampedVolume, safeTimeValue);
             bassFilter.gain.setValueAtTime(clampedBass, safeTimeValue);
+            voiceFilter.gain.setValueAtTime(clampedVoice, safeTimeValue);
+
+            console.log("AudioProcessor: Nodes connected successfully", {
+                volume: clampedVolume,
+                bass: clampedBass,
+                voice: clampedVoice,
+                mono: settings.mono
+            });
+        } catch (error) {
+            console.error("AudioProcessor: Failed to connect nodes:", error);
+            throw error;
+        }
+    }
+
+    private async verifyConnection(connect: () => void): Promise<void> {
+        try {
+            connect();
+            await new Promise(resolve => setTimeout(resolve, 0)); // Allow time for connection
+        } catch (error) {
+            console.error("AudioProcessor: Connection verification failed:", error);
+            throw error;
+        }
+    }
+
+    async updateAudioEffects(settings: AudioSettings): Promise<void> {
+        for (const [element, nodes] of this.audioElementMap.entries()) {
+            const wasPlaying = !element.paused;
+            const currentTime = element.currentTime;
+
+            try {
+                await this.connectNodes(nodes, settings);
+                
+                // Restore playback state
+                element.currentTime = currentTime;
+                if (wasPlaying) {
+                    await element.play();
+                }
+            } catch (error) {
+                console.error("AudioProcessor: Update failed for element:", element.src, error);
             }
         }
     }
