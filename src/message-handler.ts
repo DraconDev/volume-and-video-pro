@@ -250,7 +250,7 @@ export function setupMessageHandler() {
                 "Message Handler: Received message:",
                 message,
                 "from tab:",
-                sender.tab?.id,
+                sender.tab?.id, sender,
                 "sender type:",
                 sender.documentId ? "content" : "popup"
             );
