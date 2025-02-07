@@ -24,7 +24,7 @@
       var(--color-primary)
     );
     background-repeat: no-repeat;
-    height
+    margin-bottom: -7px;
     background-size: var(--range-progress, 0%) 100%;
   }
 
@@ -87,7 +87,7 @@
   }
 
   .settings-button {
-        @apply flex-1 py-2.5 px-3 text-sm border-none outline-none cursor-pointer transition-colors duration-200 rounded;
+    @apply flex-1 py-2.5 px-3 text-sm border-none outline-none cursor-pointer transition-colors duration-200 rounded;
     background-color: var(--color-surface);
     color: var(--color-text);
   }
