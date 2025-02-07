@@ -93,50 +93,50 @@ export class AudioProcessor {
     private async connectNodes(nodes: AudioNodes, settings: AudioSettings): Promise<void> {
         const { source, bassFilter, voiceFilter, gain, splitter, merger, context } = nodes;
 
-        // Disconnect existing connections
-        source.disconnect();
-        bassFilter.disconnect();
-        voiceFilter.disconnect();
-        gain.disconnect();
-        splitter.disconnect();
-        merger.disconnect();
-
-        // Connect based on settings
-        if (settings.mono) {
-            source.connect(bassFilter);
-            bassFilter.connect(voiceFilter);
-            voiceFilter.connect(splitter);
-            splitter.connect(merger, 0, 0);
-            splitter.connect(merger, 0, 1);
-            merger.connect(gain);
-        } else {
-            source.connect(bassFilter);
-            bassFilter.connect(voiceFilter);
-            voiceFilter.connect(gain);
-        }
-        gain.connect(context.destination);
-
-        // Update parameters
-        gain.gain.setValueAtTime(settings.volume / 100, context.currentTime);
-        bassFilter.gain.setValueAtTime(((settings.bassBoost - 100) / 100) * 15, context.currentTime);
-        voiceFilter.gain.setValueAtTime(((settings.voiceBoost - 100) / 100) * 24, context.currentTime);
-    }
-
-    async updateAudioEffects(settings: AudioSettings): Promise<void> {
-        for (const [element, nodes] of this.audioElementMap.entries()) {
-            const wasPlaying = !element.paused;
-            const currentTime = element.currentTime;
-
-            try {
-                await this.connectNodes(nodes, settings);
-                
-                // Restore playback state
-                element.currentTime = currentTime;
-                if (wasPlaying) {
-                    await element.play();
+        try {
+            // Safely disconnect all nodes
+            const disconnectNode = (node: AudioNode) => {
+                try {
+                    node.disconnect();
+                } catch (err) {
+                    console.log("AudioProcessor: Node disconnect failed (normal if not connected):", err);
                 }
-            } catch (error) {
-                console.error("AudioProcessor: Update failed for element:", element.src, error);
+            };
+
+            disconnectNode(source);
+            disconnectNode(bassFilter);
+            disconnectNode(voiceFilter);
+            disconnectNode(gain);
+            disconnectNode(splitter);
+            disconnectNode(merger);
+
+            // Connect based on settings
+            if (settings.mono) {
+                // Verify connections in mono mode
+                await this.verifyConnection(() => source.connect(bassFilter));
+                await this.verifyConnection(() => bassFilter.connect(voiceFilter));
+                await this.verifyConnection(() => voiceFilter.connect(splitter));
+                await this.verifyConnection(() => splitter.connect(merger, 0, 0));
+                await this.verifyConnection(() => splitter.connect(merger, 0, 1));
+                await this.verifyConnection(() => merger.connect(gain));
+            } else {
+                // Verify connections in stereo mode
+                await this.verifyConnection(() => source.connect(bassFilter));
+                await this.verifyConnection(() => bassFilter.connect(voiceFilter));
+                await this.verifyConnection(() => voiceFilter.connect(gain));
+            }
+            await this.verifyConnection(() => gain.connect(context.destination));
+
+            // Update parameters with time validation
+            const safeTimeValue = isFinite(context.currentTime) ? context.currentTime : 0;
+            
+            // Clamp values to prevent invalid audio settings
+            const clampedVolume = Math.max(0, Math.min(settings.volume, 1000)) / 100;
+            const clampedBass = Math.max(-15, Math.min(((settings.bassBoost - 100) / 100) * 15, 15));
+            const clampedVoice = Math.max(-24, Math.min(((settings.voiceBoost - 100) / 100) * 24, 24));
+
+            gain.gain.setValueAtTime(clampedVolume, safeTimeValue);
+            bassFilter.gain.setValueAtTime(clampedBass, safeTimeValue);
             }
         }
     }

@@ -83,7 +83,7 @@ function App() {
     // Debounce settings updates
     useEffect(() => {
         let settingsUpdateTimeout: number | null = null;
-        const debouncedUpdateSettings = (
+        const debouncedUpdateSettings = async (
             updatedSettings: AudioSettings,
             updatedHostname: string | undefined,
             updatedTabId: number | undefined
@@ -91,40 +91,62 @@ function App() {
             if (settingsUpdateTimeout) {
                 clearTimeout(settingsUpdateTimeout);
             }
-            settingsUpdateTimeout = window.setTimeout(() => {
-                console.log(
-                    "Popup: Settings updated",
-                    updatedSettings,
-                    updatedHostname,
-                    updatedTabId
-                );
 
-                chrome.tabs.query(
-                    { active: true, currentWindow: true },
-                    (tabs) => {
-                        if (!tabs[0]?.url) {
-                            console.error("Popup: No active tab found");
-                            return;
+            settingsUpdateTimeout = window.setTimeout(async () => {
+                try {
+                    console.log(
+                        "Popup: Settings updated",
+                        updatedSettings,
+                        updatedHostname,
+                        updatedTabId
+                    );
+
+                    const tabs = await chrome.tabs.query({
+                        active: true,
+                        currentWindow: true,
+                    });
+
+                    if (!tabs[0]?.url) {
+                        console.error("Popup: No active tab found");
+                        return;
+                    }
+
+                    const currentHostname = new URL(tabs[0].url).hostname;
+                    if (
+                        updatedHostname === undefined ||
+                        updatedHostname === currentHostname
+                    ) {
+                        // Ensure settings are properly synced before updating state
+                        await chrome.storage.sync.set({
+                            lastUpdated: Date.now(),
+                            lastSettings: updatedSettings,
+                        });
+
+                        setSettings(updatedSettings);
+                        if (updatedTabId) {
+                            // Site-specific settings updated, adjust mode accordingly
+                            setIsUsingGlobalSettings(false);
+                            setIsSiteEnabled(true);
+                        } else {
+                            // Global settings updated
+                            setIsUsingGlobalSettings(true);
+                            setIsSiteEnabled(true);
                         }
 
-                        const currentHostname = new URL(tabs[0].url).hostname;
-                        if (
-                            updatedHostname === undefined ||
-                            updatedHostname === currentHostname
-                        ) {
-                            setSettings(updatedSettings);
-                            if (updatedTabId) {
-                                // Site-specific settings updated, adjust mode accordingly
-                                setIsUsingGlobalSettings(false);
-                                setIsSiteEnabled(true);
-                            } else {
-                                // Global settings updated
-                                setIsUsingGlobalSettings(true);
-                                setIsSiteEnabled(true);
-                            }
+                        // Force refresh settings in content script
+                        if (tabs[0].id) {
+                            chrome.tabs.sendMessage(tabs[0].id, {
+                                type: "UPDATE_SETTINGS",
+                                settings: updatedSettings,
+                                isGlobal: !updatedTabId,
+                                enabled: true,
+                                forceUpdate: true,
+                            });
                         }
                     }
-                );
+                } catch (error) {
+                    console.error("Failed to update settings:", error);
+                }
             }, 500);
         };
 
