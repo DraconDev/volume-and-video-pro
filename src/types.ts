@@ -9,7 +9,7 @@ export interface AudioSettings {
 export interface SiteSettings {
     enabled: boolean;
     settings?: AudioSettings;
-    activeSetting: "global" | "site" | "default";
+    activeSetting: "global" | "site" | "disabled";
 }
 
 export const defaultSettings: AudioSettings = {
@@ -47,7 +47,7 @@ export interface ContentScriptReadyMessage {
 export interface UpdateSiteModeMessage {
     type: "UPDATE_SITE_MODE";
     hostname?: string;
-    mode?: "global" | "site" | "default";
+    mode?: "global" | "site" | "disabled";
 }
 
 export type MessageType =
