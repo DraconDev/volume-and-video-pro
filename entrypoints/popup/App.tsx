@@ -242,6 +242,7 @@ function App() {
 
             const hostname = new URL(tab.url).hostname;
 
+
             if (mode === "default") {
                 setIsUsingGlobalSettings(false);
                 setIsSiteEnabled(false);
