@@ -24,6 +24,7 @@
       var(--color-primary)
     );
     background-repeat: no-repeat;
+    height
     background-size: var(--range-progress, 0%) 100%;
   }
 
