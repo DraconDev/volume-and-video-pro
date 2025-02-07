@@ -105,6 +105,40 @@ export class SettingsManager extends EventEmitter {
     if (!siteConfig) {
       return null;
     }
+
+    // If in global mode, make sure we're using global settings
+    if (siteConfig.activeSetting === "global") {
+      return {
+        ...siteConfig,
+        settings: { ...this.globalSettings },
+      };
+    }
+
+    // For disabled sites, return config but with disabled flag
+    if (siteConfig.activeSetting === "disabled") {
+      return {
+        ...siteConfig,
+        enabled: false,
+      };
+    }
+
+    return siteConfig;
+  }
+
+  async updateGlobalSettings(
+    settings: Partial<AudioSettings>,
+    tabId?: number,
+    hostname?: string
+  ) {
+    console.log("SettingsManager: Updating global settings", {
+      oldSettings: { ...this.globalSettings },
+      newSettings: settings,
+      tabId,
+      hostname,
+    });
+
+    // Update settings
+    this.globalSettings = {
       ...this.globalSettings,
       ...settings,
     };
