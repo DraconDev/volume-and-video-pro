@@ -215,6 +215,34 @@ export class AudioProcessor {
     console.log(
       "AudioProcessor: Updating audio effects with settings:",
       settings
+    );
+
+    for (const [element, nodes] of this.audioElementMap.entries()) {
+      try {
+        await this.updateNodeSettings(nodes, settings);
+        console.log(
+          "AudioProcessor: Updated effects for element:",
+          element.src
+        );
+      } catch (error) {
+        console.error(
+          "AudioProcessor: Update failed for element:",
+          element.src,
+          error
+        );
+      }
+    }
+  }
+
+  async resetAllToDisabled(): Promise<void> {
+    // Reset all audio contexts and disconnect nodes
+    this.audioElementMap.forEach((nodes, element) => {
+      this.disconnectAudioNodes(element);
+      nodes.context.close();
+    });
+    this.audioElementMap.clear();
+  }
+
   hasProcessing(mediaElement: HTMLMediaElement): boolean {
     return this.audioElementMap.has(mediaElement);
   }
