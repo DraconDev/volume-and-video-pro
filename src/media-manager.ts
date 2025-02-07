@@ -42,14 +42,17 @@ export class MediaManager {
             '[class*="audio"]',
             '.video-js',
             '.jwplayer',
-            '.html5-video-player'
+            '.html5-video-player',
+            '.plyr',         // common in Plyr players
+            '[data-media]',   // data attribute often used on custom players
+            'iframe[src*="youtube.com"]',  // Inlined YouTube embeds
         ];
 
         try {
             const elements = root.querySelectorAll(selectors.join(","));
             elements.forEach(element => {
-                if (element instanceof HTMLElement && 
-                    !this.processedElements.has(element) && 
+                if (element instanceof HTMLElement &&
+                    !this.processedElements.has(element) &&
                     this.isElementVisible(element)) {
                     this.processedElements.add(element);
                     customPlayers.push(element);
