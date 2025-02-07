@@ -62,16 +62,26 @@ export default defineContentScript({
         chrome.runtime.onMessage.addListener(
             (message: MessageType, sender, sendResponse) => {
                 if (message.type === "UPDATE_SETTINGS") {
-                    const updateSettingsMessage =
-                        message as UpdateSettingsMessage;
+                    const updateSettingsMessage = message as UpdateSettingsMessage;
                     console.log(
                         "Content: Received settings update:",
-                        updateSettingsMessage.settings
+                        updateSettingsMessage.settings,
+                        "force update:",
+                        updateSettingsMessage.forceUpdate
                     );
-                    settingsHandler.updateSettings(
-                        updateSettingsMessage.settings
-                    );
-                    processMedia();
+
+                    // Always update internal settings
+                    settingsHandler.updateSettings(updateSettingsMessage.settings);
+
+                    // Force reprocess media elements if requested
+                    if (updateSettingsMessage.forceUpdate) {
+                        console.log("Content: Force updating media elements");
+                        mediaProcessor.resetToDefault().then(() => {
+                            processMedia();
+                        });
+                    } else {
+                        processMedia();
+                    }
                 }
             }
         );
