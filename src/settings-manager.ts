@@ -65,9 +65,23 @@ export class SettingsManager extends EventEmitter {
 
     getSettingsForSite(hostname: string): SiteSettings | null {
         const siteConfig = this.siteSettings.get(hostname);
-        if (!siteConfig || siteConfig.activeSetting === "default") {
+        if (!siteConfig) {
             return null;
         }
+        
+        // If in global mode, make sure we're using global settings
+        if (siteConfig.activeSetting === "global") {
+            return {
+                ...siteConfig,
+                settings: { ...this.globalSettings }
+            };
+        }
+        
+        // For default mode or disabled sites
+        if (siteConfig.activeSetting === "default" || !siteConfig.enabled) {
+            return null;
+        }
+
         return siteConfig;
     }
 
