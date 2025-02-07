@@ -16,11 +16,18 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
   };
 
   return (
-    <div className="flex items-center space-x-2 mb-4">
+    <div className="settings-toggle">
       <select
-        value={!isSiteEnabled ? "disabled" : isUsingGlobalSettings ? "global" : "site"}
-        onChange={(e) => handleModeChange(e.target.value as "global" | "site" | "disabled")}
-        className="flex-1 bg-[var(--color-primary)] text-[var(--color-text)] rounded py-2 px-3 text-sm font-medium border-none cursor-pointer hover:bg-[var(--color-primary-hover)] transition-colors duration-200"
+        value={
+          !isSiteEnabled
+            ? "disabled"
+            : isUsingGlobalSettings
+            ? "global"
+            : "site"
+        }
+        onChange={(e) =>
+          handleModeChange(e.target.value as "global" | "site" | "disabled")
+        }
       >
         <option value="global">Global Settings</option>
         <option value="site">Site Settings</option>
