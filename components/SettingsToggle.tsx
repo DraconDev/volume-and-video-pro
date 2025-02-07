@@ -28,6 +28,7 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
         onChange={(e) =>
           handleModeChange(e.target.value as "global" | "site" | "disabled")
         }
+        className="w-full bg-[var(--color-primary)] text-[var(--color-text)] rounded py-2.5 text-sm font-medium border-none cursor-pointer hover:bg-[var(--color-primary-hover)] transition-colors duration-200"
       >
         <option value="global">Global Settings</option>
         <option value="site">Site Settings</option>
