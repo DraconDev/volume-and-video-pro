@@ -87,173 +87,121 @@ export class AudioProcessor {
             // Update parameters smoothly
             gain.gain.cancelScheduledValues(safeTimeValue);
             bassFilter.gain.cancelScheduledValues(safeTimeValue);
-      bassFilter,
-      voiceFilter,
-      splitter,
-      merger,
-      element: mediaElement,
-    };
-  }
+            voiceFilter.gain.cancelScheduledValues(safeTimeValue);
 
-  private async updateNodeSettings(
-    nodes: AudioNodes,
-    settings: AudioSettings
-  ): Promise<void> {
-    const { gain, bassFilter, voiceFilter, context } = nodes;
+            gain.gain.setValueAtTime(gain.gain.value, safeTimeValue);
+            bassFilter.gain.setValueAtTime(bassFilter.gain.value, safeTimeValue);
+            voiceFilter.gain.setValueAtTime(voiceFilter.gain.value, safeTimeValue);
 
-    try {
-      const safeTimeValue = isFinite(context.currentTime)
-        ? context.currentTime
-        : 0;
+            gain.gain.linearRampToValueAtTime(clampedVolume, safeTimeValue + 0.1);
+            bassFilter.gain.linearRampToValueAtTime(clampedBass, safeTimeValue + 0.1);
+            voiceFilter.gain.linearRampToValueAtTime(clampedVoice, safeTimeValue + 0.1);
 
-      // Clamp values to prevent invalid audio settings
-      const clampedVolume = Math.max(0, Math.min(settings.volume, 1000)) / 100;
-      const clampedBass = Math.max(
-        -15,
-        Math.min(((settings.bassBoost - 100) / 100) * 15, 15)
-      );
-      const clampedVoice = Math.max(
-        -24,
-        Math.min(((settings.voiceBoost - 100) / 100) * 24, 24)
-      );
-
-      // Update parameters smoothly
-      gain.gain.linearRampToValueAtTime(clampedVolume, safeTimeValue + 0.1);
-      bassFilter.gain.linearRampToValueAtTime(clampedBass, safeTimeValue + 0.1);
-      voiceFilter.gain.linearRampToValueAtTime(
-        clampedVoice,
-        safeTimeValue + 0.1
-      );
-
-      console.log("AudioProcessor: Settings updated successfully", {
-        volume: clampedVolume,
-        bass: clampedBass,
-        voice: clampedVoice,
-        mono: settings.mono,
-      });
-    } catch (error) {
-      console.error("AudioProcessor: Failed to update settings:", error);
-      throw error;
-    }
-  }
-
-  private async connectNodes(
-    nodes: AudioNodes,
-    settings: AudioSettings
-  ): Promise<void> {
-    const { source, bassFilter, voiceFilter, gain, splitter, merger, context } =
-      nodes;
-
-    try {
-      // Only set up connections if not already connected
-      if (!this.hasProcessing(nodes.element)) {
-        if (settings.mono) {
-          // Connect in mono mode
-          source.connect(bassFilter);
-          bassFilter.connect(voiceFilter);
-          voiceFilter.connect(splitter);
-          splitter.connect(merger, 0, 0);
-          splitter.connect(merger, 0, 1);
-          merger.connect(gain);
-        } else {
-          // Connect in stereo mode
-          source.connect(bassFilter);
-          bassFilter.connect(voiceFilter);
-          voiceFilter.connect(gain);
+            console.log("AudioProcessor: Settings updated successfully", {
+                volume: clampedVolume,
+                bass: clampedBass,
+                voice: clampedVoice,
+                mono: settings.mono
+            });
+        } catch (error) {
+            console.error("AudioProcessor: Failed to update settings:", error);
+            throw error;
         }
-        gain.connect(context.destination);
-      }
-
-      // Always update settings values
-      await this.updateNodeSettings(nodes, settings);
-    } catch (error) {
-      console.error("AudioProcessor: Failed to connect nodes:", error);
-      throw error;
     }
-  }
 
-  private async verifyConnection(connect: () => void): Promise<void> {
-    try {
-      connect();
-      await new Promise((resolve) => setTimeout(resolve, 0)); // Allow time for connection
-    } catch (error) {
-      console.error("AudioProcessor: Connection verification failed:", error);
-      throw error;
-    }
-  }
+    private async connectNodes(nodes: AudioNodes, settings: AudioSettings): Promise<void> {
+        const { source, bassFilter, voiceFilter, gain, splitter, merger, context } = nodes;
 
-  async updateAudioEffects(settings: AudioSettings): Promise<void> {
-    for (const [element, nodes] of this.audioElementMap.entries()) {
-      const wasPlaying = !element.paused;
-      const currentTime = element.currentTime;
+        try {
+            // Disconnect existing connections
+            source.disconnect();
+            bassFilter.disconnect();
+            voiceFilter.disconnect();
+            gain.disconnect();
+            splitter.disconnect();
+            merger.disconnect();
 
-      try {
-        await this.connectNodes(nodes, settings);
+            // Create new connections based on settings
+            if (settings.mono) {
+                // Connect in mono mode
+                source.connect(bassFilter);
+                bassFilter.connect(voiceFilter);
+                voiceFilter.connect(splitter);
+                splitter.connect(merger, 0, 0);
+                splitter.connect(merger, 0, 1);
+                merger.connect(gain);
+            } else {
+                // Connect in stereo mode
+                source.connect(bassFilter);
+                bassFilter.connect(voiceFilter);
+                voiceFilter.connect(gain);
+            }
+            gain.connect(context.destination);
 
-        // Restore playback state
-        element.currentTime = currentTime;
-        if (wasPlaying) {
-          await element.play();
+            // Apply settings
+            await this.updateNodeSettings(nodes, settings);
+
+            console.log("AudioProcessor: Nodes connected successfully");
+        } catch (error) {
+            console.error("AudioProcessor: Failed to connect nodes:", error);
+            throw error;
         }
-      } catch (error) {
-        console.error(
-          "AudioProcessor: Update failed for element:",
-          element.src,
-          error
-        );
-      }
     }
-  }
 
-  async resetToDefault(mediaElement: HTMLMediaElement): Promise<void> {
-    const nodes = this.audioElementMap.get(mediaElement);
-    if (!nodes) return;
-
-    const wasPlaying = !mediaElement.paused;
-    const currentTime = mediaElement.currentTime;
-
-    try {
-      // Disconnect all nodes
-      nodes.source.disconnect();
-      nodes.bassFilter.disconnect();
-      nodes.voiceFilter.disconnect();
-      nodes.gain.disconnect();
-      nodes.splitter.disconnect();
-      nodes.merger.disconnect();
-
-      // Connect source directly to destination
-      nodes.source.connect(nodes.context.destination);
-
-      // Restore playback state
-      mediaElement.currentTime = currentTime;
-      if (wasPlaying) {
-        await mediaElement.play();
-      }
-    } catch (error) {
-      console.error(
-        "AudioProcessor: Reset failed for element:",
-        mediaElement.src,
-        error
-      );
+    async updateAudioEffects(settings: AudioSettings): Promise<void> {
+        console.log("AudioProcessor: Updating audio effects with settings:", settings);
+        
+        for (const [element, nodes] of this.audioElementMap.entries()) {
+            try {
+                // Reconnect nodes with new settings to handle mono/stereo changes
+                await this.connectNodes(nodes, settings);
+                console.log("AudioProcessor: Updated effects for element:", element.src);
+            } catch (error) {
+                console.error("AudioProcessor: Update failed for element:", element.src, error);
+            }
+        }
     }
-  }
 
-  async resetAllToDefault(): Promise<void> {
-    for (const [element] of this.audioElementMap) {
-      await this.resetToDefault(element);
+    async resetToDefault(mediaElement: HTMLMediaElement): Promise<void> {
+        const nodes = this.audioElementMap.get(mediaElement);
+        if (!nodes) return;
+
+        try {
+            // Disconnect all nodes
+            nodes.source.disconnect();
+            nodes.bassFilter.disconnect();
+            nodes.voiceFilter.disconnect();
+            nodes.gain.disconnect();
+            nodes.splitter.disconnect();
+            nodes.merger.disconnect();
+
+            // Remove from tracking
+            this.audioElementMap.delete(mediaElement);
+
+            console.log("AudioProcessor: Reset completed for element:", mediaElement.src);
+        } catch (error) {
+            console.error("AudioProcessor: Reset failed for element:", mediaElement.src, error);
+        }
     }
-    this.audioElementMap.clear();
-  }
 
-  hasProcessing(mediaElement: HTMLMediaElement): boolean {
-    return this.audioElementMap.has(mediaElement);
-  }
-
-  cleanup(): void {
-    this.audioElementMap.clear();
-    if (this.audioContext) {
-      this.audioContext.close();
-      this.audioContext = null;
+    async resetAllToDefault(): Promise<void> {
+        for (const [element] of this.audioElementMap) {
+            await this.resetToDefault(element);
+        }
+        this.audioElementMap.clear();
+        console.log("AudioProcessor: All elements reset to default");
     }
-  }
+
+    hasProcessing(mediaElement: HTMLMediaElement): boolean {
+        return this.audioElementMap.has(mediaElement);
+    }
+
+    cleanup(): void {
+        this.audioElementMap.clear();
+        if (this.audioContext) {
+            this.audioContext.close();
+            this.audioContext = null;
+        }
+        console.log("AudioProcessor: Cleanup completed");
+    }
 }
