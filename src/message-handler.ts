@@ -113,14 +113,18 @@ async function handleUpdateSettings(
                 {
                     tabId: targetTabId,
                     settings: message.settings,
-                    isGlobal: message.isGlobal
+                    isGlobal: message.isGlobal,
+                    hostname: hostname
                 }
             );
             try {
                 await chrome.tabs.sendMessage(targetTabId, {
-                    ...message
+                    type: "UPDATE_SETTINGS",
+                    settings: message.settings,
+                    isGlobal: message.isGlobal || isCurrentlyGlobal,
+                    enabled: true
                 });
-                console.log("Message Handler: Settings successfully forwarded");
+                console.log("Message Handler: Settings successfully forwarded with explicit params");
             } catch (error) {
                 console.error("Message Handler: Failed to forward settings:", error);
             }
