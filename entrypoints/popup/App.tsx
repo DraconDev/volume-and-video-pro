@@ -241,14 +241,18 @@ function App() {
           // Don't update settings state, just disable the site
           await settingsManager.disableSite(hostname, tab.id);
           break;
-        
+
         case "global":
           setIsUsingGlobalSettings(true);
           setIsSiteEnabled(true);
           // Use existing settings when switching to global
-          await settingsManager.updateGlobalSettings(settings, tab.id, hostname);
+          await settingsManager.updateGlobalSettings(
+            settings,
+            tab.id,
+            hostname
+          );
           break;
-        
+
         case "site":
           setIsUsingGlobalSettings(false);
           setIsSiteEnabled(true);

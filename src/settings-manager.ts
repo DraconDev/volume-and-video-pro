@@ -277,7 +277,10 @@ export class SettingsManager extends EventEmitter {
     await this.persistSettings(hostname);
     // Emit default settings for display, but keep actual settings in storage
     this.emit("settingsUpdated", { ...defaultSettings }, hostname, tabId);
-    return { actualSettings: siteConfig.settings, displaySettings: { ...defaultSettings } };
+    return {
+      actualSettings: siteConfig.settings,
+      displaySettings: { ...defaultSettings },
+    };
   }
 }
 
