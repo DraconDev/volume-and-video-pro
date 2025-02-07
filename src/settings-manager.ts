@@ -196,22 +196,24 @@ export class SettingsManager extends EventEmitter {
       tabId,
     });
 
-    // Handle mode-specific initialization
-    if (mode === "site") {
-      if (!siteConfig.settings) {
-        // Initialize with default settings for new site mode
-        siteConfig.settings = { ...defaultSettings };
-      }
-      siteConfig.enabled = true;
-    } else if (mode === "global") {
-      // Keep site settings but use global mode
-      if (!siteConfig.settings) {
-        siteConfig.settings = { ...defaultSettings };
-      }
-      siteConfig.enabled = true;
-    } else {
-      // Default mode - disable site settings
-      siteConfig.enabled = false;
+    // Update mode-specific settings
+    switch (mode) {
+      case 'site':
+        siteConfig.enabled = true;
+        // Use existing site settings or initialize with defaults
+        siteConfig.settings = siteConfig.settings || { ...defaultSettings };
+        break;
+      
+      case 'global':
+        siteConfig.enabled = true;
+        // Keep existing site settings but use global settings for now
+        siteConfig.settings = siteConfig.settings || { ...defaultSettings };
+        break;
+      
+      case 'disabled':
+        siteConfig.enabled = false;
+        // Preserve site settings even when disabled
+        break;
     }
 
     // Update mode
@@ -221,12 +223,11 @@ export class SettingsManager extends EventEmitter {
     await this.persistSettings(hostname);
 
     // Get the appropriate settings based on mode
-    const settingsToUse =
-      mode === "global"
-        ? { ...this.globalSettings }
-        : mode === "site" && siteConfig.settings
-        ? { ...siteConfig.settings }
-        : { ...defaultSettings };
+    const settingsToUse = mode === "global"
+      ? { ...this.globalSettings }
+      : mode === "site"
+      ? { ...siteConfig.settings }
+      : { ...defaultSettings };
 
     // Emit settings update event
     this.emit("settingsUpdated", settingsToUse, hostname, tabId);
@@ -262,8 +263,9 @@ export class SettingsManager extends EventEmitter {
       ...defaultSiteSettings,
     };
 
-    // Only update the activeSetting, preserve the settings
-    siteConfig.activeSetting = "default";
+    // Preserve the settings but mark as disabled
+    siteConfig.activeSetting = "disabled";
+    siteConfig.enabled = false;
     this.siteSettings.set(hostname, siteConfig);
 
     await this.persistSettings(hostname);
