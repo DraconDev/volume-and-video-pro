@@ -23,6 +23,9 @@ async function broadcastSettings(
             } catch (error) {
                 // Ignore errors for inactive tabs
                 console.debug(
+                    "Settings Event Handler: Could not send to tab:",
+                    tab.id,
+                    error
                 );
             }
         }
@@ -30,13 +33,10 @@ async function broadcastSettings(
 }
 
 export function setupSettingsEventHandler() {
-    // Listen for settings updates from the settings manager
     settingsManager.on(
         "settingsUpdated",
-        (settings: any, hostname?: string, tabId?: number) => {
+        async (settings: any, hostname?: string, tabId?: number) => {
             console.log(
-                "Settings Event Handler: settingsUpdated event received",
-                {
                     settings,
                     hostname,
                     tabId,
