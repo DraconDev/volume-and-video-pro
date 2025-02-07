@@ -31,7 +31,7 @@
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     @apply appearance-none w-5 h-5 bg-primary rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.4)] relative;
-    margin-top: -10px;
+    margin-top: 0px;
     border: 2px solid var(--color-surface);
   }
 
