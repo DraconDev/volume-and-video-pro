@@ -45,7 +45,7 @@ async function handleUpdateSettings(
 
     const hostname = getHostname(targetUrl);
 
-    // Handle default state
+    // Handle disabled state
     if (!message.enabled) {
       const defaultSettings = await settingsManager.disableSite(
         hostname,
@@ -69,6 +69,7 @@ async function handleUpdateSettings(
     );
 
     if (!currentSiteConfig) {
+      // Site is disabled or not configured
       const defaultSettings = await settingsManager.disableSite(
         hostname,
         targetTabId

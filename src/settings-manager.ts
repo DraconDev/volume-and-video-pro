@@ -80,8 +80,8 @@ export class SettingsManager extends EventEmitter {
       };
     }
 
-    // For default mode or disabled sites
-    if (siteConfig.activeSetting === "default" || !siteConfig.enabled) {
+    // For disabled sites
+    if (siteConfig.activeSetting === "disabled" || !siteConfig.enabled) {
       return null;
     }
 
@@ -255,7 +255,7 @@ export class SettingsManager extends EventEmitter {
       return { ...siteConfig.settings };
     }
 
-    console.log("SettingsManager: Using default settings for playback");
+    console.log("SettingsManager: Using disabled settings for playback");
     return { ...defaultSettings };
   }
 

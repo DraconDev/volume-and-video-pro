@@ -23,7 +23,7 @@ export const defaultSettings: AudioSettings = {
 export const defaultSiteSettings: SiteSettings = {
   enabled: true,
   settings: { ...defaultSettings },
-  activeSetting: "global",
+  activeSetting: "global", // Starts in global mode, can be changed to "site" or "disabled"
 };
 
 export type StateType = {
