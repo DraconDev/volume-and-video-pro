@@ -1,0 +1,8 @@
+{
+  "problematicsite.com": [
+    ".problem-player",
+    "div[data-player]",
+    "iframe.custom-video",
+    "video#special-video"
+  ]
+}
