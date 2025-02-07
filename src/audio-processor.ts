@@ -161,17 +161,8 @@ export class AudioProcessor {
 
     async updateAudioEffects(settings: AudioSettings): Promise<void> {
         for (const [element, nodes] of this.audioElementMap.entries()) {
-            const wasPlaying = !element.paused;
-            const currentTime = element.currentTime;
-
             try {
-                await this.connectNodes(nodes, settings);
-                
-                // Restore playback state
-                element.currentTime = currentTime;
-                if (wasPlaying) {
-                    await element.play();
-                }
+                await this.updateNodeSettings(nodes, settings);
             } catch (error) {
                 console.error("AudioProcessor: Update failed for element:", element.src, error);
             }
