@@ -180,26 +180,50 @@ function App() {
             [key]: value,
         };
 
+        // Update local state immediately for responsive UI
         setSettings(newSettings);
 
-        // Update settings through settings manager
-        const [tab] = await chrome.tabs.query({
-            active: true,
-            currentWindow: true,
-        });
-        if (tab?.url && tab.id) {
-            const hostname = new URL(tab.url).hostname;
-            if (isUsingGlobalSettings) {
-                await settingsManager.updateGlobalSettings(newSettings, tab.id);
-            } else {
-                await settingsManager.updateSiteSettings(
-                    hostname,
-                    newSettings,
-                    tab.id
-                );
-            }
+        // Use debounced update for storage operations
+        if (updateTimeoutRef.current) {
+            clearTimeout(updateTimeoutRef.current);
         }
+
+        updateTimeoutRef.current = window.setTimeout(async () => {
+            try {
+                // Update settings through settings manager
+                const [tab] = await chrome.tabs.query({
+                    active: true,
+                    currentWindow: true,
+                });
+                if (tab?.url && tab.id) {
+                    const hostname = new URL(tab.url).hostname;
+                    if (isUsingGlobalSettings) {
+                        await settingsManager.updateGlobalSettings(newSettings, tab.id);
+                    } else {
+                        await settingsManager.updateSiteSettings(
+                            hostname,
+                            newSettings,
+                            tab.id
+                        );
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to update settings:", error);
+            }
+        }, 500); // Debounce for 500ms
     };
+
+    // Initialize updateTimeoutRef
+    const updateTimeoutRef = useRef<number | null>(null);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (updateTimeoutRef.current) {
+                clearTimeout(updateTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const formatDiff = (value: number) => {
         return `${value}%`;

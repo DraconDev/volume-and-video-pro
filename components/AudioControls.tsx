@@ -34,12 +34,17 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
     };
 
     useEffect(() => {
-        // Send settings to background script
-        chrome.runtime.sendMessage({
-            type: "UPDATE_SETTINGS",
-            settings,
-            enabled: isEnabled,
-        });
+        const updateTimeout = setTimeout(() => {
+            // Send settings to background script
+            chrome.runtime.sendMessage({
+                type: "UPDATE_SETTINGS",
+                settings,
+                enabled: isEnabled,
+            });
+            console.log("AudioControls: Settings update sent after debounce");
+        }, 250); // Debounce settings updates
+
+        return () => clearTimeout(updateTimeout);
     }, [settings, isEnabled]);
 
     useEffect(() => {
@@ -183,7 +188,10 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                             if (!isEnabled) return;
                             const input = e.target;
                             updateRangeProgress(input);
-                            onSettingChange(key, parseInt(input.value));
+                            const value = parseInt(input.value);
+                            if (!isNaN(value)) {
+                                onSettingChange(key, value);
+                            }
                         }}
                         disabled={!isEnabled}
                         onInput={(e) => {
