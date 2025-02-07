@@ -24,7 +24,10 @@ async function handleUpdateSettings(
 
     if (!sender.tab) {
       // Message from popup - get active tab
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tabs = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
       if (!tabs[0]?.url || !tabs[0]?.id) {
         throw new Error("No active tab found");
       }
@@ -45,11 +48,13 @@ async function handleUpdateSettings(
       hostname,
       tabId: targetTabId,
       isPopup: !sender.tab,
-      settings: message.settings
+      settings: message.settings,
     });
 
     // Get current site config
-    const currentSiteConfig = await settingsManager.getSettingsForSite(hostname);
+    const currentSiteConfig = await settingsManager.getSettingsForSite(
+      hostname
+    );
     const isCurrentlyGlobal = currentSiteConfig?.activeSetting === "global";
 
     if (!message.enabled) {
@@ -63,44 +68,10 @@ async function handleUpdateSettings(
 
     // Update settings based on mode
     if (message.isGlobal || isCurrentlyGlobal) {
-      await settingsManager.updateGlobalSettings(message.settings, targetTabId, hostname);
-    } else {
-      await settingsManager.updateSiteSettings(hostname, message.settings, targetTabId);
-    }
-
-    // Forward settings to content script
-    if (targetTabId) {
-      try {
-        await chrome.tabs.sendMessage(targetTabId, {
-          type: "UPDATE_SETTINGS",
-          settings: message.settings,
-          isGlobal: message.isGlobal || isCurrentlyGlobal,
-          enabled: true,
-          hostname
-        } as MessageType);
-      } catch (error) {
-        console.warn("Message Handler: Failed to forward settings to tab", {
-          tabId: targetTabId,
-          error
-        });
-      }
-    }
-
-    sendResponse({ success: true });
-  } catch (error) {
-    console.error("Message Handler: Error processing update", error);
-    sendResponse({ success: false, error: String(error) });
-  }
-}
-
-async function handleUpdateSiteMode(
-    // Update settings based on mode
-    if (message.isGlobal || isCurrentlyGlobal) {
-      // Always pass hostname for global updates so sites using global get updated
       await settingsManager.updateGlobalSettings(
         message.settings,
         targetTabId,
-        hostname // Pass hostname for global updates
+        hostname
       );
     } else {
       await settingsManager.updateSiteSettings(
@@ -112,30 +83,25 @@ async function handleUpdateSiteMode(
 
     // Forward settings to content script
     if (targetTabId) {
-      console.log("Message Handler: Settings forwarded to content script", {
-        tabId: targetTabId,
-        settings: message.settings,
-        isGlobal: message.isGlobal,
-        hostname: hostname,
-      });
       try {
         await chrome.tabs.sendMessage(targetTabId, {
           type: "UPDATE_SETTINGS",
           settings: message.settings,
           isGlobal: message.isGlobal || isCurrentlyGlobal,
           enabled: true,
-        });
-        console.log(
-          "Message Handler: Settings successfully forwarded with explicit params"
-        );
+          hostname,
+        } as MessageType);
       } catch (error) {
-        console.error("Message Handler: Failed to forward settings:", error);
+        console.warn("Message Handler: Failed to forward settings to tab", {
+          tabId: targetTabId,
+          error,
+        });
       }
     }
 
     sendResponse({ success: true });
   } catch (error) {
-    console.error("Message Handler: Error in handleUpdateSettings:", error);
+    console.error("Message Handler: Error processing update", error);
     sendResponse({ success: false, error: String(error) });
   }
 }
@@ -183,47 +149,37 @@ async function handleUpdateSiteMode(
 }
 
 async function handleContentScriptReady(
-  message: any, //MessageType, // TODO: Type this correctly
+  message: any,
   sender: chrome.runtime.MessageSender,
   sendResponse: (response?: any) => void
 ) {
-  const tabId = sender.tab?.id;
-  const url = sender.tab?.url;
+  try {
+    if (!sender.tab?.id || !sender.tab?.url) {
+      throw new Error("Invalid sender tab");
+    }
 
-  if (tabId && url) {
-    console.log(
-      "Message Handler: Content script ready in tab:",
-      tabId,
-      "for URL:",
-      url
-    );
-    const hostname = message.hostname || getHostname(url);
+    const hostname = message.hostname || getHostname(sender.tab.url);
     const siteConfig = await settingsManager.getSettingsForSite(hostname);
-    const settingsToSend = siteConfig ? siteConfig.settings : defaultSettings;
-    const isGlobal = siteConfig ? siteConfig.activeSetting === "global" : false;
 
-    console.log(
-      "Message Handler: Sending initial settings to tab",
-      tabId,
-      ":",
-      settingsToSend
-    );
-    chrome.tabs
-      .sendMessage(tabId, {
-        type: "UPDATE_SETTINGS",
-        settings: settingsToSend,
-        isGlobal,
-        enabled: !!siteConfig,
-        hostname, // sending hostname
-      } as MessageType)
-      .catch((error) => {
-        console.warn(
-          "Message Handler: Failed to send settings to tab:",
-          tabId,
-          error
-        );
-      });
+    const settingsToSend = siteConfig?.settings || defaultSettings;
+    const isGlobal = siteConfig?.activeSetting === "global";
+    const isEnabled = siteConfig?.enabled ?? true;
+
+    await chrome.tabs.sendMessage(sender.tab.id, {
+      type: "UPDATE_SETTINGS",
+      settings: settingsToSend,
+      isGlobal,
+      enabled: isEnabled,
+      hostname,
+    } as MessageType);
+
     sendResponse({ success: true });
+  } catch (error) {
+    console.error(
+      "Message Handler: Error handling content script ready",
+      error
+    );
+    sendResponse({ success: false, error: String(error) });
   }
 }
 
