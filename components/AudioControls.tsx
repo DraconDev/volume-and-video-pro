@@ -142,7 +142,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
     ];
 
     return (
-        <div className="space-y-6 mb-2">
+        <div className="space-y-4 mb-2">
             {controls.map(({ key, label, min, max, icon, defaultValue }) => (
                 <div key={key} className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -202,7 +202,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                 </div>
             ))}
             <div
-                className={`rounded m-[2px] mb-[2px] p-1 ${
+                className={`rounded mt-1 p-1 ${
                     settings.mono
                         ? "bg-[var(--color-primary)] text-[var(--color-text)]"
                         : "bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)]"
