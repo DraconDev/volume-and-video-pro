@@ -257,47 +257,24 @@ export function setupMessageHandler() {
 
             (async () => {
                 try {
-                    switch (message.type) {
-                        case 'UPDATE_SETTINGS': {
-                            const { settings, enabled, hostname } = message;
-                            const tab = sender.tab;
-                            const targetHostname = hostname || (tab ? new URL(tab.url!).hostname : undefined);
-                            
-                            console.log("Message Handler: Processing UPDATE_SETTINGS", {
-                                settings,
-                                enabled,
-                                targetHostname,
-                                tab
-                            });
-
-                            settingsEventHandler.settingsUpdated({
-                                settings,
-                                hostname: targetHostname,
-                                tabId: tab?.id
-                            });
-                            break;
-                        }
-                        case "UPDATE_SETTINGS":
-                            await handleUpdateSettings(
-                                message,
-                                sender,
-                                sendResponse
-                            );
-                            break;
-                        case "UPDATE_SITE_MODE":
-                            await handleUpdateSiteMode(
-                                message,
-                                sender,
-                                sendResponse
-                            );
-                            break;
-                        case "CONTENT_SCRIPT_READY":
-                            await handleContentScriptReady(
-                                message,
-                                sender,
-                                sendResponse
-                            );
-                            break;
+                    if (message.type === "UPDATE_SETTINGS") {
+                        await handleUpdateSettings(
+                            message,
+                            sender,
+                            sendResponse
+                        );
+                    } else if (message.type === "UPDATE_SITE_MODE") {
+                        await handleUpdateSiteMode(
+                            message,
+                            sender,
+                            sendResponse
+                        );
+                    } else if (message.type === "CONTENT_SCRIPT_READY") {
+                        await handleContentScriptReady(
+                            message,
+                            sender,
+                            sendResponse
+                        );
                     }
                 } catch (error) {
                     const errorMsg =
