@@ -65,12 +65,12 @@ export class MediaManager {
       'iframe[src*="vimeo.com"]',
       'iframe[src*="dailymotion.com"]',
       'iframe[src*="twitch.tv"]',
-      'iframe[src*="facebook.com"]'
+      'iframe[src*="facebook.com"]',
     ];
 
     // Append extra selectors if needed
     const selectors = baseSelectors.concat(this.getExtraSelectorsForSite());
-    
+
     try {
       const elements = root.querySelectorAll(selectors.join(","));
       elements.forEach((element) => {
@@ -110,6 +110,22 @@ export class MediaManager {
 
   static findMediaElements(
     root: ParentNode = document,
+    depth: number = 0
+  ): HTMLMediaElement[] {
+    if (this.isExtensionContext() || depth > this.MAX_DEPTH) {
+      return [];
+    }
+
+    const elements: HTMLMediaElement[] = [];
+    const processedNodes = new Set<Node>();
+
+    try {
+      // Direct media elements
+      const mediaElements = root.querySelectorAll("video, audio");
+      mediaElements.forEach((element) => {
+        if (
+          element instanceof HTMLMediaElement &&
+          !processedNodes.has(element) &&
           this.isElementVisible(element)
         ) {
           elements.push(element);
