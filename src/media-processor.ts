@@ -82,4 +82,8 @@ export class MediaProcessor {
     async resetToDefault(): Promise<void> {
         await this.audioProcessor.resetAllToDefault();
     }
+
+    async resetToDisabled(): Promise<void> {
+        await this.audioProcessor.resetAllToDisabled();
+    }
 }

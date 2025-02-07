@@ -225,11 +225,11 @@ function App() {
     };
 
     const handleReset = () => {
-        if (!isSiteEnabled) return; // Prevent reset when in default mode
+        if (!isSiteEnabled) return; // Prevent reset when disabled
         setSettings(defaultSettings);
     };
 
-    const handleToggleMode = async (mode: "global" | "site" | "default") => {
+    const handleToggleMode = async (mode: "global" | "site" | "disabled") => {
         try {
             const [tab] = await chrome.tabs.query({
                 active: true,
@@ -243,7 +243,7 @@ function App() {
             const hostname = new URL(tab.url).hostname;
 
 
-            if (mode === "default") {
+            if (mode === "disabled") {
                 setIsUsingGlobalSettings(false);
                 setIsSiteEnabled(false);
                 await settingsManager.disableSite(hostname, tab.id);
@@ -275,7 +275,7 @@ function App() {
         }
     };
 
-    // Display settings should show default values when in default mode
+    // Display settings should show disabled values when in disabled mode
     const displaySettings = isSiteEnabled ? settings : defaultSettings;
 
     return (
