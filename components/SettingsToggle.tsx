@@ -11,29 +11,34 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
   isSiteEnabled,
   onToggle,
 }) => {
-  const handleModeChange = (mode: "global" | "site" | "disabled") => {
-    onToggle(mode);
-  };
+  const buttonClassName = (isActive: boolean) => `
+    flex-1 px-3 py-2 text-sm font-medium rounded
+    ${isActive 
+      ? 'bg-[var(--color-primary)] text-[var(--color-text)]' 
+      : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]'}
+    border-none cursor-pointer hover:bg-[var(--color-primary-hover)] transition-colors duration-200
+  `;
 
   return (
-    <div className="settings-toggle">
-      <select
-        value={
-          !isSiteEnabled
-            ? "disabled"
-            : isUsingGlobalSettings
-            ? "global"
-            : "site"
-        }
-        onChange={(e) =>
-          handleModeChange(e.target.value as "global" | "site" | "disabled")
-        }
-        className="w-full bg-[var(--color-primary)] text-[var(--color-text)] rounded py-2.5 text-sm font-medium border-none cursor-pointer hover:bg-[var(--color-primary-hover)] transition-colors duration-200"
+    <div className="flex space-x-2">
+      <button
+        onClick={() => onToggle("global")}
+        className={buttonClassName(isUsingGlobalSettings && isSiteEnabled)}
       >
-        <option value="global">Global Settings</option>
-        <option value="site">Site Settings</option>
-        <option value="disabled">Disabled</option>
-      </select>
+        Global
+      </button>
+      <button
+        onClick={() => onToggle("site")}
+        className={buttonClassName(!isUsingGlobalSettings && isSiteEnabled)}
+      >
+        Site
+      </button>
+      <button
+        onClick={() => onToggle("disabled")}
+        className={buttonClassName(!isSiteEnabled)}
+      >
+        Off
+      </button>
     </div>
   );
 };

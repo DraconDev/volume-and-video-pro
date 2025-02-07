@@ -43,13 +43,13 @@ function App() {
 
         // Set initial mode and settings
         if (siteConfig) {
-          const isDefault = siteConfig.activeSetting === "default";
+          const isDisabled = siteConfig.activeSetting === "disabled";
           const isGlobal = siteConfig.activeSetting === "global";
           setIsUsingGlobalSettings(isGlobal);
-          setIsSiteEnabled(!isDefault);
+          setIsSiteEnabled(!isDisabled);
 
-          if (isDefault) {
-            // Show default settings but keep actual settings in state
+          if (isDisabled) {
+            // Show disabled state settings but keep actual settings in state
             setSettings(siteConfig.settings || defaultSettings);
           } else if (isGlobal) {
             // Use global settings
