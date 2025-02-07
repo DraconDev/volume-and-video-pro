@@ -7,17 +7,9 @@ import {
 } from "./types";
 import EventEmitter from "events";
 
-interface MediaConfig {
-  baseSelectors: string[];
-  siteSelectors: {
-    [hostname: string]: string[];
-  };
-}
-
 export class SettingsManager extends EventEmitter {
   globalSettings: AudioSettings;
   private siteSettings: Map<string, SiteSettings>;
-  mediaConfig: MediaConfig | null = null;
 
   constructor() {
     super();
@@ -34,19 +26,6 @@ export class SettingsManager extends EventEmitter {
 
     if (storage.siteSettings) {
       this.siteSettings = new Map(Object.entries(storage.siteSettings));
-    }
-
-    await this.loadMediaConfig();
-  }
-
-  private async loadMediaConfig() {
-    try {
-      const configUrl = chrome.runtime.getURL("references/media-config.json");
-      const response = await fetch(configUrl);
-      this.mediaConfig = await response.json();
-      console.log("Media config loaded:", this.mediaConfig);
-    } catch (error) {
-      console.error("Failed to load media config:", error);
     }
   }
 
@@ -88,20 +67,7 @@ export class SettingsManager extends EventEmitter {
   }
 
   getSettingsForSite(hostname: string): SiteSettings | null {
-    let siteConfig = this.siteSettings.get(hostname);
-    if (!siteConfig && this.mediaConfig?.siteSelectors) {
-      for (const site in this.mediaConfig.siteSelectors) {
-        if (hostname.includes(site)) {
-          siteConfig = {
-            activeSetting: "global",
-            settings: this.globalSettings,
-          };
-          console.log("Matched site via media config selectors:", site);
-          break;
-        }
-      }
-    }
-
+    const siteConfig = this.siteSettings.get(hostname);
     if (!siteConfig) {
       return null;
     }
