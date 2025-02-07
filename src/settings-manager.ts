@@ -253,42 +253,9 @@ export class SettingsManager extends EventEmitter {
     this.siteSettings.set(hostname, siteConfig);
     await this.persistSettings(hostname);
   
-    mode: string,
-    siteConfig: SiteSettings
-  ): AudioSettings {
-    if (mode === "global") {
-      console.log("SettingsManager: Using global settings for playback:", {
-        ...this.globalSettings,
-      });
-      return { ...this.globalSettings };
-    }
-
-    if (mode === "site" && siteConfig.settings) {
-      console.log("SettingsManager: Using site settings for playback:", {
-        ...siteConfig.settings,
-      });
-      return { ...siteConfig.settings };
-    }
-
-    // Simplify to just return disabled settings
-    console.log("SettingsManager: Using disabled settings for playback");
-    return { ...defaultSettings };
-  }
-
-  async disableSite(hostname: string, tabId?: number) {
-    const siteConfig = this.siteSettings.get(hostname) || {
-      ...defaultSiteSettings,
-      settings: { ...this.globalSettings }, // Initialize with current global settings
-    };
-
-    // Keep the existing settings but mark as disabled
-    siteConfig.activeSetting = "disabled";
-    siteConfig.enabled = false;
-    this.siteSettings.set(hostname, siteConfig);
-
-    await this.persistSettings(hostname);
-    // Emit default settings for display, but keep actual settings in storage
+    // Emit default settings for display only, actual settings remain unchanged
     this.emit("settingsUpdated", { ...defaultSettings }, hostname, tabId);
+    
     return {
       actualSettings: siteConfig.settings,
       displaySettings: { ...defaultSettings },
