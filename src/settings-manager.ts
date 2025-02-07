@@ -34,7 +34,7 @@ export class SettingsManager extends EventEmitter {
         siteSettings: null as { [hostname: string]: SiteSettings } | null
     };
 
-    private async persistSettings() {
+    private async persistSettings(hostname?: string) {
         // Clear any existing timeout
         if (this.persistTimeout) {
             clearTimeout(this.persistTimeout);
@@ -52,7 +52,7 @@ export class SettingsManager extends EventEmitter {
                     siteSettings: this.pendingSettings.siteSettings
                 };
                 await chrome.storage.sync.set(settings);
-                console.log("SettingsManager: Settings persisted successfully");
+                console.log("SettingsManager: Settings persisted successfully", { hostname });
                 
                 // Clear pending settings
                 this.pendingSettings.globalSettings = null;
@@ -112,7 +112,7 @@ export class SettingsManager extends EventEmitter {
             this.emit("settingsUpdated", this.globalSettings, hostname, tabId);
         }
 
-        await this.persistSettings();
+        await this.persistSettings(hostname);
     }
 
     async updateSiteSettings(
