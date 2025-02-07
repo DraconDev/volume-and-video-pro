@@ -47,12 +47,6 @@ export class MediaProcessor {
             this.updatePlaybackSpeed(element, settings.speed)
         );
 
-        // Handle audio processing
-        if (!needsProcessing) {
-            await this.audioProcessor.resetAllToDefault();
-            return;
-        }
-
         // Setup or update audio processing for each element
         for (const element of mediaElements) {
             try {

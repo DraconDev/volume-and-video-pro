@@ -98,13 +98,9 @@ export class SettingsHandler {
     }
 
     needsAudioProcessing(): boolean {
-        const needsProcessing =
-            this.currentSettings.volume !== 100 ||
-            this.currentSettings.bassBoost !== 100 ||
-            this.currentSettings.voiceBoost !== 100 ||
-            this.currentSettings.mono;
-        console.log("Settings: Needs audio processing:", needsProcessing);
-        return needsProcessing;
+        // Always return true to maintain audio processing chain
+        // This ensures the Web Audio API nodes stay connected and ready to handle changes
+        return true;
     }
 
     setupStorageListener(callback: (settings: AudioSettings) => void): void {
