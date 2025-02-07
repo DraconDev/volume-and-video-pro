@@ -12,11 +12,11 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
     onToggle,
 }) => {
     return (
-        <div className="flex bg-gray-bg rounded p-0.5 mb-2 gap-1">
+        <div className="flex bg-[var(--color-surface)] rounded p-0.5 mb-2 gap-1">
             <button
-                className={`settings-button  ${
+                className={`settings-button ${
                     isUsingGlobalSettings ? "active" : ""
-                } bg-primary/10 hover:bg-primary/20 `}
+                } bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]`}
                 onClick={() => onToggle("global")}
             >
                 Global
@@ -24,7 +24,7 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
             <button
                 className={`settings-button ${
                     !isUsingGlobalSettings && isSiteEnabled ? "active" : ""
-                } bg-primary/10 hover:bg-primary/20`}
+                } bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]`}
                 onClick={() => onToggle("site")}
             >
                 Site
@@ -32,7 +32,7 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
             <button
                 className={`settings-button ${
                     !isSiteEnabled ? "active" : ""
-                }  bg-primary/10 hover:bg-primary/20`}
+                } bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]`}
                 onClick={() => onToggle("default")}
             >
                 Default
