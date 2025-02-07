@@ -12,7 +12,7 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
     onToggle,
 }) => {
     return (
-        <div className="flex bg-[var(--color-surface)] rounded p-0.5 mb-2 gap-1">
+        <div className="flex bg-[var(--color-surface)] rounded p-0.5 mb-2 gap-2">
             <button
                 className={`settings-button ${
                     isUsingGlobalSettings ? "active" : ""
