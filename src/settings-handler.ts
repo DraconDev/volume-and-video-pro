@@ -20,22 +20,22 @@ export class SettingsHandler {
                 "siteSettings",
             ]);
 
-            // First check for site-specific settings
-            if (storage.siteSettings?.[this.hostname]) {
-                this.currentSettings =
-                    storage.siteSettings[this.hostname].settings;
-                this.isUsingGlobalSettings =
-                    storage.siteSettings[this.hostname].activeSetting ===
-                    "global";
-                console.log("Settings: Using site-specific settings");
-            } else if (storage.globalSettings) {
+            // Initialize with global settings if available
+            if (storage.globalSettings) {
                 this.currentSettings = storage.globalSettings;
                 this.isUsingGlobalSettings = true;
-                console.log("Settings: Using global settings");
             } else {
                 this.currentSettings = defaultSettings;
                 this.isUsingGlobalSettings = true;
-                console.log("Settings: Using default settings");
+            }
+
+            // Check for site-specific settings
+            const siteConfig = storage.siteSettings?.[this.hostname];
+            if (siteConfig) {
+                if (siteConfig.activeSetting === "site") {
+                    // Only use site settings if specifically in site mode
+                    this.currentSettings = siteConfig.settings;
+                    this.isUsingGlobalSettings = false;
             }
 
             // Notify background script
