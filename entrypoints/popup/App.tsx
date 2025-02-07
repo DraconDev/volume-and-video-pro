@@ -43,13 +43,13 @@ function App() {
 
                 // Set initial mode and settings
                 if (siteConfig) {
-                    const isDefault = siteConfig.activeSetting === "default";
+                    const isDisabled = siteConfig.activeSetting === "disabled";
                     const isGlobal = siteConfig.activeSetting === "global";
                     setIsUsingGlobalSettings(isGlobal);
-                    setIsSiteEnabled(!isDefault);
+                    setIsSiteEnabled(!isDisabled);
 
-                    if (isDefault) {
-                        // Show default settings but keep actual settings in state
+                    if (isDisabled) {
+                        // Show disabled settings but keep actual settings in state
                         setSettings(siteConfig.settings || defaultSettings);
                     } else if (isGlobal) {
                         // Use global settings
@@ -168,7 +168,7 @@ function App() {
         key: keyof AudioSettings,
         value: number | boolean
     ) => {
-        if (!isSiteEnabled) return; // Prevent changes when in default mode
+        if (!isSiteEnabled) return; // Prevent changes when disabled
 
         const newSettings = {
             ...settings,

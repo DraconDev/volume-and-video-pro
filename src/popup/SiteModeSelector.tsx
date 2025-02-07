@@ -1,7 +1,7 @@
 const modeOptions = [
   { value: "global", label: "Global Settings" },
   { value: "site", label: "Site Settings" },
-  { value: "disabled", label: "Disabled" }, // Updated from 'default'
+  { value: "disabled", label: "Disabled" },
 ];
 
 const renderModeDescription = (mode: string) => {
@@ -11,7 +11,7 @@ const renderModeDescription = (mode: string) => {
     case "site":
       return "Using custom settings for this site";
     case "disabled":
-      return "Extension disabled for this site"; // Updated description
+      return "Extension disabled for this site";
     default:
       return "";
   }
