@@ -52,13 +52,26 @@ export class MediaManager {
       "video",
       "audio",
       '[class*="player"]',
-      'iframe[src*="twitch.tv"]', // Twitch embeds
-      'iframe[src*="facebook.com"]', // Facebook video embeds
+      '[class*="video"]',
+      '[class*="audio"]',
+      ".video-js",
+      ".jwplayer",
+      ".html5-video-player",
+      ".plyr",
+      "[data-media]",
+      'iframe[src*="youtube.com"]',
+      'iframe[src*="vimeo.com"]',
+      'iframe[src*="dailymotion.com"]',
+      'iframe[src*="twitch.tv"]',
+      'iframe[src*="facebook.com"]'
     ];
+
+    // Append extra selectors if needed
+    const selectors = baseSelectors.concat(this.getExtraSelectorsForSite());
 
     try {
       const elements = root.querySelectorAll(selectors.join(","));
-      elements.forEach((element) => {
+      elements.forEach(element => {
         if (
           element instanceof HTMLElement &&
           !this.processedElements.has(element) &&
