@@ -61,6 +61,10 @@ export class MediaManager {
       elements.forEach((element) => {
         if (
           element instanceof HTMLElement &&
+          !this.processedElements.has(element) &&
+          this.isElementVisible(element)
+        ) {
+          this.processedElements.add(element);
           customPlayers.push(element);
         }
       });
