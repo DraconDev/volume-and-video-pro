@@ -20,80 +20,80 @@ async function handleUpdateSettings(
     // If sender is popup (no tab), get active tab info
     let targetTabId: number | undefined;
     let targetUrl: string | undefined;
+    let hostname: string;
 
     if (!sender.tab) {
       // Message from popup - get active tab
-      const tabs = await chrome.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
-      if (tabs[0]) {
-        targetTabId = tabs[0].id;
-        targetUrl = tabs[0].url;
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tabs[0]?.url || !tabs[0]?.id) {
+        throw new Error("No active tab found");
       }
+      targetTabId = tabs[0].id;
+      targetUrl = tabs[0].url;
+      hostname = getHostname(targetUrl);
     } else {
       // Message from content script
+      if (!sender.tab.url || !sender.tab.id) {
+        throw new Error("Invalid sender tab");
+      }
       targetTabId = sender.tab.id;
       targetUrl = sender.tab.url;
+      hostname = getHostname(targetUrl);
     }
 
-    if (!targetUrl) {
-      console.error("Message Handler: No target URL available");
-      sendResponse({ success: false, error: "No target URL" });
-      return;
-    }
+    console.log("Message Handler: Processing update for", {
+      hostname,
+      tabId: targetTabId,
+      isPopup: !sender.tab,
+      settings: message.settings
+    });
 
-    const hostname = getHostname(targetUrl);
+    // Get current site config
+    const currentSiteConfig = await settingsManager.getSettingsForSite(hostname);
+    const isCurrentlyGlobal = currentSiteConfig?.activeSetting === "global";
 
-    // Handle disabled state
     if (!message.enabled) {
-      const defaultSettings = await settingsManager.disableSite(
-        hostname,
-        targetTabId
-      );
-      if (targetTabId) {
-        await chrome.tabs.sendMessage(targetTabId, {
-          type: "UPDATE_SETTINGS",
-          settings: defaultSettings,
-          isGlobal: false,
-          enabled: false,
-        } as MessageType);
-      }
-      sendResponse({ success: true });
-      return;
+      await settingsManager.disableSite(hostname, targetTabId);
+      return sendResponse({ success: true });
     }
-
-    // Get current site config to check the mode
-    const currentSiteConfig = await settingsManager.getSettingsForSite(
-      hostname
-    );
-
-    if (!currentSiteConfig) {
-      // Site is disabled or not configured
-      const defaultSettings = await settingsManager.disableSite(
-        hostname,
-        targetTabId
-      );
-      if (targetTabId) {
-        await chrome.tabs.sendMessage(targetTabId, {
-          type: "UPDATE_SETTINGS",
-          settings: defaultSettings,
-          isGlobal: false,
-          enabled: false,
-        } as MessageType);
-      }
-      sendResponse({ success: true });
-      return;
-    }
-
-    const isCurrentlyGlobal = currentSiteConfig.activeSetting === "global";
 
     if (!message.settings) {
-      console.error("Message Handler: No settings provided");
-      sendResponse({ success: false });
-      return;
+      throw new Error("No settings provided");
     }
 
+    // Update settings based on mode
+    if (message.isGlobal || isCurrentlyGlobal) {
+      await settingsManager.updateGlobalSettings(message.settings, targetTabId, hostname);
+    } else {
+      await settingsManager.updateSiteSettings(hostname, message.settings, targetTabId);
+    }
+
+    // Forward settings to content script
+    if (targetTabId) {
+      try {
+        await chrome.tabs.sendMessage(targetTabId, {
+          type: "UPDATE_SETTINGS",
+          settings: message.settings,
+          isGlobal: message.isGlobal || isCurrentlyGlobal,
+          enabled: true,
+          hostname
+        } as MessageType);
+      } catch (error) {
+        console.warn("Message Handler: Failed to forward settings to tab", {
+          tabId: targetTabId,
+          error
+        });
+      }
+    }
+
+    sendResponse({ success: true });
+  } catch (error) {
+    console.error("Message Handler: Error processing update", error);
+    sendResponse({ success: false, error: String(error) });
+  }
+}
+
+async function handleUpdateSiteMode(
     // Update settings based on mode
     if (message.isGlobal || isCurrentlyGlobal) {
       // Always pass hostname for global updates so sites using global get updated
