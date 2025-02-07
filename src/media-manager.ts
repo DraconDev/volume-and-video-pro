@@ -1,9 +1,9 @@
 import mediaConfig from "../references/media-config.json";
-import { AudioSettings } from "./types";
 
 export class MediaManager {
   // Keep track of already processed elements to avoid duplicates
   private static processedElements = new WeakSet<HTMLElement>();
+  private static readonly DEBOUNCE_DELAY = 1000; // Increased debounce delay
   private static readonly MAX_DEPTH = 10; // Increased max depth
 
   private static inIframe(): boolean {
