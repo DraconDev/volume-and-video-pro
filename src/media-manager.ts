@@ -131,12 +131,19 @@ export class MediaManager {
 
   private static findMediaElements(): HTMLMediaElement[] {
     // Query all video and audio elements
-    const mediaElements = document.querySelectorAll<HTMLMediaElement>('video, audio');
-    
+    const mediaElements =
+      document.querySelectorAll<HTMLMediaElement>("video, audio");
+
     // Convert NodeList to Array and filter out null elements
-    return Array.from(mediaElements).filter((element): element is HTMLMediaElement => {
-      return element !== null && (element instanceof HTMLVideoElement || element instanceof HTMLAudioElement);
-    });
+    return Array.from(mediaElements).filter(
+      (element): element is HTMLMediaElement => {
+        return (
+          element !== null &&
+          (element instanceof HTMLVideoElement ||
+            element instanceof HTMLAudioElement)
+        );
+      }
+    );
   }
 
   static findMediaElements(
