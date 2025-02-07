@@ -67,3 +67,8 @@ export function setupSettingsEventHandler() {
     );
 }
 
+public settingsUpdated({ settings, hostname, tabId }: SettingsUpdateEvent) {
+  console.log('Settings Event Handler: settingsUpdated event received', { settings, hostname, tabId });
+  this.settingsManager.updateGlobalSettings(settings, tabId, hostname);
+}
+
