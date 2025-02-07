@@ -160,7 +160,7 @@ function App() {
     key: keyof AudioSettings,
     value: number | boolean
   ) => {
-    if (!isSiteEnabled) return; // Prevent changes when in default mode
+    if (!isSiteEnabled) return; // Prevent changes when site is disabled
 
     const newSettings = {
       ...settings,
@@ -217,11 +217,11 @@ function App() {
   };
 
   const handleReset = () => {
-    if (!isSiteEnabled) return; // Prevent reset when in default mode
+    if (!isSiteEnabled) return; // Prevent reset when site is disabled
     setSettings(defaultSettings);
   };
 
-  const handleToggleMode = async (mode: "global" | "site" | "default") => {
+  const handleToggleMode = async (mode: "global" | "site" | "disabled") => {
     try {
       const [tab] = await chrome.tabs.query({
         active: true,
@@ -234,7 +234,7 @@ function App() {
 
       const hostname = new URL(tab.url).hostname;
 
-      if (mode === "default") {
+      if (mode === "disabled") {
         setIsUsingGlobalSettings(false);
         setIsSiteEnabled(false);
         await settingsManager.disableSite(hostname, tab.id);
@@ -258,7 +258,7 @@ function App() {
     }
   };
 
-  // Display settings should show default values when in default mode
+  // Display settings should show disabled state settings when site is disabled
   const displaySettings = isSiteEnabled ? settings : defaultSettings;
 
   return (
