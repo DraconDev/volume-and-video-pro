@@ -129,21 +129,77 @@ export class MediaManager {
     return customPlayers;
   }
 
-  private static findMediaElements(): HTMLMediaElement[] {
-    // Query all video and audio elements
-    const mediaElements =
-      document.querySelectorAll<HTMLMediaElement>("video, audio");
+  private static findMediaElements(
+    root: ParentNode = document,
+    depth: number = 0
+  ): HTMLMediaElement[] {
+    if (this.isExtensionContext() || depth > this.MAX_DEPTH) {
+      return [];
+    }
 
-    // Convert NodeList to Array and filter out null elements
-    return Array.from(mediaElements).filter(
-      (element): element is HTMLMediaElement => {
-        return (
-          element !== null &&
-          (element instanceof HTMLVideoElement ||
-            element instanceof HTMLAudioElement)
-        );
+    const elements: HTMLMediaElement[] = [];
+    const processedNodes = new Set<Node>();
+
+    try {
+      // Direct media elements
+      const mediaElements = root.querySelectorAll("video, audio");
+      mediaElements.forEach((element) => {
+        if (
+          element instanceof HTMLMediaElement &&
+          !processedNodes.has(element) &&
+          this.isElementVisible(element)
+        ) {
+          elements.push(element);
+          processedNodes.add(element);
+        }
+      });
+
+      // Handle Shadow DOM
+      if (root instanceof Element && root.shadowRoot) {
+        elements.push(...this.findMediaElements(root.shadowRoot, depth + 1));
       }
-    );
+
+      // Handle iframes only in top frame
+      if (!this.inIframe() && depth === 0) {
+        const iframes = root.querySelectorAll("iframe");
+        iframes.forEach((iframe) => {
+          try {
+            const iframeDoc =
+              iframe.contentDocument || iframe.contentWindow?.document;
+            if (iframeDoc && !processedNodes.has(iframeDoc)) {
+              elements.push(...this.findMediaElements(iframeDoc, depth + 1));
+              processedNodes.add(iframeDoc);
+            }
+          } catch (e) {
+            // Silently handle cross-origin iframes
+          }
+        });
+      }
+
+      // Custom players (only at top level)
+      if (depth === 0) {
+        const customPlayers = this.findCustomPlayers(root);
+        customPlayers.forEach((player) => {
+          const mediaInPlayer = player.querySelectorAll("video, audio");
+          mediaInPlayer.forEach((element) => {
+            if (
+              element instanceof HTMLMediaElement &&
+              !processedNodes.has(element) &&
+              this.isElementVisible(element)
+            ) {
+              elements.push(element);
+              processedNodes.add(element);
+            }
+          });
+        });
+      }
+    } catch (e) {
+      if (!this.isExtensionContext()) {
+        console.warn("Error finding media elements:", e);
+      }
+    }
+
+    return Array.from(new Set(elements));
   }
 
   static setupMediaElementObserver(
