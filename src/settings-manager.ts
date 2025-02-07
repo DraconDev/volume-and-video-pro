@@ -177,18 +177,19 @@ export class SettingsManager extends EventEmitter {
 
   async updateSiteMode(
     hostname: string,
-    mode: "global" | "site" | "disabled", // changed from 'default'
+    mode: "global" | "site" | "disabled",
     tabId?: number
   ) {
     let siteConfig = this.siteSettings.get(hostname);
     const oldMode = siteConfig?.activeSetting;
+    const previousSettings = siteConfig?.settings;
 
     // Initialize siteConfig if it doesn't exist
     if (!siteConfig) {
       siteConfig = {
         enabled: mode !== "disabled",
         activeSetting: mode,
-        settings: { ...defaultSettings }, // Always initialize with settings
+        settings: mode === "global" ? { ...this.globalSettings } : { ...defaultSettings },
       };
     }
 
@@ -196,6 +197,7 @@ export class SettingsManager extends EventEmitter {
       oldMode,
       newMode: mode,
       hasExistingSettings: !!siteConfig.settings,
+      previousSettings,
       tabId,
     });
 
@@ -203,19 +205,26 @@ export class SettingsManager extends EventEmitter {
     switch (mode) {
       case "site":
         siteConfig.enabled = true;
-        // Use existing site settings or initialize with defaults
-        siteConfig.settings = siteConfig.settings || { ...defaultSettings };
+        // Restore previous settings if they exist
+        if (previousSettings) {
+          siteConfig.settings = { ...previousSettings };
+        }
         break;
 
       case "global":
         siteConfig.enabled = true;
-        // Keep existing site settings but use global settings for now
-        siteConfig.settings = siteConfig.settings || { ...defaultSettings };
+        // Keep existing site settings but use global settings for display
+        if (previousSettings) {
+          siteConfig.settings = { ...previousSettings };
+        }
         break;
 
       case "disabled":
         siteConfig.enabled = false;
-        // Preserve site settings even when disabled
+        // Preserve existing settings while disabled
+        if (!siteConfig.settings) {
+          siteConfig.settings = { ...this.globalSettings };
+        }
         break;
     }
 
@@ -225,23 +234,14 @@ export class SettingsManager extends EventEmitter {
 
     await this.persistSettings(hostname);
 
-    // Get the appropriate settings based on mode
-    const settingsToUse =
-      mode === "global"
-        ? { ...this.globalSettings }
-        : mode === "site"
-        ? { ...siteConfig.settings }
-        : { ...defaultSettings };
+    // Get the appropriate settings to display
+    const settingsToUse = mode === "disabled"
+      ? { ...defaultSettings }
+      : mode === "global"
+      ? { ...this.globalSettings }
+      : { ...siteConfig.settings };
 
     // Emit settings update event
-    this.emit("settingsUpdated", settingsToUse, hostname, tabId);
-
-    return { settingsToUse, siteConfig };
-  }
-
-  private getSettingsForPlayback(
-    hostname: string,
-    mode: string,
     siteConfig: SiteSettings
   ): AudioSettings {
     if (mode === "global") {

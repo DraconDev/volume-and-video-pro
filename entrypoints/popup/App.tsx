@@ -233,31 +233,28 @@ function App() {
       }
 
       const hostname = new URL(tab.url).hostname;
+      const previousSettings = settings; // Store current settings
 
       switch (mode) {
         case "disabled":
           setIsUsingGlobalSettings(false);
           setIsSiteEnabled(false);
-          // Don't update settings state, just disable the site
+          // Keep settings in state while disabled
           await settingsManager.disableSite(hostname, tab.id);
           break;
 
         case "global":
           setIsUsingGlobalSettings(true);
           setIsSiteEnabled(true);
-          // Use existing settings when switching to global
-          await settingsManager.updateGlobalSettings(
-            settings,
-            tab.id,
-            hostname
-          );
+          // Restore previous settings when switching to global
+          await settingsManager.updateGlobalSettings(previousSettings, tab.id, hostname);
           break;
 
         case "site":
           setIsUsingGlobalSettings(false);
           setIsSiteEnabled(true);
-          // Use existing settings when switching to site mode
-          await settingsManager.updateSiteSettings(hostname, settings, tab.id);
+          // Restore previous settings when switching to site mode
+          await settingsManager.updateSiteSettings(hostname, previousSettings, tab.id);
           break;
       }
     } catch (error) {
@@ -265,7 +262,7 @@ function App() {
     }
   };
 
-  // Display default settings only when disabled, but keep actual settings in state
+  // Use displaySettings for UI only, keep actual settings in state
   const displaySettings = isSiteEnabled ? settings : defaultSettings;
 
   return (
