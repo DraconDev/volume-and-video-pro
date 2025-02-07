@@ -60,7 +60,7 @@ export default defineContentScript({
 
         // Listen for settings updates from the background script
         chrome.runtime.onMessage.addListener(
-            (message: MessageType, sender, sendResponse) => {
+            async (message: MessageType, sender, sendResponse) => {
                 if (message.type === "UPDATE_SETTINGS") {
                     const updateSettingsMessage = message as UpdateSettingsMessage;
                     console.log(
@@ -82,6 +82,8 @@ export default defineContentScript({
                     await mediaProcessor.resetToDefault();
                     await processMedia();
                 }
+                // Keep message channel open for async response
+                return true;
             }
         );
 
