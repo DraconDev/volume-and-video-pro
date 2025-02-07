@@ -233,44 +233,22 @@ function App() {
       }
 
       const hostname = new URL(tab.url).hostname;
-      const previousSettings = settings; // Store current settings
 
-      switch (mode) {
-        case "disabled":
-          setIsUsingGlobalSettings(false);
-          setIsSiteEnabled(false);
-          // Keep settings in state while disabled
-          await settingsManager.disableSite(hostname, tab.id);
-          break;
+      // Don't update actual settings, just switch modes
+      setIsUsingGlobalSettings(mode === "global");
+      setIsSiteEnabled(mode !== "disabled");
 
-        case "global":
-          setIsUsingGlobalSettings(true);
-          setIsSiteEnabled(true);
-          // Restore previous settings when switching to global
-          await settingsManager.updateGlobalSettings(
-            previousSettings,
-            tab.id,
-            hostname
-          );
-          break;
-
-        case "site":
-          setIsUsingGlobalSettings(false);
-          setIsSiteEnabled(true);
-          // Restore previous settings when switching to site mode
-          await settingsManager.updateSiteSettings(
-            hostname,
-            previousSettings,
-            tab.id
-          );
-          break;
+      if (mode === "disabled") {
+        await settingsManager.disableSite(hostname, tab.id);
+      } else {
+        await settingsManager.updateSiteMode(hostname, mode, tab.id);
       }
     } catch (error) {
       console.error("Popup: Error toggling mode:", error);
     }
   };
 
-  // Use displaySettings for UI only, keep actual settings in state
+  // Only affect display, not actual settings
   const displaySettings = isSiteEnabled ? settings : defaultSettings;
 
   return (

@@ -209,50 +209,50 @@ export class SettingsManager extends EventEmitter {
     this.emit("settingsUpdated", displaySettings, hostname, tabId);
     return { settingsToUse: displaySettings, siteConfig };
   }
-        if (previousSettings) {
-          siteConfig.settings = { ...previousSettings };
-        }
-        break;
-
-      case "global":
-        siteConfig.enabled = true;
-        // Keep existing site settings but use global settings for display
-        if (previousSettings) {
-          siteConfig.settings = { ...previousSettings };
-        }
-        break;
-
-      case "disabled":
-        siteConfig.enabled = false;
-        // Preserve existing settings while disabled
-        if (!siteConfig.settings) {
-          siteConfig.settings = { ...this.globalSettings };
-        }
-        break;
-    }
-
-    // Update mode
-    siteConfig.activeSetting = mode;
-    this.siteSettings.set(hostname, siteConfig);
-
-    await this.persistSettings(hostname);
-
-    // Get the appropriate settings to display
-    const settingsToUse =
-      mode === "disabled"
-        ? { ...defaultSettings }
-        : mode === "global"
-        ? { ...this.globalSettings }
-        : { ...siteConfig.settings };
-
-    // Emit settings update event
-    this.emit("settingsUpdated", settingsToUse, hostname, tabId);
-
-    return { settingsToUse, siteConfig };
-  }
 
   private getSettingsForPlayback(
     hostname: string,
+    mode: string,
+    siteConfig: SiteSettings
+  ): AudioSettings {
+    if (mode === "global") {
+      console.log("SettingsManager: Using global settings for playback:", {
+        ...this.globalSettings,
+      });
+      return { ...this.globalSettings };
+    }
+
+    if (mode === "site" && siteConfig.settings) {
+      console.log("SettingsManager: Using site settings for playback:", {
+        ...siteConfig.settings,
+      });
+      return { ...siteConfig.settings };
+    }
+
+    // Simplify to just return disabled settings
+    console.log("SettingsManager: Using disabled settings for playback");
+    return { ...defaultSettings };
+  }
+
+  async disableSite(hostname: string, tabId?: number) {
+    let siteConfig = this.siteSettings.get(hostname);
+    
+    if (!siteConfig) {
+      // If no config exists, create one with current global settings
+      siteConfig = {
+        enabled: false,
+        activeSetting: "disabled",
+        settings: { ...this.globalSettings },
+      };
+    } else {
+      // Keep existing settings, just update the mode
+      siteConfig.enabled = false;
+      siteConfig.activeSetting = "disabled";
+    }
+  
+    this.siteSettings.set(hostname, siteConfig);
+    await this.persistSettings(hostname);
+  
     mode: string,
     siteConfig: SiteSettings
   ): AudioSettings {
