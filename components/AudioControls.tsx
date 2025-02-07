@@ -167,7 +167,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                             <button
                                 onClick={() => onSettingChange(key, defaultValue)}
                                 disabled={!isEnabled}
-                                className={`text-sm bg-primary/10 hover:bg-primary/20 text-gray-text px-2 py-0.5 rounded ${
+                                className={`text-sm bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] px-2 py-0.5 rounded ${
                                     !isEnabled ? "opacity-50 cursor-not-allowed" : ""
                                 }`}
                             >
@@ -202,10 +202,10 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                 </div>
             ))}
             <div
-                className={`  rounded  m-[2px] mb-[2px] p-1 ${
+                className={`rounded m-[2px] mb-[2px] p-1 ${
                     settings.mono
-                        ? "bg-primary text-white"
-                        : "bg-primary/10 hover:bg-primary/20 text-gray-text"
+                        ? "bg-[var(--color-primary)] text-[var(--color-text)]"
+                        : "bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)]"
                 } appearance-none cursor-pointer ${
                     !isEnabled ? "opacity-50 cursor-not-allowed" : ""
                 }`}
