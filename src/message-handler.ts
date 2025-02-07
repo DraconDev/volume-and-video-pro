@@ -117,8 +117,7 @@ async function handleUpdateSettings(
             );
             try {
                 await chrome.tabs.sendMessage(targetTabId, {
-                    ...message,
-                    forceUpdate: true // Add flag to ensure content script applies the update
+                    ...message
                 });
                 console.log("Message Handler: Settings successfully forwarded");
             } catch (error) {
