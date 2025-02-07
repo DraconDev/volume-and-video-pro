@@ -274,15 +274,15 @@ export class SettingsManager extends EventEmitter {
     hostname?: string
   ) {
     console.log("SettingsManager: Updating global settings", {
-      oldSettings: this.settings,
+      oldSettings: this.globalSettings,
       newSettings,
       tabId,
       hostname,
     });
 
     // Update the settings
-    this.settings = {
-      ...this.settings,
+    this.globalSettings = {
+      ...this.globalSettings,
       ...newSettings,
     };
 
