@@ -2,7 +2,7 @@ export class MediaManager {
     // Keep track of already processed elements to avoid duplicates
     private static processedElements = new WeakSet<HTMLElement>();
     private static readonly DEBOUNCE_DELAY = 1000; // Increased debounce delay
-    private static readonly MAX_DEPTH = 5; // Reduced max depth
+    private static readonly MAX_DEPTH = 10; // Increased max depth
 
     private static inIframe(): boolean {
         try {
@@ -29,11 +29,11 @@ export class MediaManager {
         return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
     }
 
-    // Simplified custom player detection
+    // Simplified custom player detection with extended selectors
     private static findCustomPlayers(root: ParentNode): HTMLElement[] {
         const customPlayers: HTMLElement[] = [];
         
-        // Reduced set of essential selectors
+        // Extended set of selectors to catch more media players
         const selectors = [
             'video',
             'audio',
