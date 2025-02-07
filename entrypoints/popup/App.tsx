@@ -124,13 +124,8 @@ function App() {
 
                         setSettings(updatedSettings);
                         if (updatedTabId) {
-                            // Site-specific settings updated, adjust mode accordingly
-                            setIsUsingGlobalSettings(false);
-                            setIsSiteEnabled(true);
-                        } else {
-                            // Global settings updated
-                            setIsUsingGlobalSettings(true);
-                            setIsSiteEnabled(true);
+                            // Keep current mode, just update settings
+                            // The mode (global vs site) should only change via explicit toggle
                         }
 
                         // Force refresh settings in content script
