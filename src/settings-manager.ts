@@ -110,7 +110,7 @@ export class SettingsManager extends EventEmitter {
       }
     });
 
-    // Emit for the current site if specified
+    // Finally emit for the current site if specified
     if (hostname) {
       this.emit("settingsUpdated", this.globalSettings, hostname, tabId);
     }
@@ -266,6 +266,28 @@ export class SettingsManager extends EventEmitter {
     await this.persistSettings(hostname);
     this.emit("settingsUpdated", { ...defaultSettings }, hostname, tabId);
     return { ...defaultSettings };
+  }
+
+  public updateSettings(
+    newSettings: Partial<Settings>,
+    tabId?: number,
+    hostname?: string
+  ) {
+    console.log("SettingsManager: Updating global settings", {
+      oldSettings: this.globalSettings,
+      newSettings,
+      tabId,
+      hostname,
+    });
+
+    // Update the settings
+    this.globalSettings = {
+      ...this.globalSettings,
+      ...newSettings,
+    };
+
+    // Persist the settings with hostname
+    this.persistSettings(hostname);
   }
 }
 
