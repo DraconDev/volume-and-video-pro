@@ -23,18 +23,13 @@ const mediaConfig = {
       "video[src*='specialstream']",
     ],
     "youtube.com": [
-      ".html5-video-player" // Correct selector for the main player container
+      ".html5-video-player", // Correct selector for the main player container
     ],
     "netflix.com": ["[data-uia='video-player']", ".PlayerControls"],
     "hulu.com": ["video", ".HuluPlayer"],
     "amazon.com": ["[data-player='AmazonVideo']", ".avc-container"],
     "disneyplus.com": [".dp-video-player", "[data-testid='video-player']"],
   },
-    "hianime.": [ // Match hianime.to, hianime.tv etc.
-      "#player",  // Common player ID
-      "iframe",   // Catch embedded players (Vidstream, MegaCloud, etc.)
-      "video[src]" // Ensure standard video tags are found
-    ],
 };
 
 export class MediaManager {
@@ -79,7 +74,9 @@ export class MediaManager {
       // Use includes for subdomain matching (e.g., music.youtube.com)
       if (currentHostname.includes(siteHostname)) {
         // Type assertion needed as keys are strings
-        return mediaConfig.siteSelectors[siteHostname as keyof typeof mediaConfig.siteSelectors];
+        return mediaConfig.siteSelectors[
+          siteHostname as keyof typeof mediaConfig.siteSelectors
+        ];
       }
     }
     return []; // Return empty array if no match found
