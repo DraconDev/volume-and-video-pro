@@ -38,14 +38,6 @@ export class MediaManager {
   private static readonly DEBOUNCE_DELAY = 1000; // Increased debounce delay
   private static readonly MAX_DEPTH = 10; // Increased max depth
 
-  private static inIframe(): boolean {
-    try {
-      return window.self !== window.top;
-    } catch (e) {
-      return true;
-    }
-  }
-
   private static isExtensionContext(): boolean {
     try {
       return (
@@ -157,23 +149,6 @@ export class MediaManager {
       // Handle Shadow DOM
       if (root instanceof Element && root.shadowRoot) {
         elements.push(...this.findMediaElements(root.shadowRoot, depth + 1));
-      }
-
-      // Handle iframes only in top frame
-      if (!this.inIframe() && depth === 0) {
-        const iframes = root.querySelectorAll("iframe");
-        iframes.forEach((iframe) => {
-          try {
-            const iframeDoc =
-              iframe.contentDocument || iframe.contentWindow?.document;
-            if (iframeDoc && !processedNodes.has(iframeDoc)) {
-              elements.push(...this.findMediaElements(iframeDoc, depth + 1));
-              processedNodes.add(iframeDoc);
-            }
-          } catch (e) {
-            // Silently handle cross-origin iframes
-          }
-        });
       }
 
       // Custom players (only at top level)
