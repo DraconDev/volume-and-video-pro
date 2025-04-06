@@ -23,9 +23,7 @@ const mediaConfig = {
       "video[src*='specialstream']",
     ],
     "youtube.com": [
-      ".ytp-chrome-top",
-      ".ytp-show-cards-title",
-      ".ytp-toggle-button",
+      ".html5-video-player" // Correct selector for the main player container
     ],
     "netflix.com": ["[data-uia='video-player']", ".PlayerControls"],
     "hulu.com": ["video", ".HuluPlayer"],
