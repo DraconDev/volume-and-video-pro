@@ -69,17 +69,17 @@ export class MediaManager {
     );
   }
 
-  // Revert getExtraSelectorsForSite() to original implementation
+  // Use the full siteSelectors configuration
   private static getExtraSelectorsForSite(): string[] {
-    const hostname = window.location.hostname;
-    if (hostname.includes("problematicsite.com")) {
-      return [
-        ".problem-player",
-        "div[data-player]",
-        'video[src*="specialstream"]',
-      ];
+    const currentHostname = window.location.hostname;
+    for (const siteHostname in mediaConfig.siteSelectors) {
+      // Use includes for subdomain matching (e.g., music.youtube.com)
+      if (currentHostname.includes(siteHostname)) {
+        // Type assertion needed as keys are strings
+        return mediaConfig.siteSelectors[siteHostname as keyof typeof mediaConfig.siteSelectors];
+      }
     }
-    return [];
+    return []; // Return empty array if no match found
   }
 
   // Updated custom player detection with fallback dynamic scanning
