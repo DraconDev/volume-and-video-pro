@@ -5,7 +5,7 @@ export default defineConfig({
         permissions: ["storage", "tabs"],
         host_permissions: ["<all_urls>"],
         name: "Volume & Video Master 1000%",
-        version: "1.4.48",
+        version: "1.4.49",
         description: "Volume & Video Master",
         background: {
             service_worker: "entrypoints/background.ts",
@@ -27,12 +27,14 @@ export default defineConfig({
                 matches: ["<all_urls>"],
             },
         ],
-        // content_scripts: [
-        //     {
-        //         matches: ["<all_urls>"],
-        //         js: ["entrypoints/content.ts"],
-        //     },
-        // ],
+        content_scripts: [
+            {
+                matches: ["<all_urls>"],
+                js: ["entrypoints/content.ts"],
+                all_frames: true, // Inject into all frames (including iframes)
+                run_at: "document_start", // Inject as early as possible
+            },
+        ],
     },
     modules: ["@wxt-dev/module-react"],
 });
