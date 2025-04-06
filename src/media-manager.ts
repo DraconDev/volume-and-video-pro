@@ -236,15 +236,16 @@ export class MediaManager {
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-          const hasMediaElement = Array.from(mutation.addedNodes).some(
+          const needsCheck = Array.from(mutation.addedNodes).some(
             (node) =>
               node instanceof Element &&
-              (node.tagName === "VIDEO" ||
+              (node.tagName === "VIDEO" || // Is a media element
                 node.tagName === "AUDIO" ||
-                node.querySelector?.("video, audio"))
+                node.querySelector?.("video, audio") || // Contains a media element
+                node.shadowRoot) // Has a shadow root (might contain media)
           );
 
-          if (hasMediaElement) {
+          if (needsCheck) {
             debouncedCheck();
             break;
           }
