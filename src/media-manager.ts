@@ -30,6 +30,11 @@ const mediaConfig = {
     "amazon.com": ["[data-player='AmazonVideo']", ".avc-container"],
     "disneyplus.com": [".dp-video-player", "[data-testid='video-player']"],
   },
+    "hianime.": [ // Match hianime.to, hianime.tv etc.
+      "#player",  // Common player ID
+      "iframe",   // Catch embedded players (Vidstream, MegaCloud, etc.)
+      "video[src]" // Ensure standard video tags are found
+    ],
 };
 
 export class MediaManager {
