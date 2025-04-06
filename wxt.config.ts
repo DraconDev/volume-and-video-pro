@@ -5,7 +5,7 @@ export default defineConfig({
     permissions: ["storage", "tabs"],
     host_permissions: ["<all_urls>"],
     name: "Volume & Video Master 1000%",
-    version: "1.4.55",
+    version: "1.4.56",
     description: "Volume & Video Master",
     background: {
       service_worker: "entrypoints/background.ts",
@@ -30,8 +30,9 @@ export default defineConfig({
     content_scripts: [
       {
         matches: ["<all_urls>"],
+        js: ["entrypoints/content.js"],
         all_frames: true, // Inject into all frames (including iframes)
-        run_at: "document_start", // Inject as early as possiblez
+        run_at: "document_start", // Inject as early as possible
       },
     ],
   },
