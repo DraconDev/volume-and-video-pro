@@ -20,6 +20,29 @@ export default defineContentScript({
         // Start fetching settings from background immediately
         settingsHandler.initialize();
 
+        // --- User Gesture Handling for AudioContext ---
+        let hasUserInteracted = false;
+        const interactionEvents: (keyof DocumentEventMap)[] = ['click', 'keydown', 'touchstart', 'mousedown'];
+
+        const handleFirstInteraction = async () => {
+            if (hasUserInteracted) return;
+            hasUserInteracted = true;
+            console.log("Content: User interaction detected, attempting to resume AudioContext.");
+            // Remove listeners after first interaction
+            interactionEvents.forEach(event => {
+                document.removeEventListener(event, handleFirstInteraction, { capture: true });
+            });
+            // Attempt to resume the context via MediaProcessor -> AudioProcessor
+            await mediaProcessor.audioProcessor.tryResumeContext();
+        };
+
+        // Add listeners to detect the first interaction
+        interactionEvents.forEach(event => {
+            // Use capture phase to catch events early
+            document.addEventListener(event, handleFirstInteraction, { capture: true, once: false });
+        });
+        // --- End User Gesture Handling ---
+
         // Process media with current settings
         const processMedia = async () => {
             console.log("Content: processMedia called");
