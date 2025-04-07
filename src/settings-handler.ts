@@ -1,118 +1,123 @@
-import { AudioSettings, defaultSettings, SiteSettings } from "./types";
-import { settingsManager } from "./settings-manager";
+import { AudioSettings, defaultSettings } from "./types";
+// NOTE: Removed direct import of settingsManager
 
 export class SettingsHandler {
     private currentSettings: AudioSettings;
-    private isUsingGlobalSettings: boolean;
+    // isUsingGlobalSettings might become less relevant if background sends effective settings
+    // private isUsingGlobalSettings: boolean;
     private hostname: string;
+    private initializationComplete: Promise<void>; // Promise to track initialization
+    private resolveInitialization: () => void = () => {}; // Resolver for the promise
 
     constructor() {
-        this.currentSettings = defaultSettings;
-        this.isUsingGlobalSettings = true;
+        this.currentSettings = { ...defaultSettings }; // Start with defaults
+        // this.isUsingGlobalSettings = true; // Assume global initially
         this.hostname = window.location.hostname;
+        this.initializationComplete = new Promise((resolve) => {
+            this.resolveInitialization = resolve;
+        });
+        // Setup listener for updates *after* initial settings are received
+        this.setupUpdateListener();
     }
 
+    /**
+     * Initializes the handler by requesting the correct settings
+     * for the current page from the background script.
+     */
     async initialize(): Promise<void> {
+        console.log("SettingsHandler: Requesting initial settings for", this.hostname);
         try {
-            console.log("Settings: Starting initialization");
-            const storage = await chrome.storage.sync.get([
-                "globalSettings",
-                "siteSettings",
-            ]);
-
-            // Initialize with global settings if available
-            if (storage.globalSettings) {
-                this.currentSettings = storage.globalSettings;
-                this.isUsingGlobalSettings = true;
-            } else {
-                this.currentSettings = defaultSettings;
-                this.isUsingGlobalSettings = true;
-            }
-
-            // Check for site-specific settings
-            const siteConfig = storage.siteSettings?.[this.hostname];
-            if (siteConfig) {
-                if (siteConfig.activeSetting === "site") {
-                    // Only use site settings if specifically in site mode
-                    this.currentSettings = siteConfig.settings;
-                    this.isUsingGlobalSettings = false;
-                    console.log("Settings: Using site-specific settings");
-                } else {
-                    // For global or default mode, use global settings
-                    console.log("Settings: Using global settings (site in global mode)");
-                }
-            } else {
-                console.log("Settings: Using global settings (no site config)");
-            }
-
-            // Notify background script
-            await this.notifyReady();
-
-            console.log("Settings: Initialization complete", {
-                settings: this.currentSettings,
-                isGlobal: this.isUsingGlobalSettings,
+            // Send message to background to get settings for this hostname
+            const response = await chrome.runtime.sendMessage({
+                type: "GET_INITIAL_SETTINGS",
+                hostname: this.hostname,
             });
-        } catch (error) {
-            console.error("Settings: Error during initialization:", error);
-            this.currentSettings = defaultSettings;
-            this.isUsingGlobalSettings = true;
-            throw error;
-        }
 
-        // Listen for settings updates
-        settingsManager.on(
-            "settingsUpdated",
-            (settings: AudioSettings, hostname: string | undefined) => {
-                if (this.isUsingGlobalSettings || hostname === this.hostname) {
-                    this.currentSettings = settings;
-                    this.isUsingGlobalSettings =
-                        hostname === undefined || hostname === this.hostname;
-                    console.log("Settings: Updated settings", {
-                        settings: this.currentSettings,
-                        isGlobal: this.isUsingGlobalSettings,
-                    });
+            if (response &amp;&amp; response.settings) {
+                console.log("SettingsHandler: Received initial settings", response.settings);
+                this.currentSettings = response.settings;
+                // Optionally, background could also send the mode if needed
+                // this.isUsingGlobalSettings = response.mode === 'global';
+            } else {
+                console.warn("SettingsHandler: No/invalid initial settings received from background, using defaults.", response);
+                this.currentSettings = { ...defaultSettings };
+            }
+        } catch (error) {
+            console.error("SettingsHandler: Error requesting initial settings:", error, "Using defaults.");
+            this.currentSettings = { ...defaultSettings };
+            // We might still resolve, allowing the page to function with defaults
+        } finally {
+            console.log("SettingsHandler: Initialization complete.");
+            this.resolveInitialization(); // Signal that initialization is done
+        }
+    }
+
+    /**
+     * Returns a promise that resolves once initial settings have been
+     * fetched from the background script.
+     */
+    async ensureInitialized(): Promise<void> {
+        return this.initializationComplete;
+    }
+
+    /**
+     * Sets up the listener for settings updates pushed from the background script.
+     */
+    private setupUpdateListener(): void {
+         chrome.runtime.onMessage.addListener(
+            (message: any, sender, sendResponse) => {
+                // Only process updates specifically for this host pushed from background
+                if (message.type === "UPDATE_SETTINGS" &amp;&amp; message.hostname === this.hostname) {
+                     console.log("SettingsHandler: Received settings update via message", message.settings);
+                     this.currentSettings = message.settings;
+                     // TODO: Potentially trigger processMedia or notify content.ts
+                     // This depends on how content.ts handles updates now
                 }
+                // Indicate async response potentially needed (good practice)
+                // return true;
             }
         );
-    }
-
-    private async notifyReady(): Promise<void> {
-        await chrome.runtime.sendMessage({
-            type: "CONTENT_SCRIPT_READY",
-            hostname: this.hostname,
-            usingGlobal: this.isUsingGlobalSettings,
-        });
     }
 
     getCurrentSettings(): AudioSettings {
-        console.log(
-            "Settings: Getting current settings:",
-            this.currentSettings
-        );
+        // No change needed here, just returns the current state
         return this.currentSettings;
     }
 
-    isGlobal(): boolean {
-        return this.isUsingGlobalSettings;
-    }
+    // This might be removed if background always sends effective settings
+    // isGlobal(): boolean {
+    //     return this.isUsingGlobalSettings;
+    // }
 
+    /**
+     * Updates settings locally. Use with caution, updates should ideally
+     * come from the background script via messages.
+     */
     updateSettings(settings: AudioSettings): void {
+        console.warn("SettingsHandler: updateSettings called directly. Prefer updates via background messages.");
         this.currentSettings = settings;
     }
 
     resetToDefault(): void {
-        this.currentSettings = defaultSettings;
+        this.currentSettings = { ...defaultSettings };
     }
 
+    /**
+     * Determines if audio processing is needed based on current settings.
+     * TODO: Refine this logic if background provides enabled/disabled state.
+     */
     needsAudioProcessing(): boolean {
-        // Always return true to maintain audio processing chain
-        // This ensures the Web Audio API nodes stay connected and ready to handle changes
-        return true;
+        // For now, assume processing is always needed if script is running
+        // Check if settings are effectively "disabled" (e.g., all boosts/volume at default/100)
+        const defaults = defaultSettings;
+        return !(
+            this.currentSettings.volume === defaults.volume &amp;&amp;
+            this.currentSettings.bassBoost === defaults.bassBoost &amp;&amp;
+            this.currentSettings.voiceBoost === defaults.voiceBoost &amp;&amp;
+            this.currentSettings.mono === defaults.mono
+            // Add other relevant settings checks here if needed
+        );
     }
 
-    setupStorageListener(callback: (settings: AudioSettings) => void): void {
-        chrome.storage.onChanged.addListener((changes) => {
-            console.log("Settings: Storage changes detected:", changes);
-        });
-    }
+    // Removed setupStorageListener - don't listen to storage directly
 }
