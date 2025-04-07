@@ -17,6 +17,9 @@ export default defineContentScript({
         const settingsHandler = new SettingsHandler();
         const mediaProcessor = new MediaProcessor();
 
+        // Start fetching settings from background immediately
+        settingsHandler.initialize();
+
         // Process media with current settings
         const processMedia = async () => {
             console.log("Content: processMedia called");
@@ -46,7 +49,8 @@ export default defineContentScript({
 
             initializationTimeout = window.setTimeout(async () => {
                 try {
-                    await settingsHandler.initialize();
+                    // Wait for settings to be fetched before processing media
+                    await settingsHandler.ensureInitialized();
                     await processMedia();
                 } catch (error) {
                     console.error(
@@ -67,18 +71,11 @@ export default defineContentScript({
                         updateSettingsMessage.settings
                     );
 
-                    // Update internal settings
-                    settingsHandler.updateSettings(updateSettingsMessage.settings);
-
-                    // Apply settings update with proper logging
-                    console.log("Content: Processing settings update", {
-                        settings: updateSettingsMessage.settings,
-                        isGlobal: updateSettingsMessage.isGlobal,
-                        enabled: updateSettingsMessage.enabled
-                    });
-
-                    // Update settings without resetting audio context
-                    await processMedia();
+                    // SettingsHandler updates internally via its own listener now.
+                    // We might need a way for SettingsHandler to notify content.ts
+                    // to re-run processMedia if an update requires immediate action,
+                    // but for now, rely on MutationObserver or subsequent events.
+                    console.log("Content: Received settings update message (handled internally by SettingsHandler)");
                 }
                 // Keep message channel open for async response
                 return true;
