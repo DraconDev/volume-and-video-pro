@@ -1,23 +1,18 @@
 import { AudioSettings, defaultSettings } from "./types";
-// NOTE: Removed direct import of settingsManager
 
 export class SettingsHandler {
     private currentSettings: AudioSettings;
-    // isUsingGlobalSettings might become less relevant if background sends effective settings
-    // private isUsingGlobalSettings: boolean;
     private hostname: string;
-    private initializationComplete: Promise<void>; // Promise to track initialization
-    private resolveInitialization: () => void = () => {}; // Resolver for the promise
+    private initializationComplete: Promise<void>;
+    private resolveInitialization!: () => void; // Definite assignment assertion
 
     constructor() {
         this.currentSettings = { ...defaultSettings }; // Start with defaults
-        // this.isUsingGlobalSettings = true; // Assume global initially
         this.hostname = window.location.hostname;
         this.initializationComplete = new Promise((resolve) => {
             this.resolveInitialization = resolve;
         });
-        // Setup listener for updates *after* initial settings are received
-        this.setupUpdateListener();
+        // Listener setup moved inside initialize to ensure it runs after first fetch
     }
 
     /**
@@ -25,36 +20,33 @@ export class SettingsHandler {
      * for the current page from the background script.
      */
     async initialize(): Promise<void> {
-        console.log("SettingsHandler: Requesting initial settings for", this.hostname);
+        console.log(`SettingsHandler (${this.hostname}): Requesting initial settings.`);
         try {
-            // Send message to background to get settings for this hostname
             const response = await chrome.runtime.sendMessage({
                 type: "GET_INITIAL_SETTINGS",
                 hostname: this.hostname,
             });
 
-            if (response &amp;&amp; response.settings) {
-                console.log("SettingsHandler: Received initial settings", response.settings);
+            if (response && response.settings) {
+                console.log(`SettingsHandler (${this.hostname}): Received initial settings`, response.settings);
                 this.currentSettings = response.settings;
-                // Optionally, background could also send the mode if needed
-                // this.isUsingGlobalSettings = response.mode === 'global';
             } else {
-                console.warn("SettingsHandler: No/invalid initial settings received from background, using defaults.", response);
+                console.warn(`SettingsHandler (${this.hostname}): No/invalid initial settings received, using defaults.`, response);
                 this.currentSettings = { ...defaultSettings };
             }
         } catch (error) {
-            console.error("SettingsHandler: Error requesting initial settings:", error, "Using defaults.");
+            console.error(`SettingsHandler (${this.hostname}): Error requesting initial settings:`, error, "Using defaults.");
             this.currentSettings = { ...defaultSettings };
-            // We might still resolve, allowing the page to function with defaults
         } finally {
-            console.log("SettingsHandler: Initialization complete.");
+            console.log(`SettingsHandler (${this.hostname}): Initialization complete.`);
+            this.setupUpdateListener(); // Setup listener *after* initial fetch attempt
             this.resolveInitialization(); // Signal that initialization is done
         }
     }
 
     /**
      * Returns a promise that resolves once initial settings have been
-     * fetched from the background script.
+     * fetched (or failed to fetch) from the background script.
      */
     async ensureInitialized(): Promise<void> {
         return this.initializationComplete;
@@ -62,62 +54,65 @@ export class SettingsHandler {
 
     /**
      * Sets up the listener for settings updates pushed from the background script.
+     * This should only listen for updates relevant to this specific content script instance.
      */
     private setupUpdateListener(): void {
          chrome.runtime.onMessage.addListener(
             (message: any, sender, sendResponse) => {
-                // Only process updates specifically for this host pushed from background
-                if (message.type === "UPDATE_SETTINGS" &amp;&amp; message.hostname === this.hostname) {
-                     console.log("SettingsHandler: Received settings update via message", message.settings);
+                // Check if the message is a settings update specifically for this hostname
+                // Note: Background script needs to include hostname in the pushed message
+                if (message.type === "UPDATE_SETTINGS" && message.hostname === this.hostname) {
+                     console.log(`SettingsHandler (${this.hostname}): Received settings update via message`, message.settings);
                      this.currentSettings = message.settings;
-                     // TODO: Potentially trigger processMedia or notify content.ts
-                     // This depends on how content.ts handles updates now
+                     // TODO: Need mechanism to trigger processMedia in content.ts after update
+                     // Maybe emit a custom event? Or content.ts listener handles this?
                 }
-                // Indicate async response potentially needed (good practice)
+                // Keep channel open for potential async response (though not used here)
                 // return true;
             }
         );
+        console.log(`SettingsHandler (${this.hostname}): Update listener set up.`);
     }
 
+    /**
+     * Gets the currently loaded settings.
+     */
     getCurrentSettings(): AudioSettings {
-        // No change needed here, just returns the current state
         return this.currentSettings;
     }
 
-    // This might be removed if background always sends effective settings
-    // isGlobal(): boolean {
-    //     return this.isUsingGlobalSettings;
-    // }
-
     /**
-     * Updates settings locally. Use with caution, updates should ideally
-     * come from the background script via messages.
+     * Updates settings locally. Should primarily be used when receiving
+     * updates from the background script via messages.
      */
     updateSettings(settings: AudioSettings): void {
-        console.warn("SettingsHandler: updateSettings called directly. Prefer updates via background messages.");
+        // This method might be redundant if all updates come via the listener,
+        // but keep it for now as content.ts uses it.
+        console.log(`SettingsHandler (${this.hostname}): Settings updated directly`, settings);
         this.currentSettings = settings;
     }
 
+    /**
+     * Resets settings to the application defaults locally.
+     */
     resetToDefault(): void {
         this.currentSettings = { ...defaultSettings };
     }
 
     /**
      * Determines if audio processing is needed based on current settings.
-     * TODO: Refine this logic if background provides enabled/disabled state.
      */
     needsAudioProcessing(): boolean {
-        // For now, assume processing is always needed if script is running
-        // Check if settings are effectively "disabled" (e.g., all boosts/volume at default/100)
+        // Check if settings are different from defaults, implying processing is needed
         const defaults = defaultSettings;
-        return !(
-            this.currentSettings.volume === defaults.volume &amp;&amp;
-            this.currentSettings.bassBoost === defaults.bassBoost &amp;&amp;
-            this.currentSettings.voiceBoost === defaults.voiceBoost &amp;&amp;
+        const needsProcessing = !(
+            this.currentSettings.volume === defaults.volume &&
+            this.currentSettings.bassBoost === defaults.bassBoost &&
+            this.currentSettings.voiceBoost === defaults.voiceBoost &&
             this.currentSettings.mono === defaults.mono
             // Add other relevant settings checks here if needed
         );
+        // console.log(`SettingsHandler (${this.hostname}): needsAudioProcessing = ${needsProcessing}`);
+        return needsProcessing;
     }
-
-    // Removed setupStorageListener - don't listen to storage directly
 }
