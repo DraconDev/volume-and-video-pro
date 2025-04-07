@@ -12,9 +12,6 @@ export default defineContentScript({
             "Content: Script starting - This log should always appear",
             window.location.href
         );
-        if (window.location.hostname.includes("odysee.com")) {
-            console.log("Content: Running on odysee.com");
-        }
 
         // Initialize core components
         const settingsHandler = new SettingsHandler();
