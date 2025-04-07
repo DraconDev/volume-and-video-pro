@@ -192,17 +192,7 @@ export class SettingsManager extends EventEmitter {
       };
     }
 
-    // If switching TO site mode, inherit current global settings
-    if (mode === "site") {
-      // Only copy if the site didn't already have site-specific settings or if explicitly requested
-      // This check prevents overwriting existing site settings if just re-enabling site mode
-      if (!siteConfig.settings || siteConfig.activeSetting !== 'site') {
-         siteConfig.settings = { ...this.globalSettings };
-         console.log("SettingsManager: Inheriting global settings for site mode", hostname);
-      }
-    }
-
-    // Update mode and enabled state
+    // Update mode and enabled state, but preserve settings
     siteConfig.activeSetting = mode;
     siteConfig.enabled = mode !== "disabled";
 
