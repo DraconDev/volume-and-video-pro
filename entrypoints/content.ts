@@ -5,6 +5,8 @@ import { MessageType, UpdateSettingsMessage } from "../src/types";
 
 export default defineContentScript({
     matches: ["<all_urls>"],
+    allFrames: true, // Add this line
+    runAt: "document_start", // Add this line
     main: async () => {
         console.log(
             "Content: Script starting - This log should always appear",
