@@ -39,8 +39,7 @@ chrome.runtime.onMessage.addListener(
             // Use a promise to handle async operation within the listener
             (async () => {
                 try {
-                    // Ensure settingsManager is initialized (important on first load)
-                    await settingsManager.initialize();
+                    // Rely on initialization done at background script startup
 
                     const siteConfig = settingsManager.getSettingsForSite(hostname);
                     let effectiveSettings: any; // Use 'any' temporarily if type is complex
