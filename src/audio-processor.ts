@@ -109,12 +109,12 @@ export class AudioProcessor {
       bassFilter.gain.setValueAtTime(clampedBass, safeTimeValue);
       voiceFilter.gain.setValueAtTime(clampedVoice, safeTimeValue);
 
-      console.log("AudioProcessor: Settings updated successfully", {
-        volume: clampedVolume,
-        bass: clampedBass,
-        voice: clampedVoice,
-        mono: settings.mono,
-      });
+      // console.log("AudioProcessor: Settings updated successfully", { // Reduced logging
+      //   volume: clampedVolume,
+      //   bass: clampedBass,
+      //   voice: clampedVoice,
+      //   mono: settings.mono,
+      // });
     } catch (error) {
       console.error("AudioProcessor: Failed to update settings:", error);
       throw error;
@@ -167,16 +167,21 @@ export class AudioProcessor {
       // Apply settings
       await this.updateNodeSettings(nodes, settings);
 
-      // Restore playback state
+      // Restore playback state if needed (handle potential errors)
       if (wasPlaying) {
         try {
-          await nodes.element.play();
+          // Check if context is running before trying to play
+          if (context.state === 'running') {
+            await nodes.element.play();
+          } else {
+             console.warn("AudioProcessor: Context not running, cannot restore playback yet.");
+          }
         } catch (e) {
           console.error("AudioProcessor: Failed to restore playback:", e);
         }
       }
 
-      console.log("AudioProcessor: Nodes connected successfully");
+      // console.log("AudioProcessor: Nodes connected successfully"); // Reduced logging
     } catch (error) {
       console.error("AudioProcessor: Failed to connect nodes:", error);
       throw error;
@@ -205,28 +210,28 @@ export class AudioProcessor {
       safeDisconnect(nodes.source);
 
       this.audioElementMap.delete(element);
-      console.log(
-        "AudioProcessor: Disconnected nodes for element:",
-        element.src
-      );
+      // console.log( // Reduced logging
+      //   "AudioProcessor: Disconnected nodes for element:",
+      //   element.src
+      // );
     } catch (error) {
       console.error("AudioProcessor: Error disconnecting nodes:", error);
     }
   }
 
   async updateAudioEffects(settings: AudioSettings): Promise<void> {
-    console.log(
-      "AudioProcessor: Updating audio effects with settings:",
-      settings
-    );
+    // console.log( // Reduced logging
+    //   "AudioProcessor: Updating audio effects with settings:",
+    //   settings
+    // );
 
     for (const [element, nodes] of this.audioElementMap.entries()) {
       try {
         await this.updateNodeSettings(nodes, settings);
-        console.log(
-          "AudioProcessor: Updated effects for element:",
-          element.src
-        );
+        // console.log( // Reduced logging
+        //   "AudioProcessor: Updated effects for element:",
+        //   element.src
+        // );
       } catch (error) {
         console.error(
           "AudioProcessor: Update failed for element:",
@@ -241,7 +246,8 @@ export class AudioProcessor {
     // Reset all audio contexts and disconnect nodes
     this.audioElementMap.forEach((nodes, element) => {
       this.disconnectAudioNodes(element);
-      nodes.context.close();
+      // Don't close context here, let cleanup handle it or reuse it
+      // nodes.context.close();
     });
     this.audioElementMap.clear();
   }
@@ -258,7 +264,6 @@ export class AudioProcessor {
     }
     console.log("AudioProcessor: Cleanup completed");
   }
-}
 
   /**
    * Attempts to resume the AudioContext if it's suspended.
@@ -273,6 +278,8 @@ export class AudioProcessor {
         console.error("AudioProcessor: Failed to resume AudioContext:", error);
       }
     } else if (this.audioContext) {
-       console.log(`AudioProcessor: AudioContext state is already "${this.audioContext.state}", no resume needed.`);
+       // console.log(`AudioProcessor: AudioContext state is already "${this.audioContext.state}", no resume needed.`); // Reduced logging
     }
   }
+
+} // End of AudioProcessor class
