@@ -34,7 +34,7 @@ export class MediaProcessor {
   async processMediaElements(
     mediaElements: HTMLMediaElement[],
     settings: AudioSettings,
-    needsProcessing: boolean
+    needsProcessing: boolean // Keep this param even if unused for now, might be needed later
   ): Promise<void> {
     console.log("MediaProcessor: Processing elements with settings:", settings);
 
@@ -49,10 +49,10 @@ export class MediaProcessor {
         // Only set up audio context if it doesn't exist
         if (!this.audioProcessor.hasProcessing(element)) {
           await this.audioProcessor.setupAudioContext(element, settings);
-          console.log(
-            "MediaProcessor: Setup audio context for element:",
-            element.src
-          );
+          // console.log( // Reduced logging
+          //   "MediaProcessor: Setup audio context for element:",
+          //   element.src
+          // );
         }
       } catch (e) {
         console.error("MediaProcessor: Failed to process media element:", e);
@@ -60,28 +60,36 @@ export class MediaProcessor {
     }
 
     // Update effects for all elements with new settings
-    await this.audioProcessor.updateAudioEffects(settings);
+    // Only update if the context is likely running (or suspended, ready to be resumed)
+    if (this.audioProcessor['audioContext'] && this.audioProcessor['audioContext'].state !== 'closed') {
+        await this.audioProcessor.updateAudioEffects(settings);
+    } else {
+        console.log("MediaProcessor: Skipping audio effects update, context not ready/active.");
+    }
   }
 
   setupMediaObserver(callback: () => Promise<void>): void {
+    // Assuming MediaManager.setupMediaElementObserver is made public
     MediaManager.setupMediaElementObserver(async () => {
       await callback();
     });
   }
 
   findMediaElements(): HTMLMediaElement[] {
+    // Assuming MediaManager.findMediaElements is made public
     return MediaManager.findMediaElements();
   }
 
   async resetToDisabled(): Promise<void> {
     await this.audioProcessor.resetAllToDisabled();
   }
-}
 
   /**
    * Public method to attempt resuming the AudioContext via the private AudioProcessor.
    */
   public async attemptContextResume(): Promise<void> {
+    // Access the private member using bracket notation if needed, or make it public/internal
     await this.audioProcessor.tryResumeContext();
   }
 
+} // End of MediaProcessor class
