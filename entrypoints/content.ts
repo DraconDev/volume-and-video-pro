@@ -82,9 +82,13 @@ export default defineContentScript({
 
     // Listen for settings updates from the background script
     chrome.runtime.onMessage.addListener(
-      (message: MessageType, sender, sendResponse) => { // Removed async as sendResponse isn't used async
+      (
+        message: MessageType,
+        sender: chrome.runtime.MessageSender, // Added explicit type
+        sendResponse: (response?: any) => void // Added explicit type
+      ) => {
         console.log("[ContentScript Listener] Received message:", JSON.stringify(message)); // Log ALL received messages
-      async (message: MessageType, sender, sendResponse) => {
+
         if (message.type === "UPDATE_SETTINGS") {
           const updateSettingsMessage = message as UpdateSettingsMessage;
           console.log(
@@ -100,15 +104,20 @@ export default defineContentScript({
               settingsHandler.updateSettings(updateSettingsMessage.settings);
 
               // Now, re-run processMedia to apply the new settings
+              // Use .then() for async operation within sync listener if needed,
+              // or make processMedia handle errors internally if it must be async.
+              // For simplicity, let's assume processMedia can be called directly,
+              // but be aware if it causes issues with long-running tasks.
               console.log("Content: Settings updated via message, reprocessing media elements...");
-              await processMedia();
+               processMedia().catch(error => {
+                   console.error("Content: Error during processMedia after settings update:", error);
+               });
           } else {
               console.log("Content: Ignoring settings update for different host:", updateSettingsMessage.hostname);
           }
         }
-        // No need to return true as we are not using sendResponse asynchronously here
-        // Keep message channel open for async response
-        // return true; // Removed unnecessary return true
+        // Return false or undefined if not sending an async response
+        return false;
       }
     );
 
