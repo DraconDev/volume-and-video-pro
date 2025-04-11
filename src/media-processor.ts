@@ -78,3 +78,10 @@ export class MediaProcessor {
   }
 }
 
+  /**
+   * Public method to attempt resuming the AudioContext via the private AudioProcessor.
+   */
+  public async attemptContextResume(): Promise<void> {
+    await this.audioProcessor.tryResumeContext();
+  }
+
