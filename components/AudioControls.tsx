@@ -10,9 +10,6 @@ interface AudioControlsProps {
     formatDiff: (value: number) => string;
     onReset: () => void;
     isEnabled?: boolean;
-    // Removed unused props:
-    // isCustomSettings?: boolean;
-    // onSettingsToggle?: (type: "global" | "site" | "default") => void;
 }
 
 // Simple Info Tooltip Component (Defined outside AudioControls for clarity)
@@ -20,30 +17,37 @@ const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
     const [showTooltip, setShowTooltip] = useState(false);
     return (
         <span
-            className="relative inline-flex items-center justify-center ml-1 cursor-help"
+            className="relative inline-flex items-center justify-center ml-1 cursor-help group" // Added group for potential future styling
             onMouseEnter={() => setShowTooltip(true)}
             onMouseLeave={() => setShowTooltip(false)}
             onFocus={() => setShowTooltip(true)} // For accessibility
             onBlur={() => setShowTooltip(false)}  // For accessibility
             tabIndex={0} // Make it focusable
+            aria-label="Information" // Accessibility
         >
-            {/* Info Icon SVG */}
             {/* Better Question Mark Icon SVG */}
             <svg className="w-4 h-4 opacity-70" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"></path>
             </svg>
-            {/* Tooltip Text Box */}
+            {/* Improved Tooltip Box Styling - Corrected JSX */}
             {showTooltip && (
-                {/* Improved Tooltip Box Styling */}
-                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-[200px] px-3 py-2 text-xs font-medium text-[var(--color-text-tooltip)] bg-[var(--color-bg-tooltip)] rounded-md shadow-lg z-10 whitespace-normal text-center">
+                 <span className={`
+                    absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2
+                    w-max max-w-[200px] px-3 py-2
+                    text-xs font-medium text-[var(--color-text)] bg-[var(--color-surface-hover)]
+                    rounded-md shadow-lg z-10
+                    whitespace-normal text-center
+                    pointer-events-none /* Prevent tooltip from interfering with mouse */
+                 `}>
                     {text}
                     {/* Optional: Add a small triangle pointer */}
-                    <span className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-[var(--color-bg-tooltip)]"></span>
+                    <span className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-[var(--color-surface-hover)]"></span>
                 </span>
             )}
         </span>
     );
 };
+
 
 export const AudioControls: React.FC<AudioControlsProps> = ({
     settings,
@@ -53,7 +57,6 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
     isEnabled = true,
 }) => {
 
-    // --- Start: Moved inside component ---
     const tooltipText = "Activates after player interaction (e.g., click play) due to browser rules.";
 
     const updateRangeProgress = (input: HTMLInputElement) => {
@@ -65,41 +68,20 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
         input.style.setProperty('--range-progress', `${boundedPercentage}%`);
     };
 
-    // Effect for sending settings updates (debounced)
-    // Note: This useEffect seems redundant if App.tsx already handles debounced updates via settingsManager.
-    // Consider removing if App.tsx's debouncing is sufficient.
-    useEffect(() => {
-        const updateTimeout = setTimeout(() => {
-            // Send settings to background script - Is this needed here AND in App.tsx?
-            // chrome.runtime.sendMessage({
-            //     type: "UPDATE_SETTINGS", // This message type might not be handled by background
-            //     settings,
-            //     enabled: isEnabled,
-            // });
-            // console.log("AudioControls: Settings update sent after debounce (Potentially redundant)");
-        }, 250); // Debounce settings updates
-
-        return () => clearTimeout(updateTimeout);
-    }, [settings, isEnabled]); // Dependencies: settings, isEnabled
-
     // Effect for initializing range input styles
     useEffect(() => {
-        controls.forEach(({ key }) => {
-            const input = document.querySelector(
-                `input[type="range"][data-key="${key}"]`
-            ) as HTMLInputElement;
-            if (input) {
+        // Query controls defined below
+        const controlElements = document.querySelectorAll('input[type="range"][data-key]');
+        controlElements.forEach(input => {
+            if (input instanceof HTMLInputElement) {
                 updateRangeProgress(input);
             }
         });
-        // Run only when settings initially load or change significantly enough to warrant style update
     }, [settings]); // Dependency: settings
-
-    // --- End: Moved inside component ---
 
 
     const controls = [
-        {
+         {
             key: "volume" as keyof AudioSettings,
             label: "Volume",
             min: 0,
