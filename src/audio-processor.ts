@@ -127,6 +127,15 @@ export class AudioProcessor {
       bassFilter.gain.setValueAtTime(clampedBass, safeTimeValue);
       voiceFilter.gain.setValueAtTime(clampedVoice, safeTimeValue);
 
+      // ADDED LOGS: Log the values being applied to the nodes
+      console.log(`[AudioProcessor] Applying Node Settings at time ${safeTimeValue}:`, {
+          elementVolume: element.volume, // Log the directly set element volume
+          gainNodeVolume: gainNodeVolume,
+          bassGain: clampedBass,
+          voiceGain: clampedVoice,
+          mono: settings.mono // Log mono setting as it affects connections
+      });
+
       // console.log("AudioProcessor: Settings updated successfully", { // Reduced logging
       //   volume: clampedVolume,
       //   bass: clampedBass,
