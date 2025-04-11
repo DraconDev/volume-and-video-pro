@@ -86,15 +86,33 @@ export class AudioProcessor {
     nodes: AudioNodes,
     settings: AudioSettings
   ): Promise<void> {
-    const { gain, bassFilter, voiceFilter, context } = nodes;
+    const { gain, bassFilter, voiceFilter, context, element } = nodes; // Added element
 
     try {
       const safeTimeValue = isFinite(context.currentTime)
         ? context.currentTime
         : 0;
 
-      // Clamp values to prevent invalid audio settings
-      const clampedVolume = Math.max(0, Math.min(settings.volume, 1000)) / 100;
+      // Determine target volume for element and gain node
+      let elementVolume = 1.0; // Default to max for element
+      let gainNodeVolume = 1.0; // Default gain
+
+      if (settings.volume <= 100) {
+        // If volume is 100% or less, control via element.volume
+        elementVolume = Math.max(0, settings.volume) / 100;
+        gainNodeVolume = 1.0; // Keep GainNode neutral
+      } else {
+        // If volume is > 100%, set element volume to max and use GainNode for boost
+        elementVolume = 1.0;
+        gainNodeVolume = Math.max(1, Math.min(settings.volume, 1000)) / 100; // Apply boost via GainNode
+      }
+
+      // Apply element volume immediately (does not require user gesture)
+      if (isFinite(elementVolume)) {
+          element.volume = elementVolume;
+      }
+
+      // Clamp values for filters
       const clampedBass = Math.max(
         -15,
         Math.min(((settings.bassBoost - 100) / 100) * 15, 15)
@@ -104,8 +122,8 @@ export class AudioProcessor {
         Math.min(((settings.voiceBoost - 100) / 100) * 24, 24)
       );
 
-      // Update parameters immediately without transitions to avoid audio glitches
-      gain.gain.setValueAtTime(clampedVolume, safeTimeValue);
+      // Update Web Audio API parameters (requires resumed context to take effect)
+      gain.gain.setValueAtTime(gainNodeVolume, safeTimeValue);
       bassFilter.gain.setValueAtTime(clampedBass, safeTimeValue);
       voiceFilter.gain.setValueAtTime(clampedVoice, safeTimeValue);
 
