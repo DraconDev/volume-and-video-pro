@@ -81,18 +81,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
 
 
     const controls = [
-         {
-            key: "volume" as keyof AudioSettings,
-            label: "Volume",
-            min: 0,
-            max: 1000,
-            defaultValue: 100,
-            icon: ( /* SVG Icon */
-                <svg className="w-[18px] h-[18px] mr-2 opacity-70" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none">
-                    <path d="M12 6L8 10H4V14H8L12 18V6Z" /> <path d="M17 7C17 7 19 9 19 12C19 15 17 17 17 17" /> <path d="M15.5 9C15.5 9 16.5 10 16.5 12C16.5 14 15.5 15 15.5 15" />
-                </svg>
-            ),
-        },
+        // Speed is now first
         {
             key: "speed" as keyof AudioSettings,
             label: "Speed",
@@ -102,6 +91,19 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
             icon: ( /* SVG Icon */
                 <svg className="w-[18px] h-[18px] mr-2 opacity-70" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none">
                      <circle cx="12" cy="12" r="10" /> <path d="M12 8L12 12L16 14" />
+                </svg>
+            ),
+        },
+        // Volume is now second
+         {
+            key: "volume" as keyof AudioSettings,
+            label: "Volume",
+            min: 0,
+            max: 1000,
+            defaultValue: 100,
+            icon: ( /* SVG Icon */
+                <svg className="w-[18px] h-[18px] mr-2 opacity-70" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none">
+                    <path d="M12 6L8 10H4V14H8L12 18V6Z" /> <path d="M17 7C17 7 19 9 19 12C19 15 17 17 17 17" /> <path d="M15.5 9C15.5 9 16.5 10 16.5 12C16.5 14 15.5 15 15.5 15" />
                 </svg>
             ),
         },
