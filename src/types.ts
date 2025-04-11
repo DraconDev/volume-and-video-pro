@@ -36,6 +36,7 @@ export interface UpdateSettingsMessage {
   settings: AudioSettings;
   enabled?: boolean;
   isGlobal?: boolean;
+  hostname?: string; // Add optional hostname
 }
 
 export interface ContentScriptReadyMessage {
