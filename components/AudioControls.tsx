@@ -28,13 +28,17 @@ const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
             tabIndex={0} // Make it focusable
         >
             {/* Info Icon SVG */}
-            <svg className="w-4 h-4 opacity-60" viewBox="0 0 16 16" fill="currentColor">
-                <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm0 1A8 8 0 108 0a8 8 0 000 16zM8.93 6.588l.223.947c.11.469.222.929.334 1.374h.03c.112-.445.223-.905.334-1.374l.223-.947a1.02 1.02 0 00-.98-1.217 1.02 1.02 0 00-.98 1.217zM7 11.25a1 1 0 112 0 1 1 0 01-2 0z" clipRule="evenodd" />
+            {/* Better Question Mark Icon SVG */}
+            <svg className="w-4 h-4 opacity-70" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"></path>
             </svg>
             {/* Tooltip Text Box */}
             {showTooltip && (
-                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-xs p-2 text-xs text-[var(--color-text)] bg-[var(--color-surface-hover)] rounded shadow-lg z-10">
+                {/* Improved Tooltip Box Styling */}
+                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-[200px] px-3 py-2 text-xs font-medium text-[var(--color-text-tooltip)] bg-[var(--color-bg-tooltip)] rounded-md shadow-lg z-10 whitespace-normal text-center">
                     {text}
+                    {/* Optional: Add a small triangle pointer */}
+                    <span className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-[var(--color-bg-tooltip)]"></span>
                 </span>
             )}
         </span>
