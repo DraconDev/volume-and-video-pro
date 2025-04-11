@@ -20,24 +20,45 @@ export default defineContentScript({
     // Start fetching settings from background immediately
     settingsHandler.initialize();
 
+    // --- AudioContext Resume Handler ---
+    // This function will be called once when the user interacts with a media element
+    const resumeContextHandler = async () => {
+        console.log("Content: Media interaction detected, attempting to resume AudioContext.");
+        // Attempt to resume the context via MediaProcessor -> AudioProcessor
+        // No need to remove listeners here as we use { once: true } below
+        await mediaProcessor.audioProcessor.tryResumeContext();
+    };
+    // --- End AudioContext Resume Handler ---
+
     // Process media with current settings
     const processMedia = async () => {
-      console.log("Content: processMedia called");
-      const mediaElements = mediaProcessor.findMediaElements();
-      console.log("Content: Found media elements:", mediaElements.length);
-      const currentSettings = settingsHandler.getCurrentSettings();
-      const needsProcessing = settingsHandler.needsAudioProcessing();
-      console.log(
-        "Content: Processing media with settings:",
-        currentSettings,
-        "needsProcessing:",
-        needsProcessing
-      );
-      await mediaProcessor.processMediaElements(
-        mediaElements,
-        currentSettings,
-        needsProcessing
-      );
+        console.log("Content: processMedia called");
+        const mediaElements = mediaProcessor.findMediaElements();
+        console.log("Content: Found media elements:", mediaElements.length);
+
+        // Attach interaction listeners to each media element to resume AudioContext
+        mediaElements.forEach(element => {
+            // Use { once: true } so the listener fires only once per event type per element
+            element.addEventListener('play', resumeContextHandler, { once: true });
+            element.addEventListener('click', resumeContextHandler, { once: true });
+            element.addEventListener('mousedown', resumeContextHandler, { once: true });
+            // 'touchstart' could also be added if needed for mobile
+        });
+
+        const currentSettings = settingsHandler.getCurrentSettings();
+        const needsProcessing = settingsHandler.needsAudioProcessing();
+        console.log(
+            "Content: Processing media with settings:",
+            currentSettings,
+            "needsProcessing:",
+            needsProcessing
+        );
+        // Apply settings (speed is applied here, audio effects setup happens here too)
+        await mediaProcessor.processMediaElements(
+            mediaElements,
+            currentSettings,
+            needsProcessing
+        );
     };
 
     // Initialize with debouncing
