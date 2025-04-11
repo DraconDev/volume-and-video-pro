@@ -10,6 +10,7 @@ export class MediaProcessor {
   }
 
   private updatePlaybackSpeed(element: HTMLMediaElement, speed: number): void {
+    console.log(`[MediaProcessor] Updating speed for element ${element.src || '(no src)'} to ${speed}`); // ADDED LOG
     try {
       const wasPlaying = !element.paused;
       const currentTime = element.currentTime;
@@ -36,7 +37,7 @@ export class MediaProcessor {
     settings: AudioSettings,
     needsProcessing: boolean // Keep this param even if unused for now, might be needed later
   ): Promise<void> {
-    console.log("MediaProcessor: Processing elements with settings:", settings);
+    console.log("[MediaProcessor] processMediaElements called with settings:", JSON.stringify(settings)); // ADDED LOG + stringify
 
     // Update speed for all elements
     mediaElements.forEach((element) =>
@@ -62,6 +63,7 @@ export class MediaProcessor {
     // Update effects for all elements with new settings
     // Only update if the context is likely running (or suspended, ready to be resumed)
     if (this.audioProcessor['audioContext'] && this.audioProcessor['audioContext'].state !== 'closed') {
+        console.log("[MediaProcessor] Calling updateAudioEffects with settings:", JSON.stringify(settings)); // ADDED LOG + stringify
         await this.audioProcessor.updateAudioEffects(settings);
     } else {
         console.log("MediaProcessor: Skipping audio effects update, context not ready/active.");
