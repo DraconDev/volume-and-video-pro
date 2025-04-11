@@ -1,5 +1,5 @@
 import { settingsManager } from "./settings-manager";
-import { AudioSettings, MessageType } from "./types";
+import { AudioSettings, MessageType, UpdateSettingsMessage } from "./types"; // Added UpdateSettingsMessage
 
 // Helper to get hostname safely
 function getHostname(url: string | undefined): string | null {
