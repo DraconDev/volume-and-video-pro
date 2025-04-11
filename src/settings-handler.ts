@@ -39,7 +39,7 @@ export class SettingsHandler {
             this.currentSettings = { ...defaultSettings };
         } finally {
             console.log(`SettingsHandler (${this.hostname}): Initialization complete.`);
-            this.setupUpdateListener(); // Setup listener *after* initial fetch attempt
+            // Listener is no longer set up here; content.ts will handle updates
             this.resolveInitialization(); // Signal that initialization is done
         }
     }
@@ -50,28 +50,6 @@ export class SettingsHandler {
      */
     async ensureInitialized(): Promise<void> {
         return this.initializationComplete;
-    }
-
-    /**
-     * Sets up the listener for settings updates pushed from the background script.
-     * This should only listen for updates relevant to this specific content script instance.
-     */
-    private setupUpdateListener(): void {
-         chrome.runtime.onMessage.addListener(
-            (message: any, sender, sendResponse) => {
-                // Check if the message is a settings update specifically for this hostname
-                // Note: Background script needs to include hostname in the pushed message
-                if (message.type === "UPDATE_SETTINGS" && message.hostname === this.hostname) {
-                     console.log(`SettingsHandler (${this.hostname}): Received settings update via message`, message.settings);
-                     this.currentSettings = message.settings;
-                     // TODO: Need mechanism to trigger processMedia in content.ts after update
-                     // Maybe emit a custom event? Or content.ts listener handles this?
-                }
-                // Keep channel open for potential async response (though not used here)
-                // return true;
-            }
-        );
-        console.log(`SettingsHandler (${this.hostname}): Update listener set up.`);
     }
 
     /**
