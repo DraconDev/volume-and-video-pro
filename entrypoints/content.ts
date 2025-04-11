@@ -54,6 +54,7 @@ export default defineContentScript({
             needsProcessing
         );
         // Apply settings (speed is applied here, audio effects setup happens here too)
+        console.log("[ProcessMedia] Applying settings:", JSON.stringify(currentSettings)); // ADDED LOG
         await mediaProcessor.processMediaElements(
             mediaElements,
             currentSettings,
