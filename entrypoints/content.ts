@@ -82,12 +82,14 @@ export default defineContentScript({
 
     // Listen for settings updates from the background script
     chrome.runtime.onMessage.addListener(
+      (message: MessageType, sender, sendResponse) => { // Removed async as sendResponse isn't used async
+        console.log("[ContentScript Listener] Received message:", JSON.stringify(message)); // Log ALL received messages
       async (message: MessageType, sender, sendResponse) => {
         if (message.type === "UPDATE_SETTINGS") {
           const updateSettingsMessage = message as UpdateSettingsMessage;
           console.log(
-            "Content: Received settings update:", updateSettingsMessage.settings,
-            "for hostname:", updateSettingsMessage.hostname // Log received hostname
+            "[ContentScript Listener] Processing UPDATE_SETTINGS for hostname:", updateSettingsMessage.hostname,
+            "Current page hostname:", window.location.hostname
           );
 
           // Check if the update is relevant to this instance's hostname
