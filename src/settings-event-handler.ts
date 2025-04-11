@@ -38,12 +38,13 @@ export function setupSettingsEventHandler() {
                         const siteConfig = settingsManager.getSettingsForSite(tabHostname);
                         // Send update if no site config exists or if site is set to global mode
                         if (!siteConfig || siteConfig.activeSetting === "global") {
-                            sendMessageToTab(tab.id, {
+                            const message: UpdateSettingsMessage = {
                                 type: "UPDATE_SETTINGS",
                                 settings: newGlobalSettings,
-                                hostname: tabHostname, // Content script needs hostname to filter relevant messages
-                                // isGlobal flag might be useful for UI, but content script uses hostname
-                            });
+                                hostname: tabHostname,
+                            };
+                            console.log(`[EventHandler] Sending global update to tab ${tab.id} (${tabHostname})`, message); // ADDED LOG
+                            sendMessageToTab(tab.id, message);
                         }
                     }
                 }
@@ -59,11 +60,13 @@ export function setupSettingsEventHandler() {
              const tabs = await chrome.tabs.query({});
              for (const tab of tabs) {
                  if (tab.id && getHostname(tab.url) === hostname) {
-                     sendMessageToTab(tab.id, {
+                     const message: UpdateSettingsMessage = {
                          type: "UPDATE_SETTINGS",
                          settings: newSiteSettings,
                          hostname: hostname,
-                     });
+                     };
+                     console.log(`[EventHandler] Sending site settings update to tab ${tab.id} (${hostname})`, message); // ADDED LOG
+                     sendMessageToTab(tab.id, message);
                  }
              }
         }
@@ -77,11 +80,13 @@ export function setupSettingsEventHandler() {
             const tabs = await chrome.tabs.query({});
             for (const tab of tabs) {
                 if (tab.id && getHostname(tab.url) === hostname) {
-                     sendMessageToTab(tab.id, {
+                     const message: UpdateSettingsMessage = {
                          type: "UPDATE_SETTINGS",
                          settings: effectiveSettings, // Send the settings appropriate for the new mode
                          hostname: hostname,
-                     });
+                     };
+                     console.log(`[EventHandler] Sending site mode update to tab ${tab.id} (${hostname})`, message); // ADDED LOG
+                     sendMessageToTab(tab.id, message);
                  }
             }
         }
