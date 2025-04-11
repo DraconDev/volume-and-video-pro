@@ -26,7 +26,7 @@ export default defineContentScript({
         console.log("Content: Media interaction detected, attempting to resume AudioContext.");
         // Attempt to resume the context via MediaProcessor -> AudioProcessor
         // No need to remove listeners here as we use { once: true } below
-        await mediaProcessor.audioProcessor.tryResumeContext();
+        await mediaProcessor.attemptContextResume();
     };
     // --- End AudioContext Resume Handler ---
 
@@ -89,13 +89,10 @@ export default defineContentScript({
             updateSettingsMessage.settings
           );
 
-          // SettingsHandler updates internally via its own listener now.
-          // We might need a way for SettingsHandler to notify content.ts
-          // to re-run processMedia if an update requires immediate action,
-          // but for now, rely on MutationObserver or subsequent events.
-          console.log(
-            "Content: Received settings update message (handled internally by SettingsHandler)"
-          );
+          // SettingsHandler has updated internally. Now, re-run processMedia
+          // to apply the new settings to all current media elements.
+          console.log("Content: Settings updated, reprocessing media elements...");
+          await processMedia();
         }
         // Keep message channel open for async response
         return true;
