@@ -1,5 +1,5 @@
 import { AudioSettings } from "../src/types";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react"; // Added useState
 
 interface AudioControlsProps {
     settings: AudioSettings;
@@ -13,6 +13,30 @@ interface AudioControlsProps {
     isCustomSettings?: boolean;
     onSettingsToggle?: (type: "global" | "site" | "default") => void;
 }
+// Simple Info Tooltip Component
+const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
+    const [showTooltip, setShowTooltip] = useState(false);
+    return (
+        <span
+            className="relative inline-flex items-center justify-center ml-1 cursor-help"
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+            onFocus={() => setShowTooltip(true)} // For accessibility
+            onBlur={() => setShowTooltip(false)}  // For accessibility
+            tabIndex={0} // Make it focusable
+        >
+            <svg className="w-4 h-4 opacity-60" viewBox="0 0 16 16" fill="currentColor">
+                <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm0 1A8 8 0 108 0a8 8 0 000 16zM8.93 6.588l.223.947c.11.469.222.929.334 1.374h.03c.112-.445.223-.905.334-1.374l.223-.947a1.02 1.02 0 00-.98-1.217 1.02 1.02 0 00-.98 1.217zM7 11.25a1 1 0 112 0 1 1 0 01-2 0z" clipRule="evenodd" />
+            </svg>
+            {showTooltip && (
+                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-xs p-2 text-xs text-[var(--color-text)] bg-[var(--color-surface-hover)] rounded shadow-lg z-10">
+                    {text}
+                </span>
+            )}
+        </span>
+    );
+};
+
 
 export const AudioControls: React.FC<AudioControlsProps> = ({
     settings,
@@ -20,8 +44,11 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
     formatDiff,
     onReset,
     isEnabled = true,
-    isCustomSettings = false,
-    onSettingsToggle,
+    // isCustomSettings and onSettingsToggle seem unused, removed for clarity
+    // isCustomSettings = false,
+    // onSettingsToggle,
+}) => {
+    const tooltipText = "Activates after player interaction (e.g., click play) due to browser rules.";
 }) => {
     const updateRangeProgress = (input: HTMLInputElement) => {
         const value = parseInt(input.value);
@@ -154,6 +181,9 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                                 }`}
                             >
                                 {label}
+                                {/* Add tooltip conditionally */}
+                                {key === 'volume' && settings.volume > 100 && <InfoTooltip text={tooltipText} />}
+                                {(key === 'bassBoost' || key === 'voiceBoost') && <InfoTooltip text={tooltipText} />}
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -226,6 +256,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                         <circle cx="12" cy="12" r="4" />
                     </svg>
                     Mono {settings.mono ? "On" : "Off"}
+                    <InfoTooltip text={tooltipText} />
                 </button>
             </div>
         </div>
