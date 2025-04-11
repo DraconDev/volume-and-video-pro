@@ -89,9 +89,11 @@ export default defineContentScript({
             updateSettingsMessage.settings
           );
 
-          // SettingsHandler has updated internally. Now, re-run processMedia
-          // to apply the new settings to all current media elements.
-          console.log("Content: Settings updated, reprocessing media elements...");
+          // Explicitly update the SettingsHandler with the new settings
+          settingsHandler.updateSettings(updateSettingsMessage.settings);
+
+          // Now, re-run processMedia to apply the new settings
+          console.log("Content: Settings updated via message, reprocessing media elements...");
           await processMedia();
         }
         // Keep message channel open for async response
