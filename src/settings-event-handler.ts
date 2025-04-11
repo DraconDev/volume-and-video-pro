@@ -1,73 +1,91 @@
 import { settingsManager } from "./settings-manager";
-import { MessageType } from "./types";
+import { AudioSettings, MessageType } from "./types";
 
-// Helper function to broadcast settings to all active tabs
-async function broadcastSettings(
-  settings: any,
-  isGlobal: boolean,
-  enabled: boolean,
-  hostname?: string
-) {
-  const tabs = await chrome.tabs.query({});
-  for (const tab of tabs) {
-    if (tab.id && tab.url) {
-      try {
-        await chrome.tabs.sendMessage(tab.id, {
-          type: "UPDATE_SETTINGS",
-          settings,
-          isGlobal,
-          enabled,
-          hostname, // passing hostname along
-        } as MessageType);
-      } catch (error) {
-        // Ignore errors for inactive tabs
-        console.debug(
-          "Settings Event Handler: Could not send to tab:",
-          tab.id,
-          error
-        );
-      }
+// Helper to get hostname safely
+function getHostname(url: string | undefined): string | null {
+    if (!url) return null;
+    try {
+        return new URL(url).hostname;
+    } catch (e) {
+        console.warn("SettingsEventHandler: Invalid URL:", url);
+        return null;
     }
-  }
+}
+
+// Helper to send message to a specific tab, ignoring errors
+async function sendMessageToTab(tabId: number, message: MessageType) {
+    try {
+        await chrome.tabs.sendMessage(tabId, message);
+    } catch (error) {
+        // Ignore errors (e.g., tab closed, content script not ready)
+        // console.debug(`SettingsEventHandler: Could not send to tab ${tabId}:`, error);
+    }
 }
 
 export function setupSettingsEventHandler() {
-  // Listen for settings updates from the settings manager
-  settingsManager.on(
-    "settingsUpdated",
-    (settings: any, hostname?: string, tabId?: number) => {
-      console.log("Settings Event Handler: settingsUpdated event received", {
-        settings,
-        hostname,
-        tabId,
-      });
+    console.log("SettingsEventHandler: Setting up listeners...");
 
-      const isGlobal = hostname
-        ? settingsManager.getSettingsForSite(hostname)?.activeSetting ===
-          "global"
-        : false;
+    // --- Listener for Global Settings Changes ---
+    settingsManager.on(
+        "globalSettingsChanged",
+        async (newGlobalSettings: AudioSettings) => {
+            console.log("SettingsEventHandler: globalSettingsChanged event", newGlobalSettings);
+            const tabs = await chrome.tabs.query({});
+            for (const tab of tabs) {
+                if (tab.id && tab.url) {
+                    const tabHostname = getHostname(tab.url);
+                    if (tabHostname) {
+                        const siteConfig = settingsManager.getSettingsForSite(tabHostname);
+                        // Send update if no site config exists or if site is set to global mode
+                        if (!siteConfig || siteConfig.activeSetting === "global") {
+                            sendMessageToTab(tab.id, {
+                                type: "UPDATE_SETTINGS",
+                                settings: newGlobalSettings,
+                                hostname: tabHostname, // Content script needs hostname to filter relevant messages
+                                // isGlobal flag might be useful for UI, but content script uses hostname
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    );
 
-      if (tabId) {
-        chrome.tabs
-          .sendMessage(tabId, {
-            type: "UPDATE_SETTINGS",
-            settings,
-            isGlobal,
-            enabled: true,
-            hostname, // include hostname here, too
-          } as MessageType)
-          .catch((error) =>
-            console.error(
-              "Settings Event Handler: Error sending settings to tab",
-              tabId,
-              error
-            )
-          );
-      } else {
-        broadcastSettings(settings, isGlobal, true, hostname).catch(
-          console.error
-        );
-      }
-    }
-  );
+    // --- Listener for Site-Specific Settings Changes ---
+    settingsManager.on(
+        "siteSettingsChanged",
+        async (hostname: string, newSiteSettings: AudioSettings) => {
+             console.log(`SettingsEventHandler: siteSettingsChanged event for ${hostname}`, newSiteSettings);
+             const tabs = await chrome.tabs.query({});
+             for (const tab of tabs) {
+                 if (tab.id && getHostname(tab.url) === hostname) {
+                     sendMessageToTab(tab.id, {
+                         type: "UPDATE_SETTINGS",
+                         settings: newSiteSettings,
+                         hostname: hostname,
+                     });
+                 }
+             }
+        }
+    );
+
+     // --- Listener for Site Mode Changes ---
+    settingsManager.on(
+        "siteModeChanged",
+        async (hostname: string, mode: string, effectiveSettings: AudioSettings) => {
+            console.log(`SettingsEventHandler: siteModeChanged event for ${hostname} to ${mode}`, effectiveSettings);
+            const tabs = await chrome.tabs.query({});
+            for (const tab of tabs) {
+                if (tab.id && getHostname(tab.url) === hostname) {
+                     sendMessageToTab(tab.id, {
+                         type: "UPDATE_SETTINGS",
+                         settings: effectiveSettings, // Send the settings appropriate for the new mode
+                         hostname: hostname,
+                     });
+                 }
+            }
+        }
+    );
+
+    console.log("SettingsEventHandler: Listeners set up.");
 }
