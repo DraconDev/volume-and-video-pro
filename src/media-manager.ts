@@ -121,7 +121,7 @@ export class MediaManager {
     return customPlayers;
   }
 
-  private static findMediaElements(
+  public static findMediaElements(
     root: ParentNode = document,
     depth: number = 0
   ): HTMLMediaElement[] {
@@ -177,7 +177,7 @@ export class MediaManager {
     return Array.from(new Set(elements));
   }
 
-  static setupMediaElementObserver(
+  public static setupMediaElementObserver(
     callback: (elements: HTMLMediaElement[]) => void
   ): MutationObserver {
     let debounceTimeout: NodeJS.Timeout | null = null;
