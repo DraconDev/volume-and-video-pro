@@ -57,7 +57,9 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
     isEnabled = true,
 }) => {
 
-    const tooltipText = "Activates after player interaction (e.g., click play) due to browser rules.";
+    // Define specific tooltip texts
+    const generalTooltipText = "Activates after player interaction (e.g., click play) due to browser rules.";
+    const volumeTooltipText = "Volume above 100% activates after player interaction (e.g., click play) due to browser rules.";
 
     const updateRangeProgress = (input: HTMLInputElement) => {
         const value = parseInt(input.value);
@@ -140,11 +142,14 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                     <div className="flex items-center justify-between">
                         <div className="flex items-center">
                             {icon}
-                            <span className={`text-sm font-medium ${!isEnabled ? "opacity-50" : ""}`}>
+                            {/* Ensure vertical alignment for label + icon */}
+                            <span className={`flex items-center text-sm font-medium ${!isEnabled ? "opacity-50" : ""}`}>
                                 {label}
                                 {/* Add tooltip conditionally */}
-                                {key === 'volume' && settings.volume > 100 && <InfoTooltip text={tooltipText} />}
-                                {(key === 'bassBoost' || key === 'voiceBoost') && <InfoTooltip text={tooltipText} />}
+                                {/* Use specific tooltip text for volume > 100 */}
+                                {key === 'volume' && settings.volume > 100 && <InfoTooltip text={volumeTooltipText} />}
+                                {/* Use general tooltip text for other boosts */}
+                                {(key === 'bassBoost' || key === 'voiceBoost') && <InfoTooltip text={generalTooltipText} />}
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -198,7 +203,8 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                         <circle cx="12" cy="12" r="10" /> <circle cx="12" cy="12" r="4" />
                     </svg>
                     Mono {settings.mono ? "On" : "Off"}
-                    <InfoTooltip text={tooltipText} />
+                    {/* Use general tooltip text for Mono */}
+                    <InfoTooltip text={generalTooltipText} />
                 </button>
             </div>
         </div>
