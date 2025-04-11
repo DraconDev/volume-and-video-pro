@@ -85,19 +85,27 @@ export default defineContentScript({
         if (message.type === "UPDATE_SETTINGS") {
           const updateSettingsMessage = message as UpdateSettingsMessage;
           console.log(
-            "Content: Received settings update:",
-            updateSettingsMessage.settings
+            "Content: Received settings update:", updateSettingsMessage.settings,
+            "for hostname:", updateSettingsMessage.hostname // Log received hostname
           );
 
-          // Explicitly update the SettingsHandler with the new settings
-          settingsHandler.updateSettings(updateSettingsMessage.settings);
+          // Check if the update is relevant to this instance's hostname
+          const currentHostname = window.location.hostname;
+          if (updateSettingsMessage.hostname === currentHostname) {
+              console.log("Content: Applying settings update for this host.");
+              // Explicitly update the SettingsHandler with the new settings
+              settingsHandler.updateSettings(updateSettingsMessage.settings);
 
-          // Now, re-run processMedia to apply the new settings
-          console.log("Content: Settings updated via message, reprocessing media elements...");
-          await processMedia();
+              // Now, re-run processMedia to apply the new settings
+              console.log("Content: Settings updated via message, reprocessing media elements...");
+              await processMedia();
+          } else {
+              console.log("Content: Ignoring settings update for different host:", updateSettingsMessage.hostname);
+          }
         }
+        // No need to return true as we are not using sendResponse asynchronously here
         // Keep message channel open for async response
-        return true;
+        // return true; // Removed unnecessary return true
       }
     );
 
