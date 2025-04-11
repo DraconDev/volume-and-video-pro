@@ -109,17 +109,8 @@ export class SettingsManager extends EventEmitter {
       ...settings,
     };
 
-    // For sites using global settings, emit update events
-    this.siteSettings.forEach((siteConfig, site) => {
-      if (siteConfig.activeSetting === "global") {
-        this.emit("settingsUpdated", this.globalSettings, site, undefined);
-      }
-    });
-
-    // Emit for the current site if specified
-    if (hostname) {
-      this.emit("settingsUpdated", this.globalSettings, hostname, tabId);
-    }
+    // Emit a single event for global settings change
+    this.emit("globalSettingsChanged", this.globalSettings);
 
     await this.persistSettings(hostname);
   }
@@ -166,7 +157,8 @@ export class SettingsManager extends EventEmitter {
     this.siteSettings.set(hostname, siteConfig);
 
     await this.persistSettings(hostname);
-    this.emit("settingsUpdated", settings, hostname, tabId);
+    // Emit specific event for site settings change
+    this.emit("siteSettingsChanged", hostname, siteConfig.settings); // Use the actual saved settings
 
     console.log("SettingsManager: Updated site settings", {
       isNewSite,
@@ -207,7 +199,8 @@ export class SettingsManager extends EventEmitter {
         ? { ...this.globalSettings }
         : { ...siteConfig.settings };
 
-    this.emit("settingsUpdated", displaySettings, hostname, tabId);
+    // Emit specific event for site mode change
+    this.emit("siteModeChanged", hostname, mode, displaySettings);
     return { settingsToUse: displaySettings, siteConfig };
   }
 
@@ -255,7 +248,8 @@ export class SettingsManager extends EventEmitter {
     await this.persistSettings(hostname);
 
     // Emit default settings for display only, actual settings remain unchanged
-    this.emit("settingsUpdated", { ...defaultSettings }, hostname, tabId);
+    // Emit specific event for site mode change (to disabled)
+    this.emit("siteModeChanged", hostname, "disabled", { ...defaultSettings });
 
     return {
       actualSettings: siteConfig.settings,
