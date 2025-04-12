@@ -102,39 +102,19 @@ export default defineContentScript({
         if (message.type === "UPDATE_SETTINGS") {
           const updateSettingsMessage = message as UpdateSettingsMessage;
           console.log(
-            "[ContentScript Listener] Processing UPDATE_SETTINGS for hostname:",
-            updateSettingsMessage.hostname,
-            "Current page hostname:",
-            window.location.hostname
+            "[ContentScript Listener] Processing UPDATE_SETTINGS from background/popup"
+            // No longer strictly checking hostname here, assuming background sent it correctly
           );
 
-          // Check if the update is relevant to this instance's hostname
-          const currentHostname = window.location.hostname;
-          if (updateSettingsMessage.hostname === currentHostname) {
-            console.log("Content: Applying settings update for this host.");
-            // Explicitly update the SettingsHandler with the new settings
-            settingsHandler.updateSettings(updateSettingsMessage.settings);
+          // Apply the update since SettingsEventHandler should have targeted correctly
+          console.log("Content: Applying settings update received via message.");
+          settingsHandler.updateSettings(updateSettingsMessage.settings);
 
-            // Now, re-run processMedia to apply the new settings
-            // Use .then() for async operation within sync listener if needed,
-            // or make processMedia handle errors internally if it must be async.
-            // For simplicity, let's assume processMedia can be called directly,
-            // but be aware if it causes issues with long-running tasks.
-            console.log(
-              "Content: Settings updated via message, reprocessing media elements..."
-            );
-            processMedia().catch((error) => {
-              console.error(
-                "Content: Error during processMedia after settings update:",
-                error
-              );
-            });
-          } else {
-            console.log(
-              "Content: Ignoring settings update for different host:",
-              updateSettingsMessage.hostname
-            );
-          }
+          // Now, re-run processMedia to apply the new settings
+          console.log("Content: Settings updated via message, reprocessing media elements...");
+           processMedia().catch(error => {
+               console.error("Content: Error during processMedia after settings update:", error);
+           });
         }
         // Return false or undefined if not sending an async response
         return false;
