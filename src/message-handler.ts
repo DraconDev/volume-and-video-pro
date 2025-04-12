@@ -81,23 +81,8 @@ async function handleUpdateSettings(
       );
     }
 
-    // Forward settings to content script
-    if (targetTabId) {
-      try {
-        await chrome.tabs.sendMessage(targetTabId, {
-          type: "UPDATE_SETTINGS",
-          settings: message.settings,
-          isGlobal: message.isGlobal || isCurrentlyGlobal,
-          enabled: true,
-          hostname,
-        } as MessageType);
-      } catch (error) {
-        console.warn("Message Handler: Failed to forward settings to tab", {
-          tabId: targetTabId,
-          error,
-        });
-      }
-    }
+    // SettingsEventHandler will now handle notifying the content script
+    // based on events emitted by SettingsManager. No need to forward here.
 
     sendResponse({ success: true });
   } catch (error) {
