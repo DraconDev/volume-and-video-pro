@@ -17,8 +17,8 @@ async function sendMessageToTab(tabId: number, message: MessageType) {
     try {
         await chrome.tabs.sendMessage(tabId, message);
     } catch (error) {
-        // Ignore errors (e.g., tab closed, content script not ready)
-        // console.debug(`SettingsEventHandler: Could not send to tab ${tabId}:`, error);
+        // Log errors more visibly for debugging
+        console.warn(`SettingsEventHandler: Error sending message to tab ${tabId}. Type: ${message.type}. Error:`, error);
     }
 }
 
