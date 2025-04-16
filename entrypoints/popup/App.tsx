@@ -86,45 +86,54 @@ function App() {
 
     const newSettings = {
       ...settings,
+      ...settings, // Use current state as base
       [key]: value,
     };
+    console.log(`[Popup] handleSettingChange: Key=${key}, Value=${value}. New settings object:`, newSettings); // Log immediate change intent
 
     // Update local state immediately for responsive UI
     setSettings(newSettings);
 
-    // Use debounced update for storage operations
+    // Clear any existing debounce timeout
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
     }
 
+    // Set a new timeout
     updateTimeoutRef.current = window.setTimeout(async () => {
+      console.log("[Popup] Debounce triggered. Sending update..."); // Log debounce execution
       try {
-        // Update settings through settings manager
+        // Inside the timeout, read the LATEST settings state directly from React state
+        // This ensures we send the final state after all rapid slider movements.
+        const finalSettingsToSend = settings; // Read latest state here
+        const finalIsUsingGlobal = isUsingGlobalSettings; // Read latest state here
+        console.log("[Popup] Debounce - Final state to send:", { finalSettingsToSend, finalIsUsingGlobal }); // Log state being sent
+
         const [tab] = await chrome.tabs.query({
           active: true,
           currentWindow: true,
         });
         if (tab?.url && tab.id) {
           const hostname = new URL(tab.url).hostname;
-          if (isUsingGlobalSettings) {
-            // Pass hostname even for global updates for consistency/logging
-            await settingsManager.updateGlobalSettings(
-              newSettings,
-              tab.id,
-              hostname
-            );
+
+          if (finalIsUsingGlobal) {
+            await settingsManager.updateGlobalSettings(finalSettingsToSend, tab.id, hostname);
+             console.log("[Popup] Debounce - Called updateGlobalSettings"); // Log which function was called
           } else {
             await settingsManager.updateSiteSettings(
-              hostname, // Pass hostname for site-specific updates
-              newSettings,
+              hostname,
+              finalSettingsToSend,
               tab.id
             );
+             console.log("[Popup] Debounce - Called updateSiteSettings"); // Log which function was called
           }
+        } else {
+           console.warn("[Popup] Debounce - No active tab found to send update.");
         }
       } catch (error) {
-        console.error("Failed to update settings:", error);
+        console.error("Failed to update settings via debounce:", error); // Clarify error source
       }
-    }, 500); // Debounce for 500ms
+    }, 300); // Reduced debounce slightly to 300ms
   };
 
   // Initialize updateTimeoutRef
