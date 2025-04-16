@@ -108,7 +108,11 @@ function App() {
           const hostname = new URL(tab.url).hostname;
           if (isUsingGlobalSettings) {
             // Pass hostname even for global updates for consistency/logging
-            await settingsManager.updateGlobalSettings(newSettings, tab.id, hostname);
+            await settingsManager.updateGlobalSettings(
+              newSettings,
+              tab.id,
+              hostname
+            );
           } else {
             await settingsManager.updateSiteSettings(
               hostname, // Pass hostname for site-specific updates
