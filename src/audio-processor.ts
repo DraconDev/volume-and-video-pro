@@ -247,18 +247,20 @@ export class AudioProcessor {
   }
 
   async updateAudioEffects(settings: AudioSettings): Promise<void> {
-    // console.log( // Reduced logging
-    //   "AudioProcessor: Updating audio effects with settings:",
-    //   settings
-    // );
+    console.log( // ADDED LOG
+      "[AudioProcessor] Updating audio effects with settings:",
+      JSON.stringify(settings)
+    );
 
     for (const [element, nodes] of this.audioElementMap.entries()) {
       try {
-        await this.updateNodeSettings(nodes, settings);
-        // console.log( // Reduced logging
-        //   "AudioProcessor: Updated effects for element:",
-        //   element.src
-        // );
+        // Call connectNodes instead of updateNodeSettings to ensure
+        // connections (like for mono) are updated along with values.
+        // connectNodes internally calls updateNodeSettings.
+        await this.connectNodes(nodes, settings);
+        console.log( // ADDED LOG
+          `[AudioProcessor] Reconnected nodes and updated settings for element: ${element.src || '(no src)'}`
+        );
       } catch (error) {
         console.error(
           "AudioProcessor: Update failed for element:",
