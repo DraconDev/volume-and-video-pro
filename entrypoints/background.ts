@@ -26,7 +26,7 @@ const activeTabs = new Set<number>();
 
 // Listen for messages from content scripts or popup
 chrome.runtime.onMessage.addListener(
-    (message: any, sender: chrome.runtime.MessageSender, sendResponse) => {
+    async (message: any, sender: chrome.runtime.MessageSender, sendResponse) => { // Make async
         const tabId = sender.tab?.id;
         const url = sender.tab?.url;
         const hostname = message.hostname || (url ? getHostname(url) : null);
@@ -35,26 +35,25 @@ chrome.runtime.onMessage.addListener(
             if (!hostname) {
                 console.warn("Background: GET_INITIAL_SETTINGS received without hostname.");
                 sendResponse({ settings: { ...defaultSettings } });
-                return false;
+                return false; // Still synchronous for this error case
             }
 
-            // SettingsManager might not be initialized yet on first load after install/update
-            // We handle this by calling initialize() here if needed, but don't await it
-            // to keep the listener synchronous for sendResponse.
-            // The actual settings retrieval logic inside getSettingsForSite should handle
-            // returning defaults or loaded values correctly.
-            settingsManager.initialize().catch(err => console.error("Background: Error during lazy init in GET_INITIAL_SETTINGS:", err)); // Fire-and-forget init
-
             try {
+                // Ensure settings are loaded before proceeding
+                await settingsManager.initialize(); // Await initialization
+                console.log(`Background: Settings initialized. Getting settings for ${hostname}`);
+
                 const siteConfig = settingsManager.getSettingsForSite(hostname);
                 let effectiveSettings: any;
 
-                if (siteConfig?.activeSetting === "site") {
+                // Determine the correct settings based on site config and mode
+                if (siteConfig?.activeSetting === "site" && siteConfig.settings) {
                     effectiveSettings = siteConfig.settings;
                 } else if (siteConfig?.activeSetting === "disabled") {
-                    effectiveSettings = { ...defaultSettings };
+                    // For disabled, send default settings so audio processing is bypassed/neutral
+                    effectiveSettings = { ...defaultSettings, speed: 100 }; // Ensure speed is neutral too
                 } else {
-                    // Use global settings (which might be defaults if init hasn't finished)
+                    // Use global settings (guaranteed to be loaded or defaults now)
                     effectiveSettings = settingsManager.globalSettings;
                 }
 
@@ -63,9 +62,10 @@ chrome.runtime.onMessage.addListener(
 
             } catch (error) {
                 console.error(`Background: Error processing GET_INITIAL_SETTINGS for ${hostname}:`, error);
-                sendResponse({ settings: { ...defaultSettings } });
+                // Send defaults on error
+                sendResponse({ settings: { ...defaultSettings, speed: 100 } });
             }
-            return false; // Synchronous response
+            return true; // Indicate async response is being sent
 
         } else if (message.type === "CONTENT_SCRIPT_READY") {
             if (tabId && url) {
@@ -74,9 +74,13 @@ chrome.runtime.onMessage.addListener(
                      activeTabs.add(tabId);
                 }
             }
-             return false; // Synchronous response
+             // No response needed for this message type
+             return false; // Can be synchronous
         }
-        // Allow other handlers (setupMessageHandler) to potentially respond
+
+        // IMPORTANT: If setupMessageHandler handles other message types AND uses sendResponse,
+        // it might need to return true as well. Assuming it doesn't for now.
+        // If no handler intends to send a response for a given message, return false or undefined.
     }
 );
 
