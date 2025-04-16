@@ -76,85 +76,7 @@ function App() {
     loadSettings();
   }, []);
 
-  // Debounce settings updates
-  useEffect(() => {
-    let settingsUpdateTimeout: number | null = null;
-    const debouncedUpdateSettings = async (
-      updatedSettings: AudioSettings,
-      updatedHostname: string | undefined,
-      updatedTabId: number | undefined
-    ) => {
-      if (settingsUpdateTimeout) {
-        clearTimeout(settingsUpdateTimeout);
-      }
-
-      settingsUpdateTimeout = window.setTimeout(async () => {
-        try {
-          console.log(
-            "Popup: Settings updated",
-            updatedSettings,
-            updatedHostname,
-            updatedTabId
-          );
-
-          const tabs = await chrome.tabs.query({
-            active: true,
-            currentWindow: true,
-          });
-
-          if (!tabs[0]?.url) {
-            console.error("Popup: No active tab found");
-            return;
-          }
-
-          const currentHostname = new URL(tabs[0].url).hostname;
-          if (
-            updatedHostname === undefined ||
-            updatedHostname === currentHostname
-          ) {
-            // Ensure settings are properly synced before updating state
-            await chrome.storage.sync.set({
-              lastUpdated: Date.now(),
-              lastSettings: updatedSettings,
-            });
-
-            setSettings(updatedSettings);
-            if (updatedTabId) {
-              // Keep current mode, just update settings
-              // The mode (global vs site) should only change via explicit toggle
-            }
-
-            // Force refresh settings in content script
-            if (tabs[0].id) {
-              chrome.tabs.sendMessage(tabs[0].id, {
-                type: "UPDATE_SETTINGS",
-                settings: updatedSettings,
-                isGlobal: !updatedTabId,
-                enabled: true,
-                forceUpdate: true,
-              });
-            }
-          }
-        } catch (error) {
-          console.error("Failed to update settings:", error);
-        }
-      }, 500);
-    };
-
-    const handleSettingsUpdated = (
-      updatedSettings: AudioSettings,
-      updatedHostname: string | undefined,
-      updatedTabId: number | undefined
-    ) => {
-      debouncedUpdateSettings(updatedSettings, updatedHostname, updatedTabId);
-    };
-
-    settingsManager.on("settingsUpdated", handleSettingsUpdated);
-
-    return () => {
-      settingsManager.off("settingsUpdated", handleSettingsUpdated);
-    };
-  }, []);
+  // Removed incorrect useEffect listening for "settingsUpdated"
 
   const handleSettingChange = async (
     key: keyof AudioSettings,
@@ -185,10 +107,11 @@ function App() {
         if (tab?.url && tab.id) {
           const hostname = new URL(tab.url).hostname;
           if (isUsingGlobalSettings) {
-            await settingsManager.updateGlobalSettings(newSettings, tab.id);
+            // Pass hostname even for global updates for consistency/logging
+            await settingsManager.updateGlobalSettings(newSettings, tab.id, hostname);
           } else {
             await settingsManager.updateSiteSettings(
-              hostname,
+              hostname, // Pass hostname for site-specific updates
               newSettings,
               tab.id
             );
