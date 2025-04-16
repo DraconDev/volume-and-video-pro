@@ -25,12 +25,15 @@ export default defineContentScript({
     const resumeContextHandler = async () => {
       console.log(
         "Content: Media interaction detected, attempting to resume AudioContext."
-      );
-      // Attempt to resume the context via MediaProcessor -> AudioProcessor
-      // No need to remove listeners here as we use { once: true } below
-      await mediaProcessor.attemptContextResume();
-    };
-    // --- End AudioContext Resume Handler ---
+       );
+       // Attempt to resume the context via MediaProcessor -> AudioProcessor
+       await mediaProcessor.attemptContextResume();
+       // After attempting resume, re-process media to ensure settings are applied
+       // with the potentially now-running context.
+       console.log("Content: Context potentially resumed, reprocessing media...");
+       await processMedia(); // Add this call
+     };
+     // --- End AudioContext Resume Handler ---
 
     // Process media with current settings
     const processMedia = async () => {
