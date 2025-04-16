@@ -56,13 +56,17 @@ export function setupSettingsEventHandler() {
     settingsManager.on(
         "siteSettingsChanged",
         async (hostname: string, newSiteSettings: AudioSettings) => {
-             console.log(`SettingsEventHandler: siteSettingsChanged event for ${hostname}`, newSiteSettings);
+             console.log(`[!!!] SettingsEventHandler: siteSettingsChanged listener ENTERED for ${hostname}`); // ADDED VERY VISIBLE LOG
+             console.log(`SettingsEventHandler: siteSettingsChanged event data for ${hostname}`, newSiteSettings);
              const tabs = await chrome.tabs.query({});
+             console.log(`[EventHandler] Found ${tabs.length} tabs to check for hostname ${hostname}`); // Log tab count
              for (const tab of tabs) {
-                 if (tab.id && getHostname(tab.url) === hostname) {
+                 const tabHostname = getHostname(tab.url);
+                 console.log(`[EventHandler] Checking tab ${tab.id} (${tabHostname}) against ${hostname}`); // Log each tab check
+                 if (tab.id && tabHostname === hostname) {
                      const message: UpdateSettingsMessage = {
                          type: "UPDATE_SETTINGS",
-                         settings: newSiteSettings,
+                         settings: newSiteSettings, // Send the actual site-specific settings
                          hostname: hostname,
                      };
                      console.log(`[EventHandler] Sending site settings update to tab ${tab.id} (${hostname})`, message); // ADDED LOG
