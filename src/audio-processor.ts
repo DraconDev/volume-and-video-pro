@@ -220,10 +220,18 @@ export class AudioProcessor {
     }
   }
 
-  private disconnectAudioNodes(element: HTMLMediaElement): void {
+  /**
+   * Disconnects audio nodes for a specific element and removes it from the map.
+   * @param element The HTMLMediaElement to disconnect.
+   * @returns True if nodes were found and disconnected, false otherwise.
+   */
+  public disconnectElementNodes(element: HTMLMediaElement): boolean {
+    const nodes = this.audioElementMap.get(element);
+    if (!nodes) return false;
+
+    console.log(`[AudioProcessor] Disconnecting nodes for element: ${element.src || '(no src)'}`); // ADDED LOG
+
     try {
-      const nodes = this.audioElementMap.get(element);
-      if (!nodes) return;
 
       // Safely disconnect each node
       const safeDisconnect = (node: AudioNode) => {
@@ -242,14 +250,20 @@ export class AudioProcessor {
       safeDisconnect(nodes.source);
 
       this.audioElementMap.delete(element);
-      // console.log( // Reduced logging
-      //   "AudioProcessor: Disconnected nodes for element:",
-      //   element.src
-      // );
+      return true; // Indicate success
     } catch (error) {
-      console.error("AudioProcessor: Error disconnecting nodes:", error);
+      console.error(`AudioProcessor: Error disconnecting nodes for ${element.src || '(no src)'}:`, error);
+      // Attempt to remove from map even if disconnect failed partially
+      this.audioElementMap.delete(element);
+      return false; // Indicate failure
     }
   }
+
+  // Keep the old private method for resetAllToDisabled for now, or refactor resetAllToDisabled to use the public one.
+  private disconnectAudioNodes(element: HTMLMediaElement): void {
+      this.disconnectElementNodes(element); // Just call the public version
+  }
+
 
   async updateAudioEffects(settings: AudioSettings): Promise<void> {
     console.log( // ADDED LOG
