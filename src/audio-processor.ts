@@ -122,16 +122,21 @@ export class AudioProcessor {
         Math.min(((settings.voiceBoost - 100) / 100) * 24, 24)
       );
 
-      // Update Web Audio API parameters (requires resumed context to take effect)
-      gain.gain.setValueAtTime(gainNodeVolume, safeTimeValue);
-      bassFilter.gain.setValueAtTime(clampedBass, safeTimeValue);
-      voiceFilter.gain.setValueAtTime(clampedVoice, safeTimeValue);
+      // Update Web Audio API parameters using setTargetAtTime for potentially more robust application
+      const timeConstant = 0.01; // Apply quickly
+      const currentTime = context.currentTime; // Use current context time as start time
+
+      gain.gain.setTargetAtTime(gainNodeVolume, currentTime, timeConstant);
+      bassFilter.gain.setTargetAtTime(clampedBass, currentTime, timeConstant);
+      voiceFilter.gain.setTargetAtTime(clampedVoice, currentTime, timeConstant);
+
 
       // ADDED LOGS: Log the values being applied to the nodes
-      console.log(`[AudioProcessor] Applying Node Settings at time ${safeTimeValue}:`, {
+      console.log(`[AudioProcessor] Applying Node Settings via setTargetAtTime at ${currentTime}:`, {
           elementVolume: element.volume, // Log the directly set element volume
-          gainNodeVolume: gainNodeVolume,
-          bassGain: clampedBass,
+          targetGainNodeVolume: gainNodeVolume, // Log target values
+          targetBassGain: clampedBass,
+          targetVoiceGain: clampedVoice,
           voiceGain: clampedVoice,
           mono: settings.mono // Log mono setting as it affects connections
       });
