@@ -44,30 +44,26 @@ export class MediaProcessor {
       this.updatePlaybackSpeed(element, settings.speed)
     );
 
-    // Setup or update audio processing for each element
+    // Disconnect existing nodes and set up fresh audio processing for each element
     for (const element of mediaElements) {
       try {
-        // Only set up audio context if it doesn't exist
-        if (!this.audioProcessor.hasProcessing(element)) {
-          await this.audioProcessor.setupAudioContext(element, settings);
-          // console.log( // Reduced logging
-          //   "MediaProcessor: Setup audio context for element:",
-          //   element.src
-          // );
-        }
+        // 1. Disconnect any existing nodes for this element
+        this.audioProcessor.disconnectElementNodes(element);
+
+        // 2. Setup a new audio context and node graph for this element
+        //    This ensures the MediaElementAudioSourceNode is fresh.
+        //    setupAudioContext internally calls connectNodes -> updateNodeSettings
+        //    so the latest settings are applied during setup.
+        await this.audioProcessor.setupAudioContext(element, settings);
+        console.log(`[MediaProcessor] Re-established audio context for element: ${element.src || '(no src)'}`); // ADDED LOG
+
       } catch (e) {
-        console.error("MediaProcessor: Failed to process media element:", e);
+        console.error(`MediaProcessor: Failed to process media element ${element.src || '(no src)'}:`, e);
       }
     }
 
-    // Update effects for all elements with new settings
-    // Only update if the context is likely running (or suspended, ready to be resumed)
-    if (this.audioProcessor['audioContext'] && this.audioProcessor['audioContext'].state !== 'closed') {
-        console.log("[MediaProcessor] Calling updateAudioEffects with settings:", JSON.stringify(settings)); // ADDED LOG + stringify
-        await this.audioProcessor.updateAudioEffects(settings);
-    } else {
-        console.log("MediaProcessor: Skipping audio effects update, context not ready/active.");
-    }
+    // No longer need the separate updateAudioEffects call here,
+    // as setupAudioContext now handles applying the latest settings.
   }
 
   setupMediaObserver(callback: () => Promise<void>): void {
