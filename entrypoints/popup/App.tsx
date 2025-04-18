@@ -99,15 +99,13 @@ function App() {
       clearTimeout(updateTimeoutRef.current);
     }
 
-    // Set a new timeout
-    updateTimeoutRef.current = window.setTimeout(async () => {
+    // Set a new timeout, passing the specific newSettings for this change
+    updateTimeoutRef.current = window.setTimeout(async (settingsToSend) => { // Pass newSettings into the callback
       console.log("[Popup] Debounce triggered. Sending update..."); // Log debounce execution
       try {
-        // Inside the timeout, read the LATEST settings state directly from React state
-        // This ensures we send the final state after all rapid slider movements.
-        const finalSettingsToSend = settings; // Read latest state here
-        const finalIsUsingGlobal = isUsingGlobalSettings; // Read latest state here
-        console.log("[Popup] Debounce - Final state to send:", { finalSettingsToSend, finalIsUsingGlobal }); // Log state being sent
+        // Use the settingsToSend passed into the callback, which corresponds to this specific change event
+        const finalIsUsingGlobal = isUsingGlobalSettings; // Read latest global/site mode state here
+        console.log("[Popup] Debounce - Final state to send:", { settingsToSend, finalIsUsingGlobal }); // Log state being sent
 
         const [tab] = await chrome.tabs.query({
           active: true,
@@ -117,12 +115,12 @@ function App() {
           const hostname = new URL(tab.url).hostname;
 
           if (finalIsUsingGlobal) {
-            await settingsManager.updateGlobalSettings(finalSettingsToSend, tab.id, hostname);
+            await settingsManager.updateGlobalSettings(settingsToSend, tab.id, hostname); // Use settingsToSend
              console.log("[Popup] Debounce - Called updateGlobalSettings"); // Log which function was called
           } else {
             await settingsManager.updateSiteSettings(
               hostname,
-              finalSettingsToSend,
+              settingsToSend, // Use settingsToSend
               tab.id
             );
              console.log("[Popup] Debounce - Called updateSiteSettings"); // Log which function was called
@@ -133,7 +131,7 @@ function App() {
       } catch (error) {
         console.error("Failed to update settings via debounce:", error); // Clarify error source
       }
-    }, 300); // Reduced debounce slightly to 300ms
+    }, 300, newSettings); // Pass newSettings as argument to setTimeout callback
   };
 
   // Initialize updateTimeoutRef
