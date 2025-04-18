@@ -22,6 +22,31 @@ async function sendMessageToTab(tabId: number, message: MessageType) {
     }
 }
 
+/**
+ * Broadcasts updated site-specific settings to relevant tabs.
+ * Exported to be called directly by SettingsManager.
+ */
+export async function broadcastSiteSettingsUpdate(hostname: string, newSiteSettings: AudioSettings) {
+    console.log(`[!!!] Broadcasting site settings update for ${hostname}`); // ADDED LOG
+    console.log(`SettingsEventHandler: Broadcasting site settings data for ${hostname}`, newSiteSettings);
+    const tabs = await chrome.tabs.query({});
+    console.log(`[EventHandler] Found ${tabs.length} tabs to check for hostname ${hostname}`); // Log tab count
+    for (const tab of tabs) {
+        const tabHostname = getHostname(tab.url);
+        console.log(`[EventHandler] Checking tab ${tab.id} (${tabHostname}) against ${hostname}`); // Log each tab check
+        if (tab.id && tabHostname === hostname) {
+            const message: UpdateSettingsMessage = {
+                type: "UPDATE_SETTINGS",
+                settings: newSiteSettings, // Send the actual site-specific settings
+                hostname: hostname,
+            };
+            console.log(`[EventHandler] Sending site settings update to tab ${tab.id} (${hostname})`, message); // ADDED LOG
+            sendMessageToTab(tab.id, message);
+        }
+    }
+}
+
+
 export function setupSettingsEventHandler() {
     console.log("SettingsEventHandler: Setting up listeners...");
 
@@ -52,29 +77,8 @@ export function setupSettingsEventHandler() {
         }
     );
 
-    // --- Listener for Site-Specific Settings Changes ---
-    settingsManager.on(
-        "siteSettingsChanged",
-        async (hostname: string, newSiteSettings: AudioSettings) => {
-             console.log(`[!!!] SettingsEventHandler: siteSettingsChanged listener ENTERED for ${hostname}`); // ADDED VERY VISIBLE LOG
-             console.log(`SettingsEventHandler: siteSettingsChanged event data for ${hostname}`, newSiteSettings);
-             const tabs = await chrome.tabs.query({});
-             console.log(`[EventHandler] Found ${tabs.length} tabs to check for hostname ${hostname}`); // Log tab count
-             for (const tab of tabs) {
-                 const tabHostname = getHostname(tab.url);
-                 console.log(`[EventHandler] Checking tab ${tab.id} (${tabHostname}) against ${hostname}`); // Log each tab check
-                 if (tab.id && tabHostname === hostname) {
-                     const message: UpdateSettingsMessage = {
-                         type: "UPDATE_SETTINGS",
-                         settings: newSiteSettings, // Send the actual site-specific settings
-                         hostname: hostname,
-                     };
-                     console.log(`[EventHandler] Sending site settings update to tab ${tab.id} (${hostname})`, message); // ADDED LOG
-                     sendMessageToTab(tab.id, message);
-                 }
-             }
-        }
-    );
+    // --- Listener for Site-Specific Settings Changes --- (REMOVED - Now handled by direct call to broadcastSiteSettingsUpdate)
+    // settingsManager.on("siteSettingsChanged", broadcastSiteSettingsUpdate); // Keep this commented out or remove
 
      // --- Listener for Site Mode Changes ---
     settingsManager.on(
