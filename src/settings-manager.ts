@@ -6,6 +6,8 @@ import {
   defaultSiteSettings,
 } from "./types";
 import EventEmitter from "events";
+// Import the broadcast function directly
+import { broadcastSiteSettingsUpdate } from "./settings-event-handler";
 
 export class SettingsManager extends EventEmitter {
   globalSettings: AudioSettings;
@@ -157,10 +159,10 @@ export class SettingsManager extends EventEmitter {
     this.siteSettings.set(hostname, siteConfig);
 
     await this.persistSettings(hostname);
-    // Emit specific event for site settings change
-    this.emit("siteSettingsChanged", hostname, siteConfig.settings); // Use the actual saved settings
+    // Directly call the broadcast function instead of emitting an event
+    broadcastSiteSettingsUpdate(hostname, siteConfig.settings); // Use the actual saved settings
 
-    console.log("SettingsManager: Updated site settings", {
+    console.log("SettingsManager: Updated site settings & called broadcast", { // Updated log
       isNewSite,
       oldConfig: this.siteSettings.get(hostname),
       newConfig: siteConfig,
