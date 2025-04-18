@@ -7,7 +7,7 @@ import {
 } from "./types";
 import EventEmitter from "events";
 // Import the broadcast functions directly
-import { broadcastSiteSettingsUpdate, broadcastSiteModeUpdate } from "./settings-event-handler";
+import { broadcastSiteSettingsUpdate, broadcastSiteModeUpdate, broadcastGlobalSettingsUpdate } from "./settings-event-handler";
 
 export class SettingsManager extends EventEmitter {
   globalSettings: AudioSettings;
@@ -111,8 +111,9 @@ export class SettingsManager extends EventEmitter {
       ...settings,
     };
 
-    // Emit a single event for global settings change
-    this.emit("globalSettingsChanged", this.globalSettings);
+    // Directly call the broadcast function instead of emitting an event
+    broadcastGlobalSettingsUpdate(this.globalSettings);
+    console.log("SettingsManager: Updated global settings & called broadcast"); // Added log
 
     await this.persistSettings(hostname);
   }
