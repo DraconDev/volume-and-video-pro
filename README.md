@@ -4,13 +4,14 @@ A powerful browser extension for enhancing your audio experience with advanced v
 
 ## Features
 
--   🔊 Volume Boost: Amplify audio beyond browser limitations
--   🎵 Bass Boost: Enhance low frequencies for richer sound
--   🗣️ Voice Boost: Improve voice clarity in videos and audio
--   ⚡ Per-Site Settings: Customize audio settings for each website
--   🔄 Global Presets: Apply your preferred settings across all sites
--   🎚️ Real-time Controls: Adjust audio parameters on the fly
--   🎯 Mono Audio: Convert stereo to mono for accessibility
+-   🔊 **Volume Boost:** Amplify audio beyond browser limitations (up to 1000%).
+-   ⚡ **Playback Speed Control:** Adjust playback speed from 0x to 10x.
+-   🎵 **Bass Boost:** Enhance low frequencies for richer sound (0-200%).
+-   🗣️ **Voice Boost:** Improve voice clarity in videos and audio (0-200%).
+-   🎯 **Mono Audio:** Convert stereo audio to mono for accessibility or preference.
+-   ⚙️ **Per-Site Settings:** Customize and save audio settings for individual websites, or disable the extension entirely for specific sites.
+-   🌍 **Global Settings:** Apply your preferred audio settings across all websites by default.
+-   🔄 **Real-time Controls:** Adjust all audio parameters instantly via the popup interface.
 
 ## Installation
 
