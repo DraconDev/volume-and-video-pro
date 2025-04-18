@@ -170,13 +170,20 @@ function App() {
 
       // Don't update actual settings, just switch modes
       setIsUsingGlobalSettings(mode === "global");
-      setIsSiteEnabled(mode !== "disabled");
+        setIsUsingGlobalSettings(mode === "global");
+        setIsSiteEnabled(mode !== "disabled");
 
+      let result; // To store the result from the manager call
       if (mode === "disabled") {
-        await settingsManager.disableSite(hostname, tab.id);
+        result = await settingsManager.disableSite(hostname, tab.id);
+        // When disabling, update UI to show default settings
+        setSettings(result.displaySettings);
       } else {
-        await settingsManager.updateSiteMode(hostname, mode, tab.id);
+        result = await settingsManager.updateSiteMode(hostname, mode, tab.id);
+        // After changing mode, update UI to show the settings for that mode
+        setSettings(result.settingsToUse);
       }
+       console.log("Popup: Mode toggled, UI settings updated to:", result?.settingsToUse || result?.displaySettings); // Add log
     } catch (error) {
       console.error("Popup: Error toggling mode:", error);
     }
