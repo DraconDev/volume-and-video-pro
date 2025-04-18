@@ -6,8 +6,8 @@ import {
   defaultSiteSettings,
 } from "./types";
 import EventEmitter from "events";
-// Import the broadcast function directly
-import { broadcastSiteSettingsUpdate } from "./settings-event-handler";
+// Import the broadcast functions directly
+import { broadcastSiteSettingsUpdate, broadcastSiteModeUpdate } from "./settings-event-handler";
 
 export class SettingsManager extends EventEmitter {
   globalSettings: AudioSettings;
@@ -201,8 +201,9 @@ export class SettingsManager extends EventEmitter {
         ? { ...this.globalSettings }
         : { ...siteConfig.settings };
 
-    // Emit specific event for site mode change
-    this.emit("siteModeChanged", hostname, mode, displaySettings);
+    // Directly call the broadcast function instead of emitting an event
+    broadcastSiteModeUpdate(hostname, mode, displaySettings);
+    console.log("SettingsManager: Updated site mode & called broadcast", { hostname, mode, displaySettings }); // Added log
     return { settingsToUse: displaySettings, siteConfig };
   }
 
@@ -249,12 +250,12 @@ export class SettingsManager extends EventEmitter {
     this.siteSettings.set(hostname, siteConfig);
     await this.persistSettings(hostname);
 
-    // Emit default settings for display only, actual settings remain unchanged
-    // Emit specific event for site mode change (to disabled)
-    this.emit("siteModeChanged", hostname, "disabled", { ...defaultSettings });
+    // Directly call the broadcast function instead of emitting an event
+    broadcastSiteModeUpdate(hostname, "disabled", { ...defaultSettings });
+    console.log("SettingsManager: Disabled site & called broadcast", { hostname }); // Added log
 
     return {
-      actualSettings: siteConfig.settings,
+      actualSettings: siteConfig.settings, // Keep returning this for potential internal use
       displaySettings: { ...defaultSettings },
     };
   }
