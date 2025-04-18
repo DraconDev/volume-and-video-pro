@@ -54,15 +54,19 @@ export function setupSettingsEventHandler() {
     settingsManager.on(
         "globalSettingsChanged",
         async (newGlobalSettings: AudioSettings) => {
-            console.log("SettingsEventHandler: globalSettingsChanged event", newGlobalSettings);
+            console.log(`[!!!] SettingsEventHandler: globalSettingsChanged listener ENTERED`); // ADDED VERY VISIBLE LOG
+            console.log("SettingsEventHandler: globalSettingsChanged event data", newGlobalSettings);
             const tabs = await chrome.tabs.query({});
+             console.log(`[EventHandler] Found ${tabs.length} tabs to check for global update`); // Log tab count
             for (const tab of tabs) {
                 if (tab.id && tab.url) {
                     const tabHostname = getHostname(tab.url);
                     if (tabHostname) {
                         const siteConfig = settingsManager.getSettingsForSite(tabHostname);
+                         console.log(`[EventHandler] Checking tab ${tab.id} (${tabHostname}) for global update. Site config:`, siteConfig); // Log check
                         // Send update if no site config exists or if site is set to global mode
                         if (!siteConfig || siteConfig.activeSetting === "global") {
+                             console.log(`[EventHandler] Tab ${tab.id} (${tabHostname}) qualifies for global update.`); // Log qualification
                             const message: UpdateSettingsMessage = {
                                 type: "UPDATE_SETTINGS",
                                 settings: newGlobalSettings,
