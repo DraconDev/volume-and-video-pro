@@ -251,7 +251,9 @@ export class SettingsManager extends EventEmitter {
     await this.persistSettings(hostname);
 
     // Directly call the broadcast function instead of emitting an event
-    broadcastSiteModeUpdate(hostname, "disabled", { ...defaultSettings });
+    // Ensure the passed object strictly matches AudioSettings type
+    const disabledSettings: AudioSettings = { ...defaultSettings };
+    broadcastSiteModeUpdate(hostname, "disabled", disabledSettings);
     console.log("SettingsManager: Disabled site & called broadcast", { hostname }); // Added log
 
     return {
