@@ -46,6 +46,30 @@ export async function broadcastSiteSettingsUpdate(hostname: string, newSiteSetti
     }
 }
 
+/**
+ * Broadcasts updated site mode and the effective settings to relevant tabs.
+ * Exported to be called directly by SettingsManager.
+ */
+export async function broadcastSiteModeUpdate(hostname: string, mode: string, effectiveSettings: AudioSettings) {
+    console.log(`[!!!] Broadcasting site mode update for ${hostname} to ${mode}`); // ADDED LOG
+    console.log(`SettingsEventHandler: Broadcasting mode data for ${hostname}`, { mode, effectiveSettings });
+    const tabs = await chrome.tabs.query({});
+    console.log(`[EventHandler] Found ${tabs.length} tabs to check for mode update on ${hostname}`); // Log tab count
+    for (const tab of tabs) {
+        const tabHostname = getHostname(tab.url);
+        console.log(`[EventHandler] Checking tab ${tab.id} (${tabHostname}) against ${hostname} for mode update`); // Log each tab check
+        if (tab.id && tabHostname === hostname) {
+            const message: UpdateSettingsMessage = {
+                type: "UPDATE_SETTINGS", // Still send UPDATE_SETTINGS
+                settings: effectiveSettings, // Send the settings appropriate for the new mode
+                hostname: hostname,
+            };
+            console.log(`[EventHandler] Sending site mode update (as UPDATE_SETTINGS) to tab ${tab.id} (${hostname})`, message); // ADDED LOG
+            sendMessageToTab(tab.id, message);
+        }
+    }
+}
+
 
 export function setupSettingsEventHandler() {
     console.log("SettingsEventHandler: Setting up listeners...");
@@ -84,25 +108,8 @@ export function setupSettingsEventHandler() {
     // --- Listener for Site-Specific Settings Changes --- (REMOVED - Now handled by direct call to broadcastSiteSettingsUpdate)
     // settingsManager.on("siteSettingsChanged", broadcastSiteSettingsUpdate); // Keep this commented out or remove
 
-     // --- Listener for Site Mode Changes ---
-    settingsManager.on(
-        "siteModeChanged",
-        async (hostname: string, mode: string, effectiveSettings: AudioSettings) => {
-            console.log(`SettingsEventHandler: siteModeChanged event for ${hostname} to ${mode}`, effectiveSettings);
-            const tabs = await chrome.tabs.query({});
-            for (const tab of tabs) {
-                if (tab.id && getHostname(tab.url) === hostname) {
-                     const message: UpdateSettingsMessage = {
-                         type: "UPDATE_SETTINGS",
-                         settings: effectiveSettings, // Send the settings appropriate for the new mode
-                         hostname: hostname,
-                     };
-                     console.log(`[EventHandler] Sending site mode update to tab ${tab.id} (${hostname})`, message); // ADDED LOG
-                     sendMessageToTab(tab.id, message);
-                 }
-            }
-        }
-    );
+     // --- Listener for Site Mode Changes --- (REMOVED - Now handled by direct call to broadcastSiteModeUpdate)
+    // settingsManager.on("siteModeChanged", broadcastSiteModeUpdate); // Keep this commented out or remove
 
-    console.log("SettingsEventHandler: Listeners set up.");
+    console.log("SettingsEventHandler: Listeners set up (excluding siteSettingsChanged and siteModeChanged)."); // Updated log
 }
