@@ -100,7 +100,7 @@ function App() {
     }
 
     // Set a new timeout, passing the specific newSettings for this change
-    updateTimeoutRef.current = window.setTimeout(async (settingsToSend) => { // Pass newSettings into the callback
+    updateTimeoutRef.current = window.setTimeout(async (settingsToSend: AudioSettings) => { // Add AudioSettings type
       console.log("[Popup] Debounce triggered. Sending update..."); // Log debounce execution
       try {
         // Use the settingsToSend passed into the callback, which corresponds to this specific change event
