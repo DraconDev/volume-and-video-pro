@@ -97,10 +97,14 @@ export default defineBackground(() => {
     // This ensures it starts loading ASAP. Listeners below might initially get defaults.
     settingsManager.initialize().catch(err => console.error("Background: Initial settingsManager.initialize() failed:", err));
 
-    // Set up listeners immediately (they might get default settings initially)
+    // Initialize settings manager (fire-and-forget, handles its own errors)
+    // This ensures it starts loading ASAP. Listeners below might initially get defaults.
+    settingsManager.initialize().catch(err => console.error("Background: Initial settingsManager.initialize() failed:", err));
+
+    // Set up listeners within the defineBackground context
+    // This might help ensure they are correctly attached/reattached during reloads.
     setupMessageHandler();
-    setupSettingsEventHandler();
+    setupSettingsEventHandler(); // Ensure this runs within the defined context
 
     console.log("Background: Main execution finished, listeners set up.");
-    // NOTE: The onMessage and onRemoved listeners are now defined outside defineBackground
 });
