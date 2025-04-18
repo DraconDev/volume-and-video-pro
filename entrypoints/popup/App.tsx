@@ -171,19 +171,23 @@ function App() {
       // Don't update actual settings, just switch modes
       setIsUsingGlobalSettings(mode === "global");
         setIsUsingGlobalSettings(mode === "global");
+        setIsUsingGlobalSettings(mode === "global");
         setIsSiteEnabled(mode !== "disabled");
 
-      let result; // To store the result from the manager call
+      let settingsForUI: AudioSettings;
       if (mode === "disabled") {
-        result = await settingsManager.disableSite(hostname, tab.id);
+        const result = await settingsManager.disableSite(hostname, tab.id);
         // When disabling, update UI to show default settings
-        setSettings(result.displaySettings);
+        settingsForUI = result.displaySettings;
+        setSettings(settingsForUI);
       } else {
-        result = await settingsManager.updateSiteMode(hostname, mode, tab.id);
+        // For 'global' or 'site' mode
+        const result = await settingsManager.updateSiteMode(hostname, mode, tab.id);
         // After changing mode, update UI to show the settings for that mode
-        setSettings(result.settingsToUse);
+        settingsForUI = result.settingsToUse;
+        setSettings(settingsForUI);
       }
-       console.log("Popup: Mode toggled, UI settings updated to:", result?.settingsToUse || result?.displaySettings); // Add log
+       console.log(`Popup: Mode toggled to ${mode}, UI settings updated to:`, settingsForUI); // Corrected log
     } catch (error) {
       console.error("Popup: Error toggling mode:", error);
     }
