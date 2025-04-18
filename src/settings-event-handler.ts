@@ -47,6 +47,37 @@ export async function broadcastSiteSettingsUpdate(hostname: string, newSiteSetti
 }
 
 /**
+ * Broadcasts updated global settings to relevant tabs.
+ * Exported to be called directly by SettingsManager.
+ */
+export async function broadcastGlobalSettingsUpdate(newGlobalSettings: AudioSettings) {
+    console.log(`[!!!] Broadcasting global settings update`); // ADDED LOG
+    console.log("SettingsEventHandler: Broadcasting global settings data", newGlobalSettings);
+    const tabs = await chrome.tabs.query({});
+    console.log(`[EventHandler] Found ${tabs.length} tabs to check for global update`); // Log tab count
+    for (const tab of tabs) {
+        if (tab.id && tab.url) {
+            const tabHostname = getHostname(tab.url);
+            if (tabHostname) {
+                const siteConfig = settingsManager.getSettingsForSite(tabHostname);
+                console.log(`[EventHandler] Checking tab ${tab.id} (${tabHostname}) for global update. Site config:`, siteConfig); // Log check
+                // Send update if no site config exists or if site is set to global mode
+                if (!siteConfig || siteConfig.activeSetting === "global") {
+                    console.log(`[EventHandler] Tab ${tab.id} (${tabHostname}) qualifies for global update.`); // Log qualification
+                    const message: UpdateSettingsMessage = {
+                        type: "UPDATE_SETTINGS",
+                        settings: newGlobalSettings,
+                        hostname: tabHostname,
+                    };
+                    console.log(`[EventHandler] Sending global update to tab ${tab.id} (${tabHostname})`, message); // ADDED LOG
+                    sendMessageToTab(tab.id, message);
+                }
+            }
+        }
+    }
+}
+
+/**
  * Broadcasts updated site mode and the effective settings to relevant tabs.
  * Exported to be called directly by SettingsManager.
  */
@@ -74,36 +105,8 @@ export async function broadcastSiteModeUpdate(hostname: string, mode: string, ef
 export function setupSettingsEventHandler() {
     console.log("SettingsEventHandler: Setting up listeners...");
 
-    // --- Listener for Global Settings Changes ---
-    settingsManager.on(
-        "globalSettingsChanged",
-        async (newGlobalSettings: AudioSettings) => {
-            console.log(`[!!!] SettingsEventHandler: globalSettingsChanged listener ENTERED`); // ADDED VERY VISIBLE LOG
-            console.log("SettingsEventHandler: globalSettingsChanged event data", newGlobalSettings);
-            const tabs = await chrome.tabs.query({});
-             console.log(`[EventHandler] Found ${tabs.length} tabs to check for global update`); // Log tab count
-            for (const tab of tabs) {
-                if (tab.id && tab.url) {
-                    const tabHostname = getHostname(tab.url);
-                    if (tabHostname) {
-                        const siteConfig = settingsManager.getSettingsForSite(tabHostname);
-                         console.log(`[EventHandler] Checking tab ${tab.id} (${tabHostname}) for global update. Site config:`, siteConfig); // Log check
-                        // Send update if no site config exists or if site is set to global mode
-                        if (!siteConfig || siteConfig.activeSetting === "global") {
-                             console.log(`[EventHandler] Tab ${tab.id} (${tabHostname}) qualifies for global update.`); // Log qualification
-                            const message: UpdateSettingsMessage = {
-                                type: "UPDATE_SETTINGS",
-                                settings: newGlobalSettings,
-                                hostname: tabHostname,
-                            };
-                            console.log(`[EventHandler] Sending global update to tab ${tab.id} (${tabHostname})`, message); // ADDED LOG
-                            sendMessageToTab(tab.id, message);
-                        }
-                    }
-                }
-            }
-        }
-    );
+    // --- Listener for Global Settings Changes --- (REMOVED - Now handled by direct call to broadcastGlobalSettingsUpdate)
+    // settingsManager.on("globalSettingsChanged", broadcastGlobalSettingsUpdate); // Keep this commented out or remove
 
     // --- Listener for Site-Specific Settings Changes --- (REMOVED - Now handled by direct call to broadcastSiteSettingsUpdate)
     // settingsManager.on("siteSettingsChanged", broadcastSiteSettingsUpdate); // Keep this commented out or remove
@@ -111,5 +114,5 @@ export function setupSettingsEventHandler() {
      // --- Listener for Site Mode Changes --- (REMOVED - Now handled by direct call to broadcastSiteModeUpdate)
     // settingsManager.on("siteModeChanged", broadcastSiteModeUpdate); // Keep this commented out or remove
 
-    console.log("SettingsEventHandler: Listeners set up (excluding siteSettingsChanged and siteModeChanged)."); // Updated log
+    console.log("SettingsEventHandler: Listeners set up (only event emitters are no longer used for site/mode changes)."); // Updated log
 }
