@@ -199,12 +199,15 @@ export class SettingsManager extends EventEmitter {
         ? { ...defaultSettings }
         : mode === "global"
         ? { ...this.globalSettings }
-        : { ...siteConfig.settings };
+        : siteConfig.settings || { ...defaultSettings }; // Use defaults if site settings are somehow undefined
+
+    // Ensure the object passed strictly matches AudioSettings type
+    const settingsToBroadcast: AudioSettings = { ...displaySettings };
 
     // Directly call the broadcast function instead of emitting an event
-    broadcastSiteModeUpdate(hostname, mode, displaySettings);
-    console.log("SettingsManager: Updated site mode & called broadcast", { hostname, mode, displaySettings }); // Added log
-    return { settingsToUse: displaySettings, siteConfig };
+    broadcastSiteModeUpdate(hostname, mode, settingsToBroadcast);
+    console.log("SettingsManager: Updated site mode & called broadcast", { hostname, mode, settingsToBroadcast }); // Updated log
+    return { settingsToUse: settingsToBroadcast, siteConfig }; // Return the guaranteed object
   }
 
   private getSettingsForPlayback(
