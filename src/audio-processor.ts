@@ -214,8 +214,11 @@ export class AudioProcessor {
           } else {
              console.warn("AudioProcessor: Context not running, cannot restore playback yet.");
           }
-        } catch (e) {
-          console.error("AudioProcessor: Failed to restore playback:", e);
+        } catch (e: any) { // Add type 'any' to access properties like message
+          console.error(
+            `AudioProcessor: Failed to restore playback for ${nodes.element.src || '(no src)'}. Error: ${e?.message || String(e)}. Context state: ${context.state}. Document focused: ${document.hasFocus()}.`,
+            e // Log the full error object as well
+          );
         }
       }
 
