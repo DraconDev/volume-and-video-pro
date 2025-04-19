@@ -12,6 +12,8 @@ import { broadcastSiteSettingsUpdate, broadcastSiteModeUpdate, broadcastGlobalSe
 export class SettingsManager extends EventEmitter {
   globalSettings: AudioSettings;
   private siteSettings: Map<string, SiteSettings>;
+  private initializationPromise: Promise<void> | null = null; // Added initialization promise
+  private isInitialized = false; // Added flag
 
   constructor() {
     super();
@@ -19,16 +21,67 @@ export class SettingsManager extends EventEmitter {
     this.siteSettings = new Map();
   }
 
-  async initialize() {
-    const storage = await chrome.storage.sync.get([
-      "globalSettings",
-      "siteSettings",
-    ]);
-    this.globalSettings = storage.globalSettings || { ...defaultSettings };
-
-    if (storage.siteSettings) {
-      this.siteSettings = new Map(Object.entries(storage.siteSettings));
+  async initialize(): Promise<void> {
+    // Prevent re-initialization
+    if (this.initializationPromise) {
+      return this.initializationPromise;
     }
+
+    // Create the promise and store the resolver
+    let resolveInit: () => void;
+    this.initializationPromise = new Promise((resolve) => {
+      resolveInit = resolve;
+    });
+
+    try {
+      console.log("SettingsManager: Starting initialization..."); // Log start
+      const storage = await chrome.storage.sync.get([
+        "globalSettings",
+        "siteSettings",
+      ]);
+      this.globalSettings = storage.globalSettings || { ...defaultSettings };
+
+      if (storage.siteSettings) {
+        // Ensure loaded data is correctly formed Map
+        try {
+          this.siteSettings = new Map(Object.entries(storage.siteSettings));
+        } catch (mapError) {
+          console.error("SettingsManager: Error parsing siteSettings from storage, resetting.", mapError);
+          this.siteSettings = new Map(); // Reset if data is corrupt
+        }
+      } else {
+        this.siteSettings = new Map(); // Ensure it's a map if nothing in storage
+      }
+      this.isInitialized = true; // Set flag
+      console.log("SettingsManager: Initialization complete."); // Log success
+    } catch (error) {
+      console.error("SettingsManager: Initialization failed:", error);
+      // Still initialize with defaults on error
+      this.globalSettings = { ...defaultSettings };
+      this.siteSettings = new Map();
+      this.isInitialized = true; // Mark as initialized even on error to prevent blocking
+    } finally {
+      // @ts-ignore - resolveInit is guaranteed to be assigned
+      resolveInit(); // Resolve the promise whether success or failure
+    }
+    return this.initializationPromise; // Return the promise
+  }
+
+  // Helper to ensure initialization is awaited
+  private async ensureInitialized(): Promise<void> {
+    if (!this.initializationPromise) {
+       // If initialize was never called, call it now.
+       // This might happen if background script startup logic changes.
+       console.warn("SettingsManager: ensureInitialized called before initialize. Initializing now.");
+       await this.initialize();
+    } else {
+       await this.initializationPromise; // Await the existing promise
+    }
+     if (!this.isInitialized) {
+        // This case should ideally not happen if initialize resolves correctly
+        console.error("SettingsManager: Initialization promise resolved, but manager not marked as initialized.");
+        // Potentially throw an error or handle recovery
+     }
   }
 
   private persistTimeout: NodeJS.Timeout | null = null;
@@ -68,7 +121,20 @@ export class SettingsManager extends EventEmitter {
     }, 1000); // Debounce for 1 second
   }
 
+  // Note: getSettingsForSite is called by background script *after* awaiting initialize,
+  // so we might not strictly need ensureInitialized here, but adding for safety.
   getSettingsForSite(hostname: string): SiteSettings { // Changed return type to non-nullable
+    // Although background awaits, ensureInitialized check doesn't hurt
+    if (!this.isInitialized) {
+        console.warn("SettingsManager: getSettingsForSite called before initialization completed. Returning defaults.");
+        // Return a default global config immediately without waiting
+        return {
+            enabled: true,
+            activeSetting: "global",
+            settings: { ...this.globalSettings }, // Use potentially uninitialized globalSettings
+        };
+    }
+
     let siteConfig = this.siteSettings.get(hostname);
 
     // If no site config exists, create a default one using global settings
@@ -107,6 +173,7 @@ export class SettingsManager extends EventEmitter {
     tabId?: number,
     hostname?: string
   ) {
+    await this.ensureInitialized(); // Wait for init
     console.log("SettingsManager: Updating global settings", {
       oldSettings: { ...this.globalSettings },
       newSettings: settings,
@@ -132,6 +199,7 @@ export class SettingsManager extends EventEmitter {
     settings: AudioSettings,
     tabId?: number
   ) {
+    await this.ensureInitialized(); // Wait for init
     console.log("SettingsManager: Updating site settings for", hostname, {
       tabId,
     });
@@ -184,6 +252,7 @@ export class SettingsManager extends EventEmitter {
     mode: "global" | "site" | "disabled",
     tabId?: number
   ) {
+    await this.ensureInitialized(); // Wait for init
     let siteConfig = this.siteSettings.get(hostname);
     const oldMode = siteConfig?.activeSetting;
 
@@ -245,6 +314,7 @@ export class SettingsManager extends EventEmitter {
   }
 
   async disableSite(hostname: string, tabId?: number) {
+    await this.ensureInitialized(); // Wait for init
     let siteConfig = this.siteSettings.get(hostname);
 
     if (!siteConfig) {
