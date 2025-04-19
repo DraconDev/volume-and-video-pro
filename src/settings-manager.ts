@@ -68,10 +68,19 @@ export class SettingsManager extends EventEmitter {
     }, 1000); // Debounce for 1 second
   }
 
-  getSettingsForSite(hostname: string): SiteSettings | null {
-    const siteConfig = this.siteSettings.get(hostname);
+  getSettingsForSite(hostname: string): SiteSettings { // Changed return type to non-nullable
+    let siteConfig = this.siteSettings.get(hostname);
+
+    // If no site config exists, create a default one using global settings
     if (!siteConfig) {
-      return null;
+      console.log(`SettingsManager: No config found for ${hostname}, creating default global config.`);
+      siteConfig = {
+        enabled: true, // Assume enabled by default
+        activeSetting: "global",
+        settings: { ...this.globalSettings }, // Use current global settings
+      };
+      // Note: We don't persist this default config immediately.
+      // It only gets persisted if the user explicitly changes settings or mode for this site later.
     }
 
     // If in global mode, make sure we're using global settings
