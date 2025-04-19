@@ -16,9 +16,14 @@ function getHostname(url: string | undefined): string | null {
 async function sendMessageToTab(tabId: number, message: MessageType) {
     try {
         await chrome.tabs.sendMessage(tabId, message);
-    } catch (error) {
-        // Log errors more visibly for debugging
-        console.warn(`SettingsEventHandler: Error sending message to tab ${tabId}. Type: ${message.type}. Error:`, error);
+    } catch (error: any) {
+        // Suppress the specific "Receiving end does not exist" error as it's expected for certain tabs.
+        const errorMessage = error?.message || String(error);
+        if (!errorMessage.includes("Receiving end does not exist")) {
+            // Log other unexpected errors
+            console.error(`SettingsEventHandler: Unexpected error sending message to tab ${tabId}. Type: ${message.type}. Error:`, error);
+        }
+        // Otherwise, do nothing - suppress the common connection error.
     }
 }
 
