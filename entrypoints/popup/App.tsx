@@ -58,12 +58,8 @@ function App() {
             // Use site-specific settings
             setSettings(siteConfig.settings || defaultSettings);
           }
-        } else {
-          // No site config exists, use global settings
-          setSettings(settingsManager.globalSettings || defaultSettings);
-          setIsUsingGlobalSettings(true);
-          setIsSiteEnabled(true);
         }
+        // The 'else' block previously here is now unreachable because getSettingsForSite always returns a config.
       } catch (error) {
         console.error("Popup: Error loading settings:", error, {
           currentSettings: settings,
