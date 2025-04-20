@@ -82,9 +82,11 @@ export default defineContentScript({
         try {
           // Wait for settings to be fetched before processing media
           await settingsHandler.ensureInitialized();
+          // ADD LOG: Log the settings obtained after initialization
+          console.log(`[ContentScript DEBUG] Initialization complete for ${window.location.hostname}. Settings to use initially:`, JSON.stringify(settingsHandler.getCurrentSettings()));
           await processMedia();
         } catch (error) {
-          console.error("Content: Error during delayed initialization:", error);
+          console.error(`Content: Error during delayed initialization on ${window.location.hostname}:`, error); // Add hostname
         }
       }, 100); // Reduced initial delay from 1000ms
     };
