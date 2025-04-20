@@ -39,9 +39,10 @@ export default defineContentScript({
 
     // Process media with current settings
     const processMedia = async () => {
-      console.log("Content: processMedia called");
+      console.log(`[ContentScript DEBUG] processMedia called for ${window.location.hostname}`); // Add hostname
       const mediaElements = mediaProcessor.findMediaElements();
-      console.log("Content: Found media elements:", mediaElements.length);
+      // ADD LOG: Log details about found elements
+      console.log(`[ContentScript DEBUG] Found ${mediaElements.length} media elements:`, mediaElements.map(el => ({ src: el.src, tagName: el.tagName, id: el.id, classList: el.classList.toString() })));
 
       // Attach interaction listeners to each media element to resume AudioContext
       mediaElements.forEach((element) => {
