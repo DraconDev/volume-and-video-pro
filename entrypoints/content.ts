@@ -17,8 +17,19 @@ export default defineContentScript({
     const settingsHandler = new SettingsHandler();
     const mediaProcessor = new MediaProcessor();
 
-    // Start fetching settings from background immediately
-    settingsHandler.initialize();
+    // Determine the relevant hostname (try top-level first, fallback to current frame)
+    let targetHostname: string;
+    try {
+        // Accessing window.top.location can throw cross-origin errors
+        targetHostname = window.top.location.hostname;
+         console.log(`[ContentScript] Running in frame, using top-level hostname: ${targetHostname}`);
+    } catch (e) {
+        targetHostname = window.location.hostname;
+         console.warn(`[ContentScript] Could not access top-level hostname (cross-origin?), using frame hostname: ${targetHostname}`);
+    }
+
+    // Start fetching settings from background immediately, passing the determined hostname
+    settingsHandler.initialize(targetHostname);
 
     // --- AudioContext Resume Handler ---
     // This function will be called once when the user interacts with a media element
