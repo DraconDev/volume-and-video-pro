@@ -17,28 +17,146 @@ export default defineContentScript({
     const settingsHandler = new SettingsHandler();
     const mediaProcessor = new MediaProcessor();
 
-    // Determine the relevant hostname (try top-level first, fallback to current frame)
-    let targetHostname: string;
-    try {
-        // Check if window.top exists and is accessible before trying to get its hostname
-        if (window.top && window.top !== window.self && window.top.location.hostname) {
-            targetHostname = window.top.location.hostname;
-            console.log(`[ContentScript] Running in frame, using top-level hostname: ${targetHostname}`);
+    // Function to initialize settings and the rest of the script logic
+    const initializeScript = async (hostname: string) => {
+        console.log(`[ContentScript] Initializing script for hostname: ${hostname}`);
+        settingsHandler.initialize(hostname); // Initialize with the correct hostname
+
+        // --- AudioContext Resume Handler --- (Moved inside initializeScript)
+        const resumeContextHandler = async () => {
+          console.log(
+            "Content: Media interaction detected, attempting to resume AudioContext."
+          );
+          await mediaProcessor.attemptContextResume();
+          console.log(
+            "Content: Context potentially resumed, reprocessing media..."
+          );
+          await processMedia();
+        };
+        // --- End AudioContext Resume Handler ---
+
+        // Process media with current settings (Moved inside initializeScript)
+        const processMedia = async () => {
+          console.log(`[ContentScript DEBUG] processMedia called for ${window.location.hostname}`);
+          const mediaElements = mediaProcessor.findMediaElements();
+          console.log(`[ContentScript DEBUG] Found ${mediaElements.length} media elements:`, mediaElements.map(el => ({ src: el.src, tagName: el.tagName, id: el.id, classList: el.classList.toString() })));
+
+          mediaElements.forEach((element) => {
+            element.removeEventListener("play", resumeContextHandler); // Remove previous listener if any
+            element.addEventListener("play", resumeContextHandler, { once: true });
+          });
+
+          const currentSettings = settingsHandler.getCurrentSettings();
+          const needsProcessing = settingsHandler.needsAudioProcessing();
+          console.log(
+            "Content: Processing media with settings:",
+            currentSettings,
+            "needsProcessing:",
+            needsProcessing
+          );
+          console.log(
+            "[ProcessMedia] Applying settings:",
+            JSON.stringify(currentSettings)
+          );
+          await mediaProcessor.processMediaElements(
+            mediaElements,
+            currentSettings,
+            needsProcessing
+          );
+        };
+
+        // Initialize with debouncing (Moved inside initializeScript)
+        let initializationTimeout: number | null = null;
+        const debouncedInitialization = () => {
+          if (initializationTimeout) {
+            window.clearTimeout(initializationTimeout);
+          }
+          initializationTimeout = window.setTimeout(async () => {
+            try {
+              await settingsHandler.ensureInitialized();
+              console.log(`[ContentScript DEBUG] Initialization complete for ${window.location.hostname}. Settings to use initially:`, JSON.stringify(settingsHandler.getCurrentSettings()));
+              await processMedia();
+            } catch (error) {
+              console.error(`Content: Error during delayed initialization on ${window.location.hostname}:`, error);
+            }
+          }, 100);
+        };
+
+        // Listen for settings updates from the background script (Moved inside initializeScript)
+        chrome.runtime.onMessage.addListener(
+          (message: MessageType, sender, sendResponse) => {
+            console.log("[ContentScript Listener] Received message:", JSON.stringify(message));
+            if (message.type === "UPDATE_SETTINGS") {
+              console.log("[ContentScript Listener] Processing UPDATE_SETTINGS from background/popup");
+              console.log("Content: Applying settings update received via message.");
+              settingsHandler.updateSettings(message.settings);
+              console.log("Content: Settings updated via message, reprocessing media elements...");
+              processMedia().catch((error) => {
+                console.error("Content: Error during processMedia after settings update:", error);
+              });
+            }
+            return false;
+          }
+        );
+
+        // Initial setup (Moved inside initializeScript)
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", debouncedInitialization);
         } else {
-            // If top is null, same as self, or inaccessible, use current frame's hostname
-            targetHostname = window.location.hostname;
-            console.log(`[ContentScript] Not in a frame or top is inaccessible, using own hostname: ${targetHostname}`);
+          debouncedInitialization();
         }
-    } catch (e) {
-        // Catch potential cross-origin errors when accessing window.top.location
-        targetHostname = window.location.hostname;
-         console.warn(`[ContentScript] Could not access top-level hostname (cross-origin?), using frame hostname: ${targetHostname}`);
+
+        // Watch for dynamic changes (Moved inside initializeScript)
+        mediaProcessor.setupMediaObserver(processMedia);
+
+    }; // End of initializeScript function
+
+    // --- Hostname Detection and Initialization Logic ---
+    if (window.self === window.top) {
+        // Running in the top-level window
+        const topHostname = window.location.hostname;
+        console.log(`[ContentScript] Running in TOP window. Hostname: ${topHostname}`);
+        initializeScript(topHostname); // Initialize for the top window
+
+        // Send hostname to potential iframes after a short delay to allow them to load
+        // TODO: Improve iframe detection/targeting if possible
+        setTimeout(() => {
+            const iframes = document.querySelectorAll('iframe');
+             console.log(`[ContentScript Top] Found ${iframes.length} iframes. Attempting to post hostname...`);
+            iframes.forEach(iframe => {
+                if (iframe.contentWindow) {
+                    // Use '*' for targetOrigin for simplicity, but ideally restrict this
+                    iframe.contentWindow.postMessage({ type: "TOP_HOSTNAME_INFO", hostname: topHostname }, '*');
+                }
+            });
+        }, 1000); // Delay sending message slightly
+
+    } else {
+        // Running in an iframe
+        console.log(`[ContentScript] Running in IFRAME. Own hostname: ${window.location.hostname}. Waiting for hostname from top...`);
+        let receivedHostname = false;
+        const messageListener = (event: MessageEvent) => {
+            // TODO: Add origin check for security: if (event.origin !== 'expected_top_origin') return;
+            if (event.data && event.data.type === "TOP_HOSTNAME_INFO" && event.data.hostname) {
+                receivedHostname = true;
+                console.log(`[ContentScript iFrame] Received hostname from top: ${event.data.hostname}`);
+                window.removeEventListener('message', messageListener); // Clean up listener
+                initializeScript(event.data.hostname); // Initialize with received hostname
+            }
+        };
+        window.addEventListener('message', messageListener);
+
+        // Fallback timeout in case the message never arrives
+        setTimeout(() => {
+            if (!receivedHostname) {
+                console.warn(`[ContentScript iFrame] Did not receive hostname from top after timeout. Falling back to own hostname: ${window.location.hostname}`);
+                window.removeEventListener('message', messageListener); // Clean up listener
+                initializeScript(window.location.hostname); // Initialize with own hostname as fallback
+            }
+        }, 5000); // 5 second timeout
     }
 
-    // Start fetching settings from background immediately, passing the determined hostname
-    settingsHandler.initialize(targetHostname);
-
-    // --- AudioContext Resume Handler ---
+    // --- AudioContext Resume Handler --- (Moved inside initializeScript)
     // This function will be called once when the user interacts with a media element
     const resumeContextHandler = async () => {
       console.log(
