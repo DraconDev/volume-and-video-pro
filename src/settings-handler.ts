@@ -2,44 +2,50 @@ import { AudioSettings, defaultSettings } from "./types";
 
 export class SettingsHandler {
     private currentSettings: AudioSettings;
-    private hostname: string;
+    private targetHostname: string | null = null; // Store the hostname we should use
     private initializationComplete: Promise<void>;
     private resolveInitialization!: () => void; // Definite assignment assertion
 
     constructor() {
         this.currentSettings = { ...defaultSettings }; // Start with defaults
-        this.hostname = window.location.hostname;
+        // Don't set hostname here, wait for initialize
         this.initializationComplete = new Promise((resolve) => {
             this.resolveInitialization = resolve;
         });
-        // Listener setup moved inside initialize to ensure it runs after first fetch
     }
 
     /**
      * Initializes the handler by requesting the correct settings
-     * for the current page from the background script.
+     * for the target hostname from the background script.
+     * @param hostname The hostname to fetch settings for (ideally top-level).
      */
-    async initialize(): Promise<void> {
-        console.log(`SettingsHandler (${this.hostname}): Requesting initial settings.`);
+    async initialize(hostname: string): Promise<void> {
+        this.targetHostname = hostname; // Store the target hostname
+        console.log(`SettingsHandler (Target: ${this.targetHostname}): Requesting initial settings.`);
+        if (!this.targetHostname) {
+             console.error("SettingsHandler: Initialization attempted without a valid target hostname.");
+             this.currentSettings = { ...defaultSettings };
+             this.resolveInitialization();
+             return;
+        }
         try {
             const response = await chrome.runtime.sendMessage({
                 type: "GET_INITIAL_SETTINGS",
-                hostname: this.hostname,
+                hostname: this.targetHostname, // Use the provided hostname
             });
 
             if (response && response.settings) {
-                console.log(`SettingsHandler (${this.hostname}): Received initial settings`, response.settings);
+                console.log(`SettingsHandler (Target: ${this.targetHostname}): Received initial settings`, response.settings);
                 this.currentSettings = response.settings;
             } else {
-                console.warn(`SettingsHandler (${this.hostname}): No/invalid initial settings received, using defaults.`, response);
+                console.warn(`SettingsHandler (Target: ${this.targetHostname}): No/invalid initial settings received, using defaults.`, response);
                 this.currentSettings = { ...defaultSettings };
             }
         } catch (error) {
-            console.error(`SettingsHandler (${this.hostname}): Error requesting initial settings:`, error, "Using defaults.");
+            console.error(`SettingsHandler (Target: ${this.targetHostname}): Error requesting initial settings:`, error, "Using defaults.");
             this.currentSettings = { ...defaultSettings };
         } finally {
-            console.log(`SettingsHandler (${this.hostname}): Initialization complete.`);
-            // Listener is no longer set up here; content.ts will handle updates
+            console.log(`SettingsHandler (Target: ${this.targetHostname}): Initialization complete.`);
             this.resolveInitialization(); // Signal that initialization is done
         }
     }
@@ -64,9 +70,7 @@ export class SettingsHandler {
      * updates from the background script via messages.
      */
     updateSettings(settings: AudioSettings): void {
-        // This method might be redundant if all updates come via the listener,
-        // but keep it for now as content.ts uses it.
-        console.log(`SettingsHandler (${this.hostname}): Settings updated directly`, settings);
+        console.log(`SettingsHandler (Target: ${this.targetHostname}): Settings updated directly`, settings);
         this.currentSettings = settings;
     }
 
