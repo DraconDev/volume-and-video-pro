@@ -44,6 +44,8 @@ chrome.runtime.onMessage.addListener(
                 console.log(`Background: Settings initialized. Getting settings for ${hostname}`);
 
                 const siteConfig = settingsManager.getSettingsForSite(hostname);
+                // Add detailed log for the retrieved siteConfig
+                console.log(`[DEBUG] Background (GET_INITIAL_SETTINGS): Retrieved siteConfig for ${hostname}:`, JSON.stringify(siteConfig, null, 2));
                 let effectiveSettings: any;
 
                 // Determine the correct settings based on site config and mode
