@@ -20,10 +20,17 @@ export default defineContentScript({
     // Determine the relevant hostname (try top-level first, fallback to current frame)
     let targetHostname: string;
     try {
-        // Accessing window.top.location can throw cross-origin errors
-        targetHostname = window.top.location.hostname;
-         console.log(`[ContentScript] Running in frame, using top-level hostname: ${targetHostname}`);
+        // Check if window.top exists and is accessible before trying to get its hostname
+        if (window.top && window.top !== window.self && window.top.location.hostname) {
+            targetHostname = window.top.location.hostname;
+            console.log(`[ContentScript] Running in frame, using top-level hostname: ${targetHostname}`);
+        } else {
+            // If top is null, same as self, or inaccessible, use current frame's hostname
+            targetHostname = window.location.hostname;
+            console.log(`[ContentScript] Not in a frame or top is inaccessible, using own hostname: ${targetHostname}`);
+        }
     } catch (e) {
+        // Catch potential cross-origin errors when accessing window.top.location
         targetHostname = window.location.hostname;
          console.warn(`[ContentScript] Could not access top-level hostname (cross-origin?), using frame hostname: ${targetHostname}`);
     }
