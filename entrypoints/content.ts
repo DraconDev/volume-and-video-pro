@@ -25,15 +25,17 @@ export default defineContentScript({
     const resumeContextHandler = async () => {
       console.log(
         "Content: Media interaction detected, attempting to resume AudioContext."
-       );
-       // Attempt to resume the context via MediaProcessor -> AudioProcessor
-       await mediaProcessor.attemptContextResume();
-       // After attempting resume, re-process media to ensure settings are applied
-       // with the potentially now-running context.
-       console.log("Content: Context potentially resumed, reprocessing media...");
-       await processMedia(); // Add this call
-     };
-     // --- End AudioContext Resume Handler ---
+      );
+      // Attempt to resume the context via MediaProcessor -> AudioProcessor
+      await mediaProcessor.attemptContextResume();
+      // After attempting resume, re-process media to ensure settings are applied
+      // with the potentially now-running context.
+      console.log(
+        "Content: Context potentially resumed, reprocessing media..."
+      );
+      await processMedia(); // Add this call
+    };
+    // --- End AudioContext Resume Handler ---
 
     // Process media with current settings
     const processMedia = async () => {
@@ -107,14 +109,21 @@ export default defineContentScript({
           );
 
           // Apply the update since SettingsEventHandler should have targeted correctly
-          console.log("Content: Applying settings update received via message.");
+          console.log(
+            "Content: Applying settings update received via message."
+          );
           settingsHandler.updateSettings(updateSettingsMessage.settings);
 
           // Now, re-run processMedia to apply the new settings
-          console.log("Content: Settings updated via message, reprocessing media elements...");
-           processMedia().catch(error => {
-               console.error("Content: Error during processMedia after settings update:", error);
-           });
+          console.log(
+            "Content: Settings updated via message, reprocessing media elements..."
+          );
+          processMedia().catch((error) => {
+            console.error(
+              "Content: Error during processMedia after settings update:",
+              error
+            );
+          });
         }
         // Return false or undefined if not sending an async response
         return false;
