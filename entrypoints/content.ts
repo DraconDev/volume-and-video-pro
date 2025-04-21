@@ -194,8 +194,9 @@ export default defineContentScript({
 
       // Attach interaction listeners to each media element to resume AudioContext
       mediaElements.forEach((element) => {
-        // Use { once: true } so the listener fires only once per event type per element
-        // Only listen for 'play' to resume context, avoiding interference with click-to-pause.
+        // Remove any potentially existing listener first to prevent duplicates if processMedia runs multiple times
+        element.removeEventListener("play", resumeContextHandler);
+        // Add the listener with { once: true }
         element.addEventListener("play", resumeContextHandler, { once: true });
         // 'touchstart' could also be added if needed for mobile
       });
