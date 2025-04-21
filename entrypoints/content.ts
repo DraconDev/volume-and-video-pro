@@ -79,7 +79,7 @@ export default defineContentScript({
             } catch (error) {
               console.error(`Content: Error during delayed initialization on ${window.location.hostname}:`, error);
             }
-          }, 100);
+          }, 1500); // Increased delay significantly to 1500ms
         };
 
         // Listen for settings updates from the background script (Moved inside initializeScript)
