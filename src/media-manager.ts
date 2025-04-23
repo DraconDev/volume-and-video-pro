@@ -209,22 +209,13 @@ export class MediaManager {
 
     // Simplified mutation observer
     const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-          const needsCheck = Array.from(mutation.addedNodes).some(
-            (node) =>
-              node instanceof Element &&
-              (node.tagName === "VIDEO" || // Is a media element
-                node.tagName === "AUDIO" ||
-                node.querySelector?.("video, audio") || // Contains a media element
-                node.shadowRoot) // Has a shadow root (might contain media)
-          );
+      // Trigger check more aggressively: if any nodes were added anywhere.
+      // This is less performant but more likely to catch late-loading elements.
+      const nodesAdded = mutations.some(mutation => mutation.type === "childList" && mutation.addedNodes.length > 0);
 
-          if (needsCheck) {
-            debouncedCheck();
-            break;
-          }
-        }
+      if (nodesAdded) {
+         // console.log("[MediaManager Observer] Nodes added, triggering debounced check."); // Optional debug log
+         debouncedCheck();
       }
     });
 
