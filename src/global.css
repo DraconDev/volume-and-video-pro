@@ -4,13 +4,13 @@
 
 @layer base {
   :root {
-    --color-bg: #1a1b1e;
-    --color-text: #ffffff;
+    --color-bg: #16171a; /* Slightly darker background */
+    --color-text: #e0e0e0; /* Slightly less stark white text */
     --color-text-secondary: #a1a8b3;
-    --color-primary: #60a5fa;
-    --color-primary-hover: #3b82f6;
-    --color-surface: #2a2b2e;
-    --color-surface-hover: #3a3b3e;
+    --color-primary: #5a9bf0; /* Slightly more vibrant primary */
+    --color-primary-hover: #3a7cdb; /* Adjusted hover for new primary */
+    --color-surface: #252629; /* Adjusted surface for darker background */
+    --color-surface-hover: #353639; /* Adjusted surface hover */
     --color-border: #374151;
     --color-slider-bg: #4b5563;
   }
