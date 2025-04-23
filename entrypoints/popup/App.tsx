@@ -85,7 +85,10 @@ function App() {
       ...settings, // Use current state as base
       [key]: value,
     };
-    console.log(`[Popup] handleSettingChange: Key=${key}, Value=${value}. New settings object:`, newSettings); // Log immediate change intent
+    console.log(
+      `[Popup] handleSettingChange: Key=${key}, Value=${value}. New settings object:`,
+      newSettings
+    ); // Log immediate change intent
 
     // Update local state immediately for responsive UI
     setSettings(newSettings);
@@ -96,38 +99,52 @@ function App() {
     }
 
     // Set a new timeout, passing the specific newSettings for this change
-    updateTimeoutRef.current = window.setTimeout(async (settingsToSend: AudioSettings) => { // Add AudioSettings type
-      console.log("[Popup] Debounce triggered. Sending update..."); // Log debounce execution
-      try {
-        // Use the settingsToSend passed into the callback, which corresponds to this specific change event
-        const finalIsUsingGlobal = isUsingGlobalSettings; // Read latest global/site mode state here
-        console.log("[Popup] Debounce - Final state to send:", { settingsToSend, finalIsUsingGlobal }); // Log state being sent
+    updateTimeoutRef.current = window.setTimeout(
+      async (settingsToSend: AudioSettings) => {
+        // Add AudioSettings type
+        console.log("[Popup] Debounce triggered. Sending update..."); // Log debounce execution
+        try {
+          // Use the settingsToSend passed into the callback, which corresponds to this specific change event
+          const finalIsUsingGlobal = isUsingGlobalSettings; // Read latest global/site mode state here
+          console.log("[Popup] Debounce - Final state to send:", {
+            settingsToSend,
+            finalIsUsingGlobal,
+          }); // Log state being sent
 
-        const [tab] = await chrome.tabs.query({
-          active: true,
-          currentWindow: true,
-        });
-        if (tab?.url && tab.id) {
-          const hostname = new URL(tab.url).hostname;
+          const [tab] = await chrome.tabs.query({
+            active: true,
+            currentWindow: true,
+          });
+          if (tab?.url && tab.id) {
+            const hostname = new URL(tab.url).hostname;
 
-          if (finalIsUsingGlobal) {
-            await settingsManager.updateGlobalSettings(settingsToSend, tab.id, hostname); // Use settingsToSend
-             console.log("[Popup] Debounce - Called updateGlobalSettings"); // Log which function was called
+            if (finalIsUsingGlobal) {
+              await settingsManager.updateGlobalSettings(
+                settingsToSend,
+                tab.id,
+                hostname
+              ); // Use settingsToSend
+              console.log("[Popup] Debounce - Called updateGlobalSettings"); // Log which function was called
+            } else {
+              await settingsManager.updateSiteSettings(
+                hostname,
+                settingsToSend, // Use settingsToSend
+                tab.id
+              );
+              console.log("[Popup] Debounce - Called updateSiteSettings"); // Log which function was called
+            }
           } else {
-            await settingsManager.updateSiteSettings(
-              hostname,
-              settingsToSend, // Use settingsToSend
-              tab.id
+            console.warn(
+              "[Popup] Debounce - No active tab found to send update."
             );
-             console.log("[Popup] Debounce - Called updateSiteSettings"); // Log which function was called
           }
-        } else {
-           console.warn("[Popup] Debounce - No active tab found to send update.");
+        } catch (error) {
+          console.error("Failed to update settings via debounce:", error); // Clarify error source
         }
-      } catch (error) {
-        console.error("Failed to update settings via debounce:", error); // Clarify error source
-      }
-    }, 300, newSettings); // Pass newSettings as argument to setTimeout callback
+      },
+      300,
+      newSettings
+    ); // Pass newSettings as argument to setTimeout callback
   };
 
   // Initialize updateTimeoutRef
@@ -166,9 +183,9 @@ function App() {
 
       // Don't update actual settings, just switch modes
       setIsUsingGlobalSettings(mode === "global");
-        setIsUsingGlobalSettings(mode === "global");
-        setIsUsingGlobalSettings(mode === "global");
-        setIsSiteEnabled(mode !== "disabled");
+      setIsUsingGlobalSettings(mode === "global");
+      setIsUsingGlobalSettings(mode === "global");
+      setIsSiteEnabled(mode !== "disabled");
 
       let settingsForUI: AudioSettings;
       if (mode === "disabled") {
@@ -178,12 +195,19 @@ function App() {
         setSettings(settingsForUI);
       } else {
         // For 'global' or 'site' mode
-        const result = await settingsManager.updateSiteMode(hostname, mode, tab.id);
+        const result = await settingsManager.updateSiteMode(
+          hostname,
+          mode,
+          tab.id
+        );
         // After changing mode, update UI to show the settings for that mode
         settingsForUI = result.settingsToUse;
         setSettings(settingsForUI);
       }
-       console.log(`Popup: Mode toggled to ${mode}, UI settings updated to:`, settingsForUI); // Corrected log
+      console.log(
+        `Popup: Mode toggled to ${mode}, UI settings updated to:`,
+        settingsForUI
+      ); // Corrected log
     } catch (error) {
       console.error("Popup: Error toggling mode:", error);
     }
@@ -193,7 +217,7 @@ function App() {
   const displaySettings = isSiteEnabled ? settings : defaultSettings;
 
   return (
-    <div className="w-[280px] p-6 font-sans bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col space-y-6 rounded-lg">
+    <div className="w-[280px] p-4 font-sans bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col space-y-4">
       <AudioControls
         settings={displaySettings}
         onSettingChange={handleSettingChange}
