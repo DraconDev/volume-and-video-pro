@@ -193,7 +193,7 @@ function App() {
   const displaySettings = isSiteEnabled ? settings : defaultSettings;
 
   return (
-    <div className="w-[280px] p-4 font-sans bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col space-y-4">
+    <div className="w-[280px] p-6 font-sans bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col space-y-6 rounded-lg">
       <AudioControls
         settings={displaySettings}
         onSettingChange={handleSettingChange}
