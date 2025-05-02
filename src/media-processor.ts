@@ -71,12 +71,63 @@ export class MediaProcessor {
   applySettingsImmediately(mediaElements: HTMLMediaElement[], settings: AudioSettings): void {
     console.log("[MediaProcessor] Applying settings immediately to media elements");
     
-    // Update speed for all elements
+    // Update all elements with current settings
     mediaElements.forEach((element) => {
-      console.log(`[MediaProcessor] Updating speed for ${element.src || '(no src)'} to ${settings.speed}`);
-      element.playbackRate = settings.speed / 100;
-      element.defaultPlaybackRate = settings.speed / 100;
+      try {
+        console.log(`[MediaProcessor] Applying settings to ${element.src || '(no src)'}`, {
+          speed: settings.speed,
+          volume: settings.volume,
+          playbackRate: settings.speed / 100
+        });
+
+        // Store current state
+        const wasPlaying = !element.paused;
+        const currentTime = element.currentTime;
+        
+        // Apply settings
+        element.playbackRate = settings.speed / 100;
+        element.defaultPlaybackRate = settings.speed / 100;
+        element.volume = settings.volume / 100;
+
+        // Restore playback state if needed
+        if (wasPlaying) {
+          element.play()
+            .catch(e => console.warn("MediaProcessor: Failed to resume playback after settings update:", e));
+        } else {
+          // Ensure it stays paused at the same position
+          element.currentTime = currentTime;
+        }
+      } catch (e) {
+        console.error(`MediaProcessor: Error applying settings to ${element.src || '(no src)'}:`, e);
+      }
     });
+  }
+
+  /**
+   * Force update of audio effects even if context already exists
+   * Useful for immediate application of filter/audio changes
+   */
+  async forceAudioEffectsUpdate(settings: AudioSettings): Promise<void> {
+    console.log("[MediaProcessor] Forcing audio effects update");
+    
+    if (this.audioProcessor['audioContext'] && this.audioProcessor['audioContext'].state !== 'closed') {
+      try {
+        // Create new audio context if needed
+        if (this.audioProcessor['audioContext'].state === 'suspended') {
+          await this.audioProcessor['audioContext'].resume();
+        }
+        
+        // Force update of audio effects
+        await this.audioProcessor.updateAudioEffects(settings);
+        console.log("[MediaProcessor] Successfully forced audio effects update");
+      } catch (e) {
+        console.error("[MediaProcessor] Failed to force audio effects update:", e);
+      }
+    } else {
+      console.log("[MediaProcessor] Creating new audio context for forced update");
+      const mockElement = document.createElement('audio');
+      await this.audioProcessor.setupAudioContext(mockElement, settings);
+    }
   }
 
   setupMediaObserver(callback: () => Promise<void>): void {

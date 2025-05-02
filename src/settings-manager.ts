@@ -129,6 +129,14 @@ export class SettingsManager extends EventEmitter {
     broadcastGlobalSettingsUpdate(this.globalSettings);
     console.log("SettingsManager: Updated global settings & called broadcast immediately");
 
+    // Force immediate audio effects update across all contexts
+    try {
+      await settingsManager.mediaProcessor.forceAudioEffectsUpdate(this.globalSettings);
+      console.log("SettingsManager: Forced audio effects update for global settings");
+    } catch (e) {
+      console.error("SettingsManager: Failed to force audio effects update:", e);
+    }
+
     await this.persistSettings(hostname);
   }
 
@@ -176,6 +184,14 @@ export class SettingsManager extends EventEmitter {
     // Broadcast immediately before persistence
     broadcastSiteSettingsUpdate(hostname, siteConfig.settings);
     console.log("SettingsManager: Updated site settings & called broadcast immediately");
+
+    // Force immediate audio effects update for this site's settings
+    try {
+      await settingsManager.mediaProcessor.forceAudioEffectsUpdate(siteConfig.settings);
+      console.log(`SettingsManager: Forced audio effects update for site ${hostname}`);
+    } catch (e) {
+      console.error(`SettingsManager: Failed to force audio effects update for site ${hostname}:`, e);
+    }
 
     await this.persistSettings(hostname);
   }
