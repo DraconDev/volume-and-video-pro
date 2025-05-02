@@ -32,12 +32,21 @@ export class MediaProcessor {
     }
   }
 
+  private lastAppliedSettings: AudioSettings | null = null;
+
   async processMediaElements(
     mediaElements: HTMLMediaElement[],
     settings: AudioSettings,
     needsProcessing: boolean // Keep this param even if unused for now, might be needed later
   ): Promise<void> {
     console.log("[MediaProcessor] processMediaElements called with settings:", JSON.stringify(settings));
+    
+    // Skip processing if settings haven't changed
+    if (this.lastAppliedSettings && this.deepEquals(this.lastAppliedSettings, settings)) {
+      console.log("[MediaProcessor] Settings unchanged, skipping redundant processing");
+      return;
+    }
+    this.lastAppliedSettings = { ...settings };
 
     // Update speed for all elements
     mediaElements.forEach((element) =>
@@ -152,6 +161,23 @@ export class MediaProcessor {
   public async attemptContextResume(): Promise<void> {
     // Access the private member using bracket notation if needed, or make it public/internal
     await this.audioProcessor.tryResumeContext();
+  }
+
+  // Helper method to compare settings objects deeply
+  private deepEquals(a: any, b: any): boolean {
+    if (a === b) return true;
+    if (typeof a !== 'object' || typeof b !== 'object' || a == null || b == null) return false;
+    const keysA = Object.keys(a), keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+      if (!keysB.includes(key)) return false;
+      if (typeof a[key] === 'object' && typeof b[key] === 'object') {
+        if (!this.deepEquals(a[key], b[key])) return false;
+      } else if (a[key] !== b[key]) {
+        return false;
+      }
+    }
+    return true;
   }
 
 } // End of MediaProcessor class
