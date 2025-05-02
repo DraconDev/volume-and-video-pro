@@ -70,7 +70,7 @@ export class SettingsManager extends EventEmitter {
       } catch (error) {
         console.error("SettingsManager: Failed to persist settings:", error);
       }
-    }, 1000); // Debounce for 1 second
+    }, 200); // Reduced debounce time to 200ms
   }
 
   getSettingsForSite(hostname: string): SiteSettings { // Changed return type to non-nullable
@@ -125,9 +125,9 @@ export class SettingsManager extends EventEmitter {
       ...settings,
     };
 
-    // Directly call the broadcast function instead of emitting an event
+    // Broadcast immediately before persistence
     broadcastGlobalSettingsUpdate(this.globalSettings);
-    console.log("SettingsManager: Updated global settings & called broadcast"); // Added log
+    console.log("SettingsManager: Updated global settings & called broadcast immediately");
 
     await this.persistSettings(hostname);
   }
@@ -173,15 +173,11 @@ export class SettingsManager extends EventEmitter {
     siteConfig.enabled = true;
     this.siteSettings.set(hostname, siteConfig);
 
-    await this.persistSettings(hostname);
-    // Directly call the broadcast function instead of emitting an event
-    broadcastSiteSettingsUpdate(hostname, siteConfig.settings); // Use the actual saved settings
+    // Broadcast immediately before persistence
+    broadcastSiteSettingsUpdate(hostname, siteConfig.settings);
+    console.log("SettingsManager: Updated site settings & called broadcast immediately");
 
-    console.log("SettingsManager: Updated site settings & called broadcast", { // Updated log
-      isNewSite,
-      oldConfig: this.siteSettings.get(hostname),
-      newConfig: siteConfig,
-    });
+    await this.persistSettings(hostname);
   }
 
   async updateSiteMode(
