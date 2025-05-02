@@ -7,7 +7,11 @@ import {
 } from "./types";
 import EventEmitter from "events";
 // Import the broadcast functions directly
-import { broadcastSiteSettingsUpdate, broadcastSiteModeUpdate, broadcastGlobalSettingsUpdate } from "./settings-event-handler";
+import {
+  broadcastSiteSettingsUpdate,
+  broadcastSiteModeUpdate,
+  broadcastGlobalSettingsUpdate,
+} from "./settings-event-handler";
 
 export class SettingsManager extends EventEmitter {
   globalSettings: AudioSettings;
@@ -28,12 +32,20 @@ export class SettingsManager extends EventEmitter {
 
     if (storage.siteSettings) {
       this.siteSettings = new Map(Object.entries(storage.siteSettings));
-       console.log("[DEBUG] SettingsManager Initialized with stored site settings. SiteSettings Map:", this.siteSettings); // Add log
+      console.log(
+        "[DEBUG] SettingsManager Initialized with stored site settings. SiteSettings Map:",
+        this.siteSettings
+      ); // Add log
     } else {
-       this.siteSettings = new Map(); // Ensure map is empty if nothing in storage
-       console.log("[DEBUG] SettingsManager Initialized with no stored site settings."); // Add log
+      this.siteSettings = new Map(); // Ensure map is empty if nothing in storage
+      console.log(
+        "[DEBUG] SettingsManager Initialized with no stored site settings."
+      ); // Add log
     }
-     console.log("[DEBUG] SettingsManager Initialized. Global Settings:", this.globalSettings); // Also log global settings
+    console.log(
+      "[DEBUG] SettingsManager Initialized. Global Settings:",
+      this.globalSettings
+    ); // Also log global settings
   }
 
   private persistTimeout: NodeJS.Timeout | null = null;
@@ -73,12 +85,15 @@ export class SettingsManager extends EventEmitter {
     }, 200); // Reduced debounce time to 200ms
   }
 
-  getSettingsForSite(hostname: string): SiteSettings { // Changed return type to non-nullable
+  getSettingsForSite(hostname: string): SiteSettings {
+    // Changed return type to non-nullable
     let siteConfig = this.siteSettings.get(hostname);
 
     // If no site config exists, create a default one using global settings
     if (!siteConfig) {
-      console.log(`SettingsManager: No config found for ${hostname}, creating default global config.`);
+      console.log(
+        `SettingsManager: No config found for ${hostname}, creating default global config.`
+      );
       siteConfig = {
         enabled: true, // Assume enabled by default
         activeSetting: "global",
@@ -127,15 +142,9 @@ export class SettingsManager extends EventEmitter {
 
     // Broadcast immediately before persistence
     broadcastGlobalSettingsUpdate(this.globalSettings);
-    console.log("SettingsManager: Updated global settings & called broadcast immediately");
-
-    // Force immediate audio effects update across all contexts
-    try {
-      await settingsManager.mediaProcessor.forceAudioEffectsUpdate(this.globalSettings);
-      console.log("SettingsManager: Forced audio effects update for global settings");
-    } catch (e) {
-      console.error("SettingsManager: Failed to force audio effects update:", e);
-    }
+    console.log(
+      "SettingsManager: Updated global settings & called broadcast immediately"
+    );
 
     await this.persistSettings(hostname);
   }
@@ -183,15 +192,9 @@ export class SettingsManager extends EventEmitter {
 
     // Broadcast immediately before persistence
     broadcastSiteSettingsUpdate(hostname, siteConfig.settings);
-    console.log("SettingsManager: Updated site settings & called broadcast immediately");
-
-    // Force immediate audio effects update for this site's settings
-    try {
-      await settingsManager.mediaProcessor.forceAudioEffectsUpdate(siteConfig.settings);
-      console.log(`SettingsManager: Forced audio effects update for site ${hostname}`);
-    } catch (e) {
-      console.error(`SettingsManager: Failed to force audio effects update for site ${hostname}:`, e);
-    }
+    console.log(
+      "SettingsManager: Updated site settings & called broadcast immediately"
+    );
 
     await this.persistSettings(hostname);
   }
@@ -233,7 +236,11 @@ export class SettingsManager extends EventEmitter {
 
     // Directly call the broadcast function instead of emitting an event
     broadcastSiteModeUpdate(hostname, mode, settingsToBroadcast);
-    console.log("SettingsManager: Updated site mode & called broadcast", { hostname, mode, settingsToBroadcast }); // Updated log
+    console.log("SettingsManager: Updated site mode & called broadcast", {
+      hostname,
+      mode,
+      settingsToBroadcast,
+    }); // Updated log
     return { settingsToUse: settingsToBroadcast, siteConfig }; // Return the guaranteed object
   }
 
@@ -284,7 +291,9 @@ export class SettingsManager extends EventEmitter {
     // Ensure the passed object strictly matches AudioSettings type
     const disabledSettings: AudioSettings = { ...defaultSettings };
     broadcastSiteModeUpdate(hostname, "disabled", disabledSettings);
-    console.log("SettingsManager: Disabled site & called broadcast", { hostname }); // Added log
+    console.log("SettingsManager: Disabled site & called broadcast", {
+      hostname,
+    }); // Added log
 
     return {
       actualSettings: siteConfig.settings, // Keep returning this for potential internal use
