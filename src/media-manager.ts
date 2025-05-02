@@ -211,11 +211,14 @@ export class MediaManager {
     const observer = new MutationObserver((mutations) => {
       // Trigger check more aggressively: if any nodes were added anywhere.
       // This is less performant but more likely to catch late-loading elements.
-      const nodesAdded = mutations.some(mutation => mutation.type === "childList" && mutation.addedNodes.length > 0);
+      const nodesAdded = mutations.some(
+        (mutation) =>
+          mutation.type === "childList" && mutation.addedNodes.length > 0
+      );
 
       if (nodesAdded) {
-         // console.log("[MediaManager Observer] Nodes added, triggering debounced check."); // Optional debug log
-         debouncedCheck();
+        // console.log("[MediaManager Observer] Nodes added, triggering debounced check."); // Optional debug log
+        debouncedCheck();
       }
     });
 
