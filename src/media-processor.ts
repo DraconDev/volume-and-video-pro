@@ -37,35 +37,46 @@ export class MediaProcessor {
     settings: AudioSettings,
     needsProcessing: boolean // Keep this param even if unused for now, might be needed later
   ): Promise<void> {
-    console.log("[MediaProcessor] processMediaElements called with settings:", JSON.stringify(settings)); // ADDED LOG + stringify
+    console.log("[MediaProcessor] processMediaElements called with settings:", JSON.stringify(settings));
 
     // Update speed for all elements
     mediaElements.forEach((element) =>
       this.updatePlaybackSpeed(element, settings.speed)
     );
 
+    // Apply settings immediately if audio context exists
+    if (this.audioProcessor['audioContext'] && this.audioProcessor['audioContext'].state !== 'closed') {
+      console.log("[MediaProcessor] Applying settings immediately to existing audio context");
+      await this.audioProcessor.updateAudioEffects(settings);
+      return;
+    }
+
     // Setup audio processing only if it doesn't exist for the element
     for (const element of mediaElements) {
       try {
         if (!this.audioProcessor.hasProcessing(element)) {
-          console.log(`[MediaProcessor] First time processing, setting up audio context for: ${element.src || '(no src)'}`); // ADDED LOG
+          console.log(`[MediaProcessor] Setting up audio context for: ${element.src || '(no src)'}`);
           await this.audioProcessor.setupAudioContext(element, settings);
         }
       } catch (e) {
         console.error(`MediaProcessor: Failed to setup audio context for element ${element.src || '(no src)'}:`, e);
       }
     }
+  }
 
-    // Update audio effects for all currently processed elements using the latest settings.
-    // This relies on updateAudioEffects correctly calling connectNodes.
-    // Check if audioContext exists and is not closed before attempting updates.
-    // Note: Accessing private member audioContext directly here for the check. Consider adding a getter if preferred.
-    if (this.audioProcessor['audioContext'] && this.audioProcessor['audioContext'].state !== 'closed') {
-        console.log("[MediaProcessor] Calling updateAudioEffects with settings:", JSON.stringify(settings));
-        await this.audioProcessor.updateAudioEffects(settings);
-    } else {
-        console.log("[MediaProcessor] Skipping audio effects update, context not initialized or closed.");
-    }
+  /**
+   * Apply settings directly to media elements without waiting for async operations
+   * Useful for immediate UI feedback
+   */
+  applySettingsImmediately(mediaElements: HTMLMediaElement[], settings: AudioSettings): void {
+    console.log("[MediaProcessor] Applying settings immediately to media elements");
+    
+    // Update speed for all elements
+    mediaElements.forEach((element) => {
+      console.log(`[MediaProcessor] Updating speed for ${element.src || '(no src)'} to ${settings.speed}`);
+      element.playbackRate = settings.speed / 100;
+      element.defaultPlaybackRate = settings.speed / 100;
+    });
   }
 
   setupMediaObserver(callback: () => Promise<void>): void {
