@@ -129,44 +129,44 @@ export class MediaManager {
       return [];
     }
 
-    const elements: HTMLMediaElement[] = [];
-    const processedNodes = new Set<Node>();
-
-    try {
-      // Direct media elements
-      const mediaElements = root.querySelectorAll("video, audio");
-      mediaElements.forEach((element) => {
-        if (
-          element instanceof HTMLMediaElement &&
-          !processedNodes.has(element) &&
-          this.isElementVisible(element)
-        ) {
-          elements.push(element);
-          processedNodes.add(element);
+    // Special handling for 456movie.net
+    if (window.location.hostname === "456movie.net") {
+      const elements: HTMLMediaElement[] = [];
+      
+      // Try to find video elements in common player containers
+      const playerContainers = root.querySelectorAll(
+        ".video-container, .player-wrapper, .media-player"
+      );
+      
+      playerContainers.forEach(container => {
+        const video = container.querySelector("video");
+        if (video instanceof HTMLMediaElement) {
+          elements.push(video);
         }
       });
-
-      // Handle Shadow DOM
-      if (root instanceof Element && root.shadowRoot) {
-        elements.push(...this.findMediaElements(root.shadowRoot, depth + 1));
-      }
-
-      // Custom players (only at top level)
-      if (depth === 0) {
-        const customPlayers = this.findCustomPlayers(root);
-        customPlayers.forEach((player) => {
-          const mediaInPlayer = player.querySelectorAll("video, audio");
-          mediaInPlayer.forEach((element) => {
-            if (
-              element instanceof HTMLMediaElement &&
-              !processedNodes.has(element) &&
-              this.isElementVisible(element)
-            ) {
-              elements.push(element);
-              processedNodes.add(element);
-            }
-          });
+      
+      // Fallback: look for any video elements directly
+      if (elements.length === 0) {
+        const videoElements = root.querySelectorAll("video");
+        videoElements.forEach(video => {
+          if (video instanceof HTMLMediaElement) {
+            elements.push(video);
+          }
         });
+      }
+      
+      // If still not found, try to find iframe-based players
+      if (elements.length === 0) {
+        const iframes = root.querySelectorAll("iframe");
+        iframes.forEach(iframe => {
+          try {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (iframeDoc) {
+              const video = iframeDoc.querySelector("video");
+              if (video instanceof HTMLMediaElement) {
+                elements.push(video);
+              }
+            }
       }
     } catch (e) {
       if (!this.isExtensionContext()) {
