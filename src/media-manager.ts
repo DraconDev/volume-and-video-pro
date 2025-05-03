@@ -63,8 +63,8 @@ export class MediaManager {
   private static getExtraSelectorsForSite(): string[] {
     const currentHostname = window.location.hostname;
     for (const siteHostname in mediaConfig.siteSelectors) {
-      // Use includes for subdomain matching (e.g., music.youtube.com)
-      if (currentHostname.includes(siteHostname)) {
+      // Exact match for hostname (no subdomain matching)
+      if (currentHostname === siteHostname) {
         // Type assertion needed as keys are strings
         return mediaConfig.siteSelectors[
           siteHostname as keyof typeof mediaConfig.siteSelectors
