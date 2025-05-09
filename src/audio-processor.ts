@@ -9,6 +9,7 @@ export interface AudioNodes {
   merger: ChannelMergerNode;
   splitter: ChannelSplitterNode;
   element: HTMLMediaElement;
+  mono: boolean; // Track the current mono setting for this element
 }
 
 export class AudioProcessor {
@@ -74,6 +75,7 @@ export class AudioProcessor {
       splitter,
       merger,
       element: mediaElement,
+      mono: settings.mono, // Initialize mono setting
     };
 
     // Connect nodes based on settings
