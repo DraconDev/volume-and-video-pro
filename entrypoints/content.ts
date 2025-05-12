@@ -42,6 +42,14 @@ export default defineContentScript({
         console.log(
           `[ContentScript DEBUG] processMedia called for ${window.location.hostname}`
         );
+        try {
+          await settingsHandler.ensureInitialized();
+          console.log(`[ContentScript DEBUG] Settings initialized successfully in processMedia for ${window.location.hostname}. Current settings:`, JSON.stringify(settingsHandler.getCurrentSettings()));
+        } catch (error) {
+          console.error(`[ContentScript DEBUG] Error ensuring settings initialized in processMedia for ${window.location.hostname}:`, error);
+          return; // Do not proceed if settings can't be initialized
+        }
+
         const mediaElements = mediaProcessor.findMediaElements();
         console.log(
           `[ContentScript DEBUG] Found ${mediaElements.length} media elements:`,
@@ -87,11 +95,8 @@ export default defineContentScript({
         }
         initializationTimeout = window.setTimeout(async () => {
           try {
-            await settingsHandler.ensureInitialized();
-            console.log(
-              `[ContentScript DEBUG] Initialization complete for ${window.location.hostname}. Settings to use initially:`,
-              JSON.stringify(settingsHandler.getCurrentSettings())
-            );
+            // await settingsHandler.ensureInitialized(); // Removed: processMedia now handles this
+            console.log(`[ContentScript DEBUG] Debounced initialization triggered for ${window.location.hostname}. Calling processMedia.`);
             await processMedia();
           } catch (error) {
             console.error(
@@ -99,7 +104,7 @@ export default defineContentScript({
               error
             );
           }
-        }, 1500); // Increased delay significantly to 1500ms
+        }, 50); // Reduced delay significantly
       };
 
       // Listen for settings updates from the background script (Moved inside initializeScript)
@@ -221,144 +226,5 @@ export default defineContentScript({
       }, 3000); // 3 second timeout (reduced from 5)
     }
 
-    // --- Definitions moved inside initializeScript ---
-    // This function will be called once when the user interacts with a media element
-    const resumeContextHandler = async () => {
-      console.log(
-        "Content: Media interaction detected, attempting to resume AudioContext."
-      );
-      // Attempt to resume the context via MediaProcessor -> AudioProcessor
-      await mediaProcessor.attemptContextResume();
-      // After attempting resume, re-process media to ensure settings are applied
-      // with the potentially now-running context.
-      console.log(
-        "Content: Context potentially resumed, reprocessing media..."
-      );
-      await processMedia(); // Add this call
-    };
-    // --- End AudioContext Resume Handler ---
-
-    // Process media with current settings
-    const processMedia = async () => {
-      console.log(
-        `[ContentScript DEBUG] processMedia called for ${window.location.hostname}`
-      ); // Add hostname
-      const mediaElements = mediaProcessor.findMediaElements();
-      // ADD LOG: Log details about found elements
-      console.log(
-        `[ContentScript DEBUG] Found ${mediaElements.length} media elements:`,
-        mediaElements.map((el) => ({
-          src: el.src,
-          tagName: el.tagName,
-          id: el.id,
-          classList: el.classList.toString(),
-        }))
-      );
-
-      // Attach interaction listeners to each media element to resume AudioContext
-      mediaElements.forEach((element) => {
-        // Remove any potentially existing listener first to prevent duplicates if processMedia runs multiple times
-        element.removeEventListener("play", resumeContextHandler);
-        // Add the listener with { once: true }
-        element.addEventListener("play", resumeContextHandler, { once: true });
-        // 'touchstart' could also be added if needed for mobile
-      });
-
-      const currentSettings = settingsHandler.getCurrentSettings();
-      const needsProcessing = settingsHandler.needsAudioProcessing();
-      console.log(
-        "Content: Processing media with settings:",
-        currentSettings,
-        "needsProcessing:",
-        needsProcessing
-      );
-      // Apply settings (speed is applied here, audio effects setup happens here too)
-      console.log(
-        "[ProcessMedia] Applying settings:",
-        JSON.stringify(currentSettings)
-      ); // ADDED LOG
-      await mediaProcessor.processMediaElements(
-        mediaElements,
-        currentSettings,
-        needsProcessing
-      );
-    };
-
-    // Initialize with debouncing
-    let initializationTimeout: number | null = null;
-    const debouncedInitialization = () => {
-      if (initializationTimeout) {
-        window.clearTimeout(initializationTimeout);
-      }
-
-      initializationTimeout = window.setTimeout(async () => {
-        try {
-          // Wait for settings to be fetched before processing media
-          await settingsHandler.ensureInitialized();
-          // ADD LOG: Log the settings obtained after initialization
-          console.log(
-            `[ContentScript DEBUG] Initialization complete for ${window.location.hostname}. Settings to use initially:`,
-            JSON.stringify(settingsHandler.getCurrentSettings())
-          );
-          await processMedia();
-        } catch (error) {
-          console.error(
-            `Content: Error during delayed initialization on ${window.location.hostname}:`,
-            error
-          ); // Add hostname
-        }
-      }, 100); // Reduced initial delay from 1000ms
-    };
-
-    // Listen for settings updates from the background script
-    chrome.runtime.onMessage.addListener(
-      (
-        message: MessageType,
-        sender: chrome.runtime.MessageSender, // Added explicit type
-        sendResponse: (response?: any) => void // Added explicit type
-      ) => {
-        console.log(
-          "[ContentScript Listener] Received message:",
-          JSON.stringify(message)
-        ); // Log ALL received messages
-
-        if (message.type === "UPDATE_SETTINGS") {
-          const updateSettingsMessage = message as UpdateSettingsMessage;
-          console.log(
-            "[ContentScript Listener] Processing UPDATE_SETTINGS from background/popup"
-            // No longer strictly checking hostname here, assuming background sent it correctly
-          );
-
-          // Apply the update since SettingsEventHandler should have targeted correctly
-          console.log(
-            "Content: Applying settings update received via message."
-          );
-          settingsHandler.updateSettings(updateSettingsMessage.settings);
-
-          // Now, re-run processMedia to apply the new settings
-          console.log(
-            "Content: Settings updated via message, reprocessing media elements..."
-          );
-          processMedia().catch((error) => {
-            console.error(
-              "Content: Error during processMedia after settings update:",
-              error
-            );
-          });
-        }
-        // Return false or undefined if not sending an async response
-        return false;
-      }
-    );
-
-    // Initial setup
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", debouncedInitialization);
-    } else {
-      debouncedInitialization();
-    }
-
-    // Watch for dynamic changes
-    mediaProcessor.setupMediaObserver(processMedia);
   },
 });
