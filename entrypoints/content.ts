@@ -25,15 +25,28 @@ export default defineContentScript({
       settingsHandler.initialize(hostname); // Initialize with the correct hostname
 
       // --- AudioContext Resume Handler --- (Moved inside initializeScript)
-      const resumeContextHandler = async () => {
+      const resumeContextHandler = async (event: Event) => {
         console.log(
           "Content: Media interaction detected, attempting to resume AudioContext."
         );
         await mediaProcessor.attemptContextResume();
         console.log(
-          "Content: Context potentially resumed, reprocessing media..."
+          "Content: Context potentially resumed, applying audio effects..."
         );
-        await processMedia();
+        const targetElement = event.target as HTMLMediaElement;
+        if (targetElement) {
+          try {
+            // Ensure settings are initialized before applying effects
+            await settingsHandler.ensureInitialized();
+            const currentSettings = settingsHandler.getCurrentSettings();
+            const needsProcessing = settingsHandler.needsAudioProcessing();
+            console.log(`[ContentScript DEBUG] Applying audio effects for played element ${targetElement.src || '(no src)'} with settings:`, JSON.stringify(currentSettings));
+            // Apply audio effects specifically to the played element
+            await mediaProcessor.processMediaElements([targetElement], currentSettings, needsProcessing);
+          } catch (error) {
+            console.error(`Content: Error applying audio effects after context resume for ${targetElement.src || '(no src)'}:`, error);
+          }
+        }
       };
       // --- End AudioContext Resume Handler ---
 
@@ -88,14 +101,14 @@ export default defineContentScript({
             needsProcessing
           );
           console.log(
-            "[ProcessMedia] Applying settings:",
-            JSON.stringify(currentSettings)
+            "[ProcessMedia] Applying speed settings:", // Updated log
+            JSON.stringify({ speed: currentSettings.speed }) // Only log speed
           );
-          await mediaProcessor.processMediaElements(
-            mediaElements,
-            currentSettings,
-            needsProcessing
-          );
+          // Apply speed directly, audio effects will be applied on play gesture
+          mediaElements.forEach(element => {
+              mediaProcessor.updatePlaybackSpeed(element, currentSettings.speed);
+          });
+          // Removed: await mediaProcessor.processMediaElements(...)
         } catch (processingError) {
             console.error(`[ContentScript DEBUG] Error during media processing steps on ${window.location.hostname} (after initialization succeeded):`, processingError);
             // Do not return false here, as initialization itself succeeded.
