@@ -56,42 +56,50 @@ export default defineContentScript({
           return false; // Indicate failure
         }
 
-        const mediaElements = mediaProcessor.findMediaElements();
-        console.log(
-          `[ContentScript DEBUG] Found ${mediaElements.length} media elements:`,
-          mediaElements.map((el) => ({
-            src: el.src,
-            tagName: el.tagName,
-            id: el.id,
-            classList: el.classList.toString(),
-          }))
-        );
+        // --- Start of processing steps after successful initialization ---
+        try {
+          const mediaElements = mediaProcessor.findMediaElements();
+          console.log(
+            `[ContentScript DEBUG] Found ${mediaElements.length} media elements:`,
+            mediaElements.map((el) => ({
+              src: el.src,
+              tagName: el.tagName,
+              id: el.id,
+              classList: el.classList.toString(),
+            }))
+          );
 
-        mediaElements.forEach((element) => {
-          element.removeEventListener("play", resumeContextHandler); // Remove previous listener if any
-          element.addEventListener("play", resumeContextHandler, {
-            once: true,
+          mediaElements.forEach((element) => {
+            element.removeEventListener("play", resumeContextHandler); // Remove previous listener if any
+            element.addEventListener("play", resumeContextHandler, {
+              once: true,
+            });
           });
-        });
 
-        const currentSettings = settingsHandler.getCurrentSettings();
-        const needsProcessing = settingsHandler.needsAudioProcessing();
-        console.log(
-          "Content: Processing media with settings:",
-          currentSettings,
-          "needsProcessing:",
-          needsProcessing
-        );
-        console.log(
-          "[ProcessMedia] Applying settings:",
-          JSON.stringify(currentSettings)
-        );
-        await mediaProcessor.processMediaElements(
-          mediaElements,
-          currentSettings,
-          needsProcessing
-        );
-        return true; // Indicate success
+          const currentSettings = settingsHandler.getCurrentSettings();
+          const needsProcessing = settingsHandler.needsAudioProcessing();
+          console.log(
+            "Content: Processing media with settings:",
+            currentSettings,
+            "needsProcessing:",
+            needsProcessing
+          );
+          console.log(
+            "[ProcessMedia] Applying settings:",
+            JSON.stringify(currentSettings)
+          );
+          await mediaProcessor.processMediaElements(
+            mediaElements,
+            currentSettings,
+            needsProcessing
+          );
+        } catch (processingError) {
+            console.error(`[ContentScript DEBUG] Error during media processing steps on ${window.location.hostname} (after initialization succeeded):`, processingError);
+            // Do not return false here, as initialization itself succeeded.
+        }
+        // --- End of processing steps ---
+
+        return true; // Indicate initialization success, regardless of processing errors
       };
 
       // Initialize with debouncing (Moved inside initializeScript)
