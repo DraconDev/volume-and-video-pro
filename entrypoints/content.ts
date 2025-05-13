@@ -105,21 +105,22 @@ export default defineContentScript({
       // Initialize with debouncing (Moved inside initializeScript)
       let initializationTimeout: number | null = null;
 
-      const debouncedInitialization = async () => { // Made async to await processMedia
+      const debouncedInitialization = () => { // Reverted to non-async as it uses setTimeout
         if (initializationTimeout) {
           window.clearTimeout(initializationTimeout);
         }
-        // Removed setTimeout - call processMedia directly
-        try {
-          console.log(`[ContentScript DEBUG] Debounced initialization for ${window.location.hostname}. Calling processMedia immediately.`);
-          await processMedia(); // processMedia handles its own errors and returns boolean for init success
-        } catch (error) {
-          // This catch is for unexpected errors from processMedia if it doesn't handle something
-          console.error(
-            `Content: Error during debounced initialization on ${window.location.hostname}:`,
-            error
-          );
-        }
+        initializationTimeout = window.setTimeout(async () => { // Use setTimeout
+          try {
+            console.log(`[ContentScript DEBUG] Debounced initialization for ${window.location.hostname}. Calling processMedia after delay.`);
+            await processMedia(); // processMedia handles its own errors and returns boolean for init success
+          } catch (error) {
+            // This catch is for unexpected errors from processMedia if it doesn't handle something
+            console.error(
+              `Content: Error during debounced initialization on ${window.location.hostname}:`,
+              error
+            );
+          }
+        }, 200); // Single, moderate delay (200ms)
       };
 
       // Listen for settings updates from the background script (Moved inside initializeScript)
