@@ -104,7 +104,7 @@ export default defineContentScript({
               error
             );
           }
-        }, 50); // Reduced delay significantly
+        }, 300); // Adjusted delay
       };
 
       // Listen for settings updates from the background script (Moved inside initializeScript)
