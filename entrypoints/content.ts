@@ -101,10 +101,12 @@ export default defineContentScript({
             needsProcessing
           );
           console.log(
-            "[ProcessMedia] Applying speed settings:", // Updated log
-            JSON.stringify({ speed: currentSettings.speed }) // Only log speed
+            "[ProcessMedia] Applying speed and volume settings immediately:", // Updated log
+            JSON.stringify({ speed: currentSettings.speed, volume: currentSettings.volume }) // Log speed and volume
           );
-          // Apply speed directly, audio effects will be applied on play gesture
+          // Apply settings that don't require AudioContext immediately
+          mediaProcessor.applySettingsImmediately(mediaElements, currentSettings);
+          // Removed: await mediaProcessor.processMediaElements(...) - This is now called in resumeContextHandler
         } catch (processingError) {
             console.error(`[ContentScript DEBUG] Error during media processing steps on ${window.location.hostname} (after initialization succeeded):`, processingError);
             // Do not return false here, as initialization itself succeeded.
