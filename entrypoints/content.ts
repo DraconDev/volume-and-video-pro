@@ -131,7 +131,7 @@ export default defineContentScript({
                     error
                   );
                 }
-              }, 1200); // Fallback delay
+              }, 1000); // Fallback delay
             }
           } catch (error) {
             // This catch is for errors thrown by processMedia itself, not just ensureInitialized
@@ -140,7 +140,7 @@ export default defineContentScript({
               error
             );
           }
-        }, 50); // Initial short delay
+        }, 200); // Initial short delay
       };
 
       // Listen for settings updates from the background script (Moved inside initializeScript)
