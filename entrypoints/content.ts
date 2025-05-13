@@ -103,52 +103,24 @@ export default defineContentScript({
       };
 
       // Initialize with debouncing (Moved inside initializeScript)
-      let initialAttemptTimeoutId: number | null = null;
-      let fallbackAttemptTimeoutId: number | null = null;
-      let fallbackScheduled = false;
+      let initializationTimeout: number | null = null;
 
       const debouncedInitialization = () => {
-        if (initialAttemptTimeoutId) {
-          window.clearTimeout(initialAttemptTimeoutId);
+        if (initializationTimeout) {
+          window.clearTimeout(initializationTimeout);
         }
-        if (fallbackAttemptTimeoutId) {
-          window.clearTimeout(fallbackAttemptTimeoutId);
-        }
-        fallbackScheduled = false; // Reset fallback flag
-
-        initialAttemptTimeoutId = window.setTimeout(async () => {
+        initializationTimeout = window.setTimeout(async () => {
           try {
-            console.log(
-              `[ContentScript DEBUG] Initial debounced attempt for ${window.location.hostname}. Calling processMedia.`
-            );
-            const success = await processMedia();
-            if (!success && !fallbackScheduled) {
-              fallbackScheduled = true; // Set flag to prevent multiple fallbacks
-              console.log(
-                `[ContentScript DEBUG] Initial attempt failed for ${window.location.hostname}. Scheduling fallback.`
-              );
-              fallbackAttemptTimeoutId = window.setTimeout(async () => {
-                try {
-                  console.log(
-                    `[ContentScript DEBUG] Fallback attempt for ${window.location.hostname}. Calling processMedia.`
-                  );
-                  await processMedia(); // Final attempt
-                } catch (error) {
-                  console.error(
-                    `Content: Error during fallback delayed initialization on ${window.location.hostname}:`,
-                    error
-                  );
-                }
-              }, 1000); // Fallback delay
-            }
+            console.log(`[ContentScript DEBUG] Debounced initialization for ${window.location.hostname}. Calling processMedia.`);
+            await processMedia(); // processMedia handles its own errors and returns boolean for init success
           } catch (error) {
-            // This catch is for errors thrown by processMedia itself, not just ensureInitialized
+            // This catch is for unexpected errors from processMedia if it doesn't handle something
             console.error(
-              `Content: Error during initial debounced initialization attempt on ${window.location.hostname}:`,
+              `Content: Error during debounced initialization on ${window.location.hostname}:`,
               error
             );
           }
-        }, 200); // Initial short delay
+        }, 750); // Single, moderate delay
       };
 
       // Listen for settings updates from the background script (Moved inside initializeScript)
