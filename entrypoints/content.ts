@@ -43,12 +43,15 @@ export default defineContentScript({
           `[ContentScript DEBUG] processMedia called for ${window.location.hostname}`
         );
         try {
+          console.time('ensureInitialized'); // Start timing
           await settingsHandler.ensureInitialized();
+          console.timeEnd('ensureInitialized'); // End timing on success
           console.log(
             `[ContentScript DEBUG] Settings initialized successfully in processMedia for ${window.location.hostname}. Current settings:`,
             JSON.stringify(settingsHandler.getCurrentSettings())
           );
         } catch (error) {
+          console.timeEnd('ensureInitialized'); // End timing on failure
           console.error(
             `[ContentScript DEBUG] Error ensuring settings initialized in processMedia for ${window.location.hostname}:`,
             error
