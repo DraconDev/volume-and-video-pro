@@ -143,12 +143,16 @@ export default defineContentScript({
             console.log(
               "Content: Settings updated via message, reprocessing media elements..."
             );
-            processMedia().catch((error) => {
-              console.error(
-                "Content: Error during processMedia after settings update:",
-                error
-              );
-            });
+            (async () => {
+              try {
+                await processMedia();
+              } catch (error) {
+                console.error(
+                  "Content: Error during processMedia after settings update:",
+                  error
+                );
+              }
+            })();
           }
           return false;
         }
@@ -162,7 +166,9 @@ export default defineContentScript({
       }
 
       // Watch for dynamic changes (Moved inside initializeScript)
-      mediaProcessor.setupMediaObserver(processMedia);
+      mediaProcessor.setupMediaObserver(async () => {
+        await processMedia();
+      });
     }; // End of initializeScript function
 
     // --- Hostname Detection and Initialization Logic ---
