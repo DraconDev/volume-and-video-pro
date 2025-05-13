@@ -105,10 +105,6 @@ export default defineContentScript({
             JSON.stringify({ speed: currentSettings.speed }) // Only log speed
           );
           // Apply speed directly, audio effects will be applied on play gesture
-          mediaElements.forEach(element => {
-              mediaProcessor.updatePlaybackSpeed(element, currentSettings.speed);
-          });
-          // Removed: await mediaProcessor.processMediaElements(...)
         } catch (processingError) {
             console.error(`[ContentScript DEBUG] Error during media processing steps on ${window.location.hostname} (after initialization succeeded):`, processingError);
             // Do not return false here, as initialization itself succeeded.
