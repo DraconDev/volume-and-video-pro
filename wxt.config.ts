@@ -12,6 +12,15 @@ export default defineConfig({
       type: "module",
     },
 
+    content_scripts: [
+      {
+        matches: ["<all_urls>"],
+        js: ["content.js"],
+        run_at: "document_idle",
+        all_frames: true
+      }
+    ],
+
     action: {
       default_icon: {
         16: "icon/16.png",
