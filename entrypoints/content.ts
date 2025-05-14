@@ -134,9 +134,17 @@ export default defineContentScript({
             element.addEventListener("canplay", (event) => applySettingsToSingleElement(event.target as HTMLMediaElement)); // Correct listener
 
             // Also attempt to apply settings immediately in case events already fired
+            // Handle both paused and playing states
+            const wasPlaying = !element.paused;
+            if (wasPlaying) {
+              // Pause to ensure clean state before applying settings
+              element.pause();
+            }
+            
             applySettingsToSingleElement(element);
-            // Only attempt play if element was paused to resume context
-            if (element.paused) {
+            
+            // Resume playback if it was playing or attempt play if paused
+            if (wasPlaying || element.paused) {
               element.play().catch(e => console.warn("Auto-play failed:", e));
             }
           });
