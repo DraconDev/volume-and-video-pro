@@ -65,16 +65,17 @@ export default defineContentScript({
           mediaProcessor.applySettingsImmediately([element], currentSettings);
 
           // Apply audio effects if needed and context is resumable/running
-          if (needsProcessing && mediaProcessor.audioProcessor.audioContext && mediaProcessor.audioProcessor.audioContext.state !== 'closed') {
+          if (needsProcessing && mediaProcessor.canApplyAudioEffects()) { // Use public method
              // Attempt to resume context before processing audio effects
              await mediaProcessor.attemptContextResume();
-             if (mediaProcessor.audioProcessor.audioContext.state === 'running') {
+             // Check context state again after attempting resume
+             if (mediaProcessor.canApplyAudioEffects()) { // Use public method
                 await mediaProcessor.processMediaElements([element], currentSettings, needsProcessing);
              } else {
                 console.log(`[ContentScript DEBUG] AudioContext not running for ${element.src || '(no src)'}, audio effects will apply on play gesture.`);
              }
-          } else if (needsProcessing && !mediaProcessor.audioProcessor.audioContext) {
-             console.log(`[ContentScript DEBUG] AudioContext not yet created for ${element.src || '(no src)'}, audio effects will apply on play gesture.`);
+          } else if (needsProcessing && !mediaProcessor.canApplyAudioEffects()) { // Use public method
+             console.log(`[ContentScript DEBUG] AudioContext not yet ready for ${element.src || '(no src)'}, audio effects will apply on play gesture.`);
           }
 
 
@@ -120,17 +121,17 @@ export default defineContentScript({
 
           mediaElements.forEach((element) => {
             // Remove previous listeners to prevent duplicates
-            element.removeEventListener("play", resumeContextHandler);
-            element.removeEventListener("loadedmetadata", applySettingsToSingleElement);
-            element.removeEventListener("canplay", applySettingsToSingleElement);
+            element.removeEventListener("play", resumeContextHandler as EventListener); // Cast to EventListener
+            element.removeEventListener("loadedmetadata", (event) => applySettingsToSingleElement(event.target as HTMLMediaElement)); // Correct listener
+            element.removeEventListener("canplay", (event) => applySettingsToSingleElement(event.target as HTMLMediaElement)); // Correct listener
 
 
             // Add listeners
-            element.addEventListener("play", resumeContextHandler, {
+            element.addEventListener("play", resumeContextHandler as EventListener, { // Cast to EventListener
               once: true,
             });
-            element.addEventListener("loadedmetadata", () => applySettingsToSingleElement(element));
-            element.addEventListener("canplay", () => applySettingsToSingleElement(element));
+            element.addEventListener("loadedmetadata", (event) => applySettingsToSingleElement(event.target as HTMLMediaElement)); // Correct listener
+            element.addEventListener("canplay", (event) => applySettingsToSingleElement(event.target as HTMLMediaElement)); // Correct listener
 
             // Also attempt to apply settings immediately in case events already fired
             applySettingsToSingleElement(element);
