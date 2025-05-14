@@ -38,6 +38,7 @@ export async function broadcastSiteSettingsUpdate(
     `SettingsEventHandler: Broadcasting site settings data for ${hostname}`,
     newSiteSettings
   );
+  console.log("SettingsEventHandler: Broadcasting site settings data for all frames");
   const tabs = await chrome.tabs.query({});
   console.log(
     `[EventHandler] Found ${tabs.length} tabs to check for hostname ${hostname}`
