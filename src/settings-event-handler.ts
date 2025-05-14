@@ -17,9 +17,6 @@ function getHostname(url: string | undefined): string | null {
   }
 }
 
-// Fallback: Assume all tabs are active since we can't track tab connections in some environments
-// This simplifies the code and avoids issues with unimplemented chrome.runtime.onConnect
-const activeTabs = new Set<number>();
 
 // Helper to send message to a specific tab, ignoring errors
 async function sendMessageToTab(tabId: number, message: MessageType) {
@@ -164,18 +161,5 @@ export async function broadcastSiteModeUpdate(
 }
 
 export function setupSettingsEventHandler() {
-  console.log("SettingsEventHandler: Setting up listeners...");
-
-  // --- Listener for Global Settings Changes --- (REMOVED - Now handled by direct call to broadcastGlobalSettingsUpdate)
-  // settingsManager.on("globalSettingsChanged", broadcastGlobalSettingsUpdate); // Keep this commented out or remove
-
-  // --- Listener for Site-Specific Settings Changes --- (REMOVED - Now handled by direct call to broadcastSiteSettingsUpdate)
-  // settingsManager.on("siteSettingsChanged", broadcastSiteSettingsUpdate); // Keep this commented out or remove
-
-  // --- Listener for Site Mode Changes --- (REMOVED - Now handled by direct call to broadcastSiteModeUpdate)
-  // settingsManager.on("siteModeChanged", broadcastSiteModeUpdate); // Keep this commented out or remove
-
-  console.log(
-    "SettingsEventHandler: Listeners set up (only event emitters are no longer used for site/mode changes)."
-  ); // Updated log
+  console.log("SettingsEventHandler: Listeners are now handled directly by SettingsManager");
 }
