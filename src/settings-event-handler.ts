@@ -17,8 +17,27 @@ function getHostname(url: string | undefined): string | null {
   }
 }
 
+// Track active content script tabs
+const activeTabs = new Set<number>();
+
+// Register content script activation
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === "contentScript") {
+    activeTabs.add(port.sender?.tab?.id ?? -1);
+    port.onDisconnect.addListener(() => {
+      activeTabs.delete(port.sender?.tab?.id ?? -1);
+    });
+  }
+});
+
 // Helper to send message to a specific tab, ignoring errors
 async function sendMessageToTab(tabId: number, message: MessageType) {
+  // Only send to tabs with active content script
+  if (!activeTabs.has(tabId)) {
+    console.log(`SettingsEventHandler: Skipping tab ${tabId} - content script not active`);
+    return;
+  }
+
   try {
     await chrome.tabs.sendMessage(tabId, message);
   } catch (error) {
