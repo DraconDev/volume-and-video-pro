@@ -78,7 +78,7 @@ export async function broadcastSiteSettingsUpdate(
             console.log(
               `[EventHandler] Sending settings to frame ${frame.frameId} in tab ${tab.id} (${hostname})`
             );
-            sendMessageToTab(tab.id, message);
+            sendMessageToTab(tab.id as number, message);
           });
         }
       });
