@@ -195,16 +195,22 @@ export default defineContentScript({
             ); // Correct listener
 
             // Also attempt to apply settings immediately in case events already fired
-          // Apply settings immediately without modifying playback state
-          applySettingsToSingleElement(element);
+            // Apply settings immediately with playback state preservation
+            applySettingsToSingleElement(element);
+            
+            // Force immediate settings application for playing elements
+            if (!element.paused && element.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+              console.log(`[ContentScript] Force applying settings to already playing element ${element.src || "(no src)"}`);
+              mediaProcessor.applySettingsImmediately([element], settingsHandler.getCurrentSettings());
+            }
 
             // Removed auto-play attempt to avoid interfering with user interactions
             // Settings will be applied when user manually plays the video via the play event listener
           });
 
-          // Removed: Applying settings directly here. applySettingsToSingleElement handles it.
-          // Removed: console.log("[ProcessMedia] Applying speed and volume settings immediately:", ...)
-          // Removed: mediaProcessor.applySettingsImmediately(mediaElements, currentSettings);
+          // Apply settings to all elements immediately after initialization
+          console.log(`[ContentScript] Applying settings to all elements immediately for ${window.location.hostname}`);
+          mediaProcessor.applySettingsImmediately(mediaElements, settingsHandler.getCurrentSettings());
         } catch (processingError) {
           console.error(
             `[ContentScript DEBUG] Error during media processing steps on ${window.location.hostname} (after initialization succeeded):`,
