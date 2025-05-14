@@ -7,7 +7,7 @@ function getHostname(url: string | undefined): string | null {
   try {
     const parsedUrl = new URL(url);
     // Only allow http/https URLs to avoid chrome:// and other internal pages
-    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
       return null;
     }
     return parsedUrl.hostname;
@@ -21,7 +21,7 @@ function getHostname(url: string | undefined): string | null {
 const activeTabs = new Set<number>();
 
 // Register content script activation only if runtime.onConnect is available
-if (typeof chrome.runtime?.onConnect === 'function') {
+if (chrome.runtime.onConnect) {
   chrome.runtime.onConnect.addListener((port) => {
     if (port.name === "contentScript") {
       const tabId = port.sender?.tab?.id ?? -1;
@@ -34,7 +34,9 @@ if (typeof chrome.runtime?.onConnect === 'function') {
     }
   });
 } else {
-  console.warn("SettingsEventHandler: chrome.runtime.onConnect not available - tab tracking disabled");
+  console.warn(
+    "SettingsEventHandler: chrome.runtime.onConnect not available - tab tracking disabled"
+  );
   // Fallback: Assume all tabs are active in environments without onConnect support
   // This will allow builds/tests to proceed without errors but may send messages to inactive tabs
 }
@@ -43,7 +45,9 @@ if (typeof chrome.runtime?.onConnect === 'function') {
 async function sendMessageToTab(tabId: number, message: MessageType) {
   // Only send to tabs with active content script
   if (!activeTabs.has(tabId)) {
-    console.log(`SettingsEventHandler: Skipping tab ${tabId} - content script not active`);
+    console.log(
+      `SettingsEventHandler: Skipping tab ${tabId} - content script not active`
+    );
     return;
   }
 
@@ -71,7 +75,9 @@ export async function broadcastSiteSettingsUpdate(
     `SettingsEventHandler: Broadcasting site settings data for ${hostname}`,
     newSiteSettings
   );
-  console.log("SettingsEventHandler: Broadcasting site settings data for all frames");
+  console.log(
+    "SettingsEventHandler: Broadcasting site settings data for all frames"
+  );
   const tabs = await chrome.tabs.query({});
   console.log(
     `[EventHandler] Found ${tabs.length} tabs to check for hostname ${hostname}`
@@ -92,9 +98,11 @@ export async function broadcastSiteSettingsUpdate(
         message
       ); // ADDED LOG
 
-          // Only send to main frame (frameId 0) to avoid subframe connection issues
-          console.log(`[EventHandler] Sending settings to main frame (frameId 0) in tab ${tab.id} (${hostname})`);
-          sendMessageToTab(tab.id as number, message);
+      // Only send to main frame (frameId 0) to avoid subframe connection issues
+      console.log(
+        `[EventHandler] Sending settings to main frame (frameId 0) in tab ${tab.id} (${hostname})`
+      );
+      sendMessageToTab(tab.id as number, message);
     }
   }
 }
