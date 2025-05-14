@@ -95,6 +95,8 @@ export class MediaProcessor {
    * Apply settings directly to media elements without waiting for async operations
    * Useful for immediate UI feedback
    */
+  private lastAppliedSettings: AudioSettings | null = null;
+
   applySettingsImmediately(
     mediaElements: HTMLMediaElement[],
     settings: AudioSettings
@@ -103,50 +105,61 @@ export class MediaProcessor {
       "[MediaProcessor] Applying settings immediately to media elements"
     );
 
-    // Update all elements with current settings
-    mediaElements.forEach((element) => {
-      try {
-        console.log(
-          `[MediaProcessor] Applying settings to ${element.src || "(no src)"}`,
-          {
-            speed: settings.speed,
-            volume: settings.volume,
-            playbackRate: settings.speed / 100,
+    // Skip if settings haven't changed
+    if (this.lastAppliedSettings && 
+        JSON.stringify(this.lastAppliedSettings) === JSON.stringify(settings)) {
+      return;
+    }
+    this.lastAppliedSettings = { ...settings };
+
+    // Batch update for better performance
+    const batchSize = 5;
+    const updateQueue = [...mediaElements];
+    
+    const processBatch = () => {
+      const batch = updateQueue.splice(0, batchSize);
+      batch.forEach((element) => {
+        try {
+          // Store current state
+          const wasPlaying = !element.paused;
+          const currentTime = element.currentTime;
+
+          // Apply settings
+          element.playbackRate = settings.speed / 100;
+          element.defaultPlaybackRate = settings.speed / 100;
+          element.volume = settings.volume / 100;
+
+          // Restore playback state if needed
+          if (wasPlaying) {
+            element
+              .play()
+              .catch((e) =>
+                console.warn(
+                  "MediaProcessor: Failed to resume playback after settings update:",
+                  e
+                )
+              );
+          } else {
+            // Ensure it stays paused at the same position
+            element.currentTime = currentTime;
           }
-        );
-
-        // Store current state
-        const wasPlaying = !element.paused;
-        const currentTime = element.currentTime;
-
-        // Apply settings
-        element.playbackRate = settings.speed / 100;
-        element.defaultPlaybackRate = settings.speed / 100;
-        element.volume = settings.volume / 100;
-
-        // Restore playback state if needed
-        if (wasPlaying) {
-          element
-            .play()
-            .catch((e) =>
-              console.warn(
-                "MediaProcessor: Failed to resume playback after settings update:",
-                e
-              )
-            );
-        } else {
-          // Ensure it stays paused at the same position
-          element.currentTime = currentTime;
+        } catch (e) {
+          console.error(
+            `MediaProcessor: Error applying settings to ${
+              element.src || "(no src)"
+            }:`,
+            e
+          );
         }
-      } catch (e) {
-        console.error(
-          `MediaProcessor: Error applying settings to ${
-            element.src || "(no src)"
-          }:`,
-          e
-        );
+      });
+
+      // Process next batch after microtask queue clears
+      if (updateQueue.length > 0) {
+        setTimeout(processBatch, 0);
       }
-    });
+    };
+
+    processBatch();
   }
 
   /**
