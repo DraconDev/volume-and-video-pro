@@ -15,6 +15,11 @@ function getHostname(url: string | undefined): string | null {
     console.warn("SettingsEventHandler: Invalid URL:", url);
     return null;
   }
+}
+
+// Helper to send message to a specific tab, ignoring errors
+async function sendMessageToTab(tabId: number, message: MessageType) {
+  try {
     await chrome.tabs.sendMessage(tabId, message);
   } catch (error) {
     // Log errors more visibly for debugging
@@ -59,29 +64,9 @@ export async function broadcastSiteSettingsUpdate(
         message
       ); // ADDED LOG
 
-      // Get all frames in the tab to ensure iframe content scripts receive updates
-      chrome.webNavigation.getAllFrames({ tabId: tab.id }, (frames) => {
-        if (chrome.runtime.lastError) {
-          console.warn(
-            `SettingsEventHandler: Error getting frames for tab ${tab.id}:`,
-            chrome.runtime.lastError
-          );
-          return;
-        }
-
-        if (frames) {
-          console.log(
-            `[EventHandler] Found ${frames.length} frames in tab ${tab.id} for ${hostname}`
-          );
-          
-          frames.forEach((frame) => {
-            console.log(
-              `[EventHandler] Sending settings to frame ${frame.frameId} in tab ${tab.id} (${hostname})`
-            );
-            sendMessageToTab(tab.id as number, message);
-          });
-        }
-      });
+          // Only send to main frame (frameId 0) to avoid subframe connection issues
+          console.log(`[EventHandler] Sending settings to main frame (frameId 0) in tab ${tab.id} (${hostname})`);
+          sendMessageToTab(tab.id as number, message);
     }
   }
 }
