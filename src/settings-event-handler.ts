@@ -17,48 +17,12 @@ function getHostname(url: string | undefined): string | null {
   }
 }
 
-// Track active content script tabs
+// Fallback: Assume all tabs are active since we can't track tab connections in some environments
+// This simplifies the code and avoids issues with unimplemented chrome.runtime.onConnect
 const activeTabs = new Set<number>();
-
-// Register content script activation only if runtime.onConnect is available
-if (chrome.runtime.onConnect && typeof chrome.runtime.onConnect.addListener === 'function') {
-  try {
-    chrome.runtime.onConnect.addListener((port) => {
-      if (port.name === "contentScript") {
-        const tabId = port.sender?.tab?.id ?? -1;
-        if (tabId !== -1) {
-          activeTabs.add(tabId);
-          port.onDisconnect.addListener(() => {
-            activeTabs.delete(tabId);
-          });
-        }
-      }
-    });
-  } catch (error) {
-    console.warn(
-      "SettingsEventHandler: Error adding onConnect listener - tab tracking disabled",
-      error
-    );
-    // Fallback: Assume all tabs are active if listener setup fails
-  }
-} else {
-  console.warn(
-    "SettingsEventHandler: chrome.runtime.onConnect not available - tab tracking disabled"
-  );
-  // Fallback: Assume all tabs are active in environments without onConnect support
-  // This will allow builds/tests to proceed without errors but may send messages to inactive tabs
-}
 
 // Helper to send message to a specific tab, ignoring errors
 async function sendMessageToTab(tabId: number, message: MessageType) {
-  // Only send to tabs with active content script
-  if (!activeTabs.has(tabId)) {
-    console.log(
-      `SettingsEventHandler: Skipping tab ${tabId} - content script not active`
-    );
-    return;
-  }
-
   try {
     await chrome.tabs.sendMessage(tabId, message);
   } catch (error) {
