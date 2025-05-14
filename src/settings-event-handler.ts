@@ -21,7 +21,7 @@ function getHostname(url: string | undefined): string | null {
 const activeTabs = new Set<number>();
 
 // Register content script activation only if runtime.onConnect is available
-if (chrome.runtime.onConnect) {
+if (chrome.runtime.onConnect && typeof chrome.runtime.onConnect.addListener === 'function') {
   chrome.runtime.onConnect.addListener((port) => {
     if (port.name === "contentScript") {
       const tabId = port.sender?.tab?.id ?? -1;
