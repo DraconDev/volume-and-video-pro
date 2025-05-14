@@ -1,20 +1,20 @@
 import { settingsManager } from "./settings-manager";
 import { AudioSettings, MessageType, UpdateSettingsMessage } from "./types"; // Added UpdateSettingsMessage
 
-// Helper to get hostname safely
+// Helper to get hostname safely and filter non-http(s) URLs
 function getHostname(url: string | undefined): string | null {
   if (!url) return null;
   try {
-    return new URL(url).hostname;
+    const parsedUrl = new URL(url);
+    // Only allow http/https URLs to avoid chrome:// and other internal pages
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      return null;
+    }
+    return parsedUrl.hostname;
   } catch (e) {
     console.warn("SettingsEventHandler: Invalid URL:", url);
     return null;
   }
-}
-
-// Helper to send message to a specific tab, ignoring errors
-async function sendMessageToTab(tabId: number, message: MessageType) {
-  try {
     await chrome.tabs.sendMessage(tabId, message);
   } catch (error) {
     // Log errors more visibly for debugging
