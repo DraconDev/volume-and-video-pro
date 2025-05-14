@@ -195,8 +195,8 @@ export default defineContentScript({
             ); // Correct listener
 
             // Also attempt to apply settings immediately in case events already fired
-            // Apply settings without modifying playback state
-            applySettingsToSingleElement(element);
+          // Apply settings immediately without modifying playback state
+          applySettingsToSingleElement(element);
 
             // Removed auto-play attempt to avoid interfering with user interactions
             // Settings will be applied when user manually plays the video via the play event listener
