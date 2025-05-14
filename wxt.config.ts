@@ -15,7 +15,7 @@ export default defineConfig({
     content_scripts: [
       {
         matches: ["<all_urls>"],
-        js: ["content.js"],
+        js: ["content.ts"],
         run_at: "document_idle",
         all_frames: true
       }
