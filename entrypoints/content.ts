@@ -128,13 +128,15 @@ export default defineContentScript({
 
             // Add listeners
             element.addEventListener("play", resumeContextHandler as EventListener, { // Cast to EventListener
-              once: true,
+              once: false, // Changed from true to allow multiple triggers
             });
             element.addEventListener("loadedmetadata", (event) => applySettingsToSingleElement(event.target as HTMLMediaElement)); // Correct listener
             element.addEventListener("canplay", (event) => applySettingsToSingleElement(event.target as HTMLMediaElement)); // Correct listener
 
             // Also attempt to apply settings immediately in case events already fired
             applySettingsToSingleElement(element);
+            // Force play to ensure context resumes on click
+            element.play().catch(e => console.warn("Auto-play failed:", e));
           });
 
           // Removed: Applying settings directly here. applySettingsToSingleElement handles it.
