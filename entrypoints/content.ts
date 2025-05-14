@@ -50,6 +50,39 @@ export default defineContentScript({
       };
       // --- End AudioContext Resume Handler ---
 
+      // Function to apply settings to a single media element
+      const applySettingsToSingleElement = async (element: HTMLMediaElement) => {
+        console.log(`[ContentScript DEBUG] applySettingsToSingleElement called for ${element.src || '(no src)'}`);
+        try {
+          // Ensure settings are initialized
+          await settingsHandler.ensureInitialized();
+          const currentSettings = settingsHandler.getCurrentSettings();
+          const needsProcessing = settingsHandler.needsAudioProcessing();
+
+          console.log(`[ContentScript DEBUG] Applying settings to single element ${element.src || '(no src)'}:`, JSON.stringify(currentSettings));
+
+          // Apply immediate settings (speed, volume)
+          mediaProcessor.applySettingsImmediately([element], currentSettings);
+
+          // Apply audio effects if needed and context is resumable/running
+          if (needsProcessing && mediaProcessor.audioProcessor.audioContext && mediaProcessor.audioProcessor.audioContext.state !== 'closed') {
+             // Attempt to resume context before processing audio effects
+             await mediaProcessor.attemptContextResume();
+             if (mediaProcessor.audioProcessor.audioContext.state === 'running') {
+                await mediaProcessor.processMediaElements([element], currentSettings, needsProcessing);
+             } else {
+                console.log(`[ContentScript DEBUG] AudioContext not running for ${element.src || '(no src)'}, audio effects will apply on play gesture.`);
+             }
+          } else if (needsProcessing && !mediaProcessor.audioProcessor.audioContext) {
+             console.log(`[ContentScript DEBUG] AudioContext not yet created for ${element.src || '(no src)'}, audio effects will apply on play gesture.`);
+          }
+
+
+        } catch (error) {
+          console.error(`[ContentScript DEBUG] Error applying settings to single element ${element.src || '(no src)'}:`, error);
+        }
+      };
+
       // Process media with current settings (Moved inside initializeScript)
       const processMedia = async () => {
         console.log(
@@ -86,27 +119,26 @@ export default defineContentScript({
           );
 
           mediaElements.forEach((element) => {
-            element.removeEventListener("play", resumeContextHandler); // Remove previous listener if any
+            // Remove previous listeners to prevent duplicates
+            element.removeEventListener("play", resumeContextHandler);
+            element.removeEventListener("loadedmetadata", applySettingsToSingleElement);
+            element.removeEventListener("canplay", applySettingsToSingleElement);
+
+
+            // Add listeners
             element.addEventListener("play", resumeContextHandler, {
               once: true,
             });
+            element.addEventListener("loadedmetadata", () => applySettingsToSingleElement(element));
+            element.addEventListener("canplay", () => applySettingsToSingleElement(element));
+
+            // Also attempt to apply settings immediately in case events already fired
+            applySettingsToSingleElement(element);
           });
 
-          const currentSettings = settingsHandler.getCurrentSettings();
-          const needsProcessing = settingsHandler.needsAudioProcessing();
-          console.log(
-            "Content: Processing media with settings:",
-            currentSettings,
-            "needsProcessing:",
-            needsProcessing
-          );
-          console.log(
-            "[ProcessMedia] Applying speed and volume settings immediately:", // Updated log
-            JSON.stringify({ speed: currentSettings.speed, volume: currentSettings.volume }) // Log speed and volume
-          );
-          // Apply settings that don't require AudioContext immediately
-          mediaProcessor.applySettingsImmediately(mediaElements, currentSettings);
-          // Removed: await mediaProcessor.processMediaElements(...) - This is now called in resumeContextHandler
+          // Removed: Applying settings directly here. applySettingsToSingleElement handles it.
+          // Removed: console.log("[ProcessMedia] Applying speed and volume settings immediately:", ...)
+          // Removed: mediaProcessor.applySettingsImmediately(mediaElements, currentSettings);
         } catch (processingError) {
             console.error(`[ContentScript DEBUG] Error during media processing steps on ${window.location.hostname} (after initialization succeeded):`, processingError);
             // Do not return false here, as initialization itself succeeded.
