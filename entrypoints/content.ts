@@ -135,8 +135,10 @@ export default defineContentScript({
 
             // Also attempt to apply settings immediately in case events already fired
             applySettingsToSingleElement(element);
-            // Force play to ensure context resumes on click
-            element.play().catch(e => console.warn("Auto-play failed:", e));
+            // Only attempt play if element was paused to resume context
+            if (element.paused) {
+              element.play().catch(e => console.warn("Auto-play failed:", e));
+            }
           });
 
           // Removed: Applying settings directly here. applySettingsToSingleElement handles it.
