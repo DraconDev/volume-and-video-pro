@@ -40,47 +40,93 @@ export default defineContentScript({
             await settingsHandler.ensureInitialized();
             const currentSettings = settingsHandler.getCurrentSettings();
             const needsProcessing = settingsHandler.needsAudioProcessing();
-            console.log(`[ContentScript DEBUG] Applying audio effects for played element ${targetElement.src || '(no src)'} with settings:`, JSON.stringify(currentSettings));
+            console.log(
+              `[ContentScript DEBUG] Applying audio effects for played element ${
+                targetElement.src || "(no src)"
+              } with settings:`,
+              JSON.stringify(currentSettings)
+            );
             // Apply audio effects specifically to the played element
-            await mediaProcessor.processMediaElements([targetElement], currentSettings, needsProcessing);
+            await mediaProcessor.processMediaElements(
+              [targetElement],
+              currentSettings,
+              needsProcessing
+            );
           } catch (error) {
-            console.error(`Content: Error applying audio effects after context resume for ${targetElement.src || '(no src)'}:`, error);
+            console.error(
+              `Content: Error applying audio effects after context resume for ${
+                targetElement.src || "(no src)"
+              }:`,
+              error
+            );
           }
         }
       };
       // --- End AudioContext Resume Handler ---
 
       // Function to apply settings to a single media element
-      const applySettingsToSingleElement = async (element: HTMLMediaElement) => {
-        console.log(`[ContentScript DEBUG] applySettingsToSingleElement called for ${element.src || '(no src)'}`);
+      const applySettingsToSingleElement = async (
+        element: HTMLMediaElement
+      ) => {
+        console.log(
+          `[ContentScript DEBUG] applySettingsToSingleElement called for ${
+            element.src || "(no src)"
+          }`
+        );
         try {
           // Ensure settings are initialized
           await settingsHandler.ensureInitialized();
           const currentSettings = settingsHandler.getCurrentSettings();
           const needsProcessing = settingsHandler.needsAudioProcessing();
 
-          console.log(`[ContentScript DEBUG] Applying settings to single element ${element.src || '(no src)'}:`, JSON.stringify(currentSettings));
+          console.log(
+            `[ContentScript DEBUG] Applying settings to single element ${
+              element.src || "(no src)"
+            }:`,
+            JSON.stringify(currentSettings)
+          );
 
           // Apply immediate settings (speed, volume)
           mediaProcessor.applySettingsImmediately([element], currentSettings);
 
           // Apply audio effects if needed and context is resumable/running
-          if (needsProcessing && mediaProcessor.canApplyAudioEffects()) { // Use public method
-             // Attempt to resume context before processing audio effects
-             await mediaProcessor.attemptContextResume();
-             // Check context state again after attempting resume
-             if (mediaProcessor.canApplyAudioEffects()) { // Use public method
-                await mediaProcessor.processMediaElements([element], currentSettings, needsProcessing);
-             } else {
-                console.log(`[ContentScript DEBUG] AudioContext not running for ${element.src || '(no src)'}, audio effects will apply on play gesture.`);
-             }
-          } else if (needsProcessing && !mediaProcessor.canApplyAudioEffects()) { // Use public method
-             console.log(`[ContentScript DEBUG] AudioContext not yet ready for ${element.src || '(no src)'}, audio effects will apply on play gesture.`);
+          if (needsProcessing && mediaProcessor.canApplyAudioEffects()) {
+            // Use public method
+            // Attempt to resume context before processing audio effects
+            await mediaProcessor.attemptContextResume();
+            // Check context state again after attempting resume
+            if (mediaProcessor.canApplyAudioEffects()) {
+              // Use public method
+              await mediaProcessor.processMediaElements(
+                [element],
+                currentSettings,
+                needsProcessing
+              );
+            } else {
+              console.log(
+                `[ContentScript DEBUG] AudioContext not running for ${
+                  element.src || "(no src)"
+                }, audio effects will apply on play gesture.`
+              );
+            }
+          } else if (
+            needsProcessing &&
+            !mediaProcessor.canApplyAudioEffects()
+          ) {
+            // Use public method
+            console.log(
+              `[ContentScript DEBUG] AudioContext not yet ready for ${
+                element.src || "(no src)"
+              }, audio effects will apply on play gesture.`
+            );
           }
-
-
         } catch (error) {
-          console.error(`[ContentScript DEBUG] Error applying settings to single element ${element.src || '(no src)'}:`, error);
+          console.error(
+            `[ContentScript DEBUG] Error applying settings to single element ${
+              element.src || "(no src)"
+            }:`,
+            error
+          );
         }
       };
 
@@ -90,15 +136,15 @@ export default defineContentScript({
           `[ContentScript DEBUG] processMedia called for ${window.location.hostname}`
         );
         try {
-          console.time('ensureInitialized'); // Start timing
+          console.time("ensureInitialized"); // Start timing
           await settingsHandler.ensureInitialized();
-          console.timeEnd('ensureInitialized'); // End timing on success
+          console.timeEnd("ensureInitialized"); // End timing on success
           console.log(
             `[ContentScript DEBUG] Settings initialized successfully in processMedia for ${window.location.hostname}. Current settings:`,
             JSON.stringify(settingsHandler.getCurrentSettings())
           );
         } catch (error) {
-          console.timeEnd('ensureInitialized'); // End timing on failure
+          console.timeEnd("ensureInitialized"); // End timing on failure
           console.error(
             `[ContentScript DEBUG] Error ensuring settings initialized in processMedia for ${window.location.hostname}:`,
             error
@@ -121,31 +167,50 @@ export default defineContentScript({
 
           mediaElements.forEach((element) => {
             // Remove previous listeners to prevent duplicates
-            element.removeEventListener("play", resumeContextHandler as EventListener); // Cast to EventListener
-            element.removeEventListener("loadedmetadata", (event) => applySettingsToSingleElement(event.target as HTMLMediaElement)); // Correct listener
-            element.removeEventListener("canplay", (event) => applySettingsToSingleElement(event.target as HTMLMediaElement)); // Correct listener
-
+            element.removeEventListener(
+              "play",
+              resumeContextHandler as EventListener
+            ); // Cast to EventListener
+            element.removeEventListener("loadedmetadata", (event) =>
+              applySettingsToSingleElement(event.target as HTMLMediaElement)
+            ); // Correct listener
+            element.removeEventListener("canplay", (event) =>
+              applySettingsToSingleElement(event.target as HTMLMediaElement)
+            ); // Correct listener
 
             // Add listeners
-            element.addEventListener("play", resumeContextHandler as EventListener, { // Cast to EventListener
-              once: false, // Changed from true to allow multiple triggers
-            });
-            element.addEventListener("loadedmetadata", (event) => applySettingsToSingleElement(event.target as HTMLMediaElement)); // Correct listener
-            element.addEventListener("canplay", (event) => applySettingsToSingleElement(event.target as HTMLMediaElement)); // Correct listener
+            element.addEventListener(
+              "play",
+              resumeContextHandler as EventListener,
+              {
+                // Cast to EventListener
+                once: false, // Changed from true to allow multiple triggers
+              }
+            );
+            element.addEventListener("loadedmetadata", (event) =>
+              applySettingsToSingleElement(event.target as HTMLMediaElement)
+            ); // Correct listener
+            element.addEventListener("canplay", (event) =>
+              applySettingsToSingleElement(event.target as HTMLMediaElement)
+            ); // Correct listener
 
             // Also attempt to apply settings immediately in case events already fired
-          // Removed immediate application of settings to avoid interfering with user interactions
-            
-          // Removed auto-play attempt to avoid interfering with user interactions
-          // Settings will be applied when user manually plays the video via the play event listener
+            // Apply settings without modifying playback state
+            applySettingsToSingleElement(element);
+
+            // Removed auto-play attempt to avoid interfering with user interactions
+            // Settings will be applied when user manually plays the video via the play event listener
           });
 
           // Removed: Applying settings directly here. applySettingsToSingleElement handles it.
           // Removed: console.log("[ProcessMedia] Applying speed and volume settings immediately:", ...)
           // Removed: mediaProcessor.applySettingsImmediately(mediaElements, currentSettings);
         } catch (processingError) {
-            console.error(`[ContentScript DEBUG] Error during media processing steps on ${window.location.hostname} (after initialization succeeded):`, processingError);
-            // Do not return false here, as initialization itself succeeded.
+          console.error(
+            `[ContentScript DEBUG] Error during media processing steps on ${window.location.hostname} (after initialization succeeded):`,
+            processingError
+          );
+          // Do not return false here, as initialization itself succeeded.
         }
         // --- End of processing steps ---
 
@@ -155,13 +220,17 @@ export default defineContentScript({
       // Initialize with debouncing (Moved inside initializeScript)
       let initializationTimeout: number | null = null;
 
-      const debouncedInitialization = () => { // Reverted to non-async as it uses setTimeout
+      const debouncedInitialization = () => {
+        // Reverted to non-async as it uses setTimeout
         if (initializationTimeout) {
           window.clearTimeout(initializationTimeout);
         }
-        initializationTimeout = window.setTimeout(async () => { // Use setTimeout
+        initializationTimeout = window.setTimeout(async () => {
+          // Use setTimeout
           try {
-            console.log(`[ContentScript DEBUG] Debounced initialization for ${window.location.hostname}. Calling processMedia after delay.`);
+            console.log(
+              `[ContentScript DEBUG] Debounced initialization for ${window.location.hostname}. Calling processMedia after delay.`
+            );
             await processMedia(); // processMedia handles its own errors and returns boolean for init success
           } catch (error) {
             // This catch is for unexpected errors from processMedia if it doesn't handle something
