@@ -58,7 +58,30 @@ export async function broadcastSiteSettingsUpdate(
         `[EventHandler] Sending site settings update to tab ${tab.id} (${hostname})`,
         message
       ); // ADDED LOG
-      sendMessageToTab(tab.id, message);
+
+      // Get all frames in the tab to ensure iframe content scripts receive updates
+      chrome.webNavigation.getAllFrames({ tabId: tab.id }, (frames) => {
+        if (chrome.runtime.lastError) {
+          console.warn(
+            `SettingsEventHandler: Error getting frames for tab ${tab.id}:`,
+            chrome.runtime.lastError
+          );
+          return;
+        }
+
+        if (frames) {
+          console.log(
+            `[EventHandler] Found ${frames.length} frames in tab ${tab.id} for ${hostname}`
+          );
+          
+          frames.forEach((frame) => {
+            console.log(
+              `[EventHandler] Sending settings to frame ${frame.frameId} in tab ${tab.id} (${hostname})`
+            );
+            sendMessageToTab(tab.id, message);
+          });
+        }
+      });
     }
   }
 }
