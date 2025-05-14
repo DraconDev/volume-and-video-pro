@@ -21,13 +21,22 @@ function getHostname(url: string | undefined): string | null {
 // Helper to send message to a specific tab, ignoring errors
 async function sendMessageToTab(tabId: number, message: MessageType) {
   try {
+    // Check if tab exists before sending
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (!tab) {
+      console.debug(`SettingsEventHandler: Tab ${tabId} no longer exists`);
+      return;
+    }
+    
     await chrome.tabs.sendMessage(tabId, message);
   } catch (error) {
-    // Log errors more visibly for debugging
-    console.warn(
-      `SettingsEventHandler: Error sending message to tab ${tabId}. Type: ${message.type}. Error:`,
-      error
-    );
+    // Only warn for critical errors
+    if (error && !String(error).includes("Could not establish connection")) {
+      console.warn(
+        `SettingsEventHandler: Error sending message to tab ${tabId}. Type: ${message.type}. Error:`,
+        error
+      );
+    }
   }
 }
 
