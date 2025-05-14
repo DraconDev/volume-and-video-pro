@@ -134,14 +134,8 @@ export default defineContentScript({
             element.addEventListener("canplay", (event) => applySettingsToSingleElement(event.target as HTMLMediaElement)); // Correct listener
 
             // Also attempt to apply settings immediately in case events already fired
-            // Handle both paused and playing states
-            const wasPlaying = !element.paused;
-            if (wasPlaying) {
-              // Pause to ensure clean state before applying settings
-              element.pause();
-            }
-            
-            applySettingsToSingleElement(element);
+          // Apply settings without modifying playback state
+          applySettingsToSingleElement(element);
             
           // Removed auto-play attempt to avoid interfering with user interactions
           // Settings will be applied when user manually plays the video via the play event listener
