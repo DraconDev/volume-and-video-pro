@@ -13,7 +13,7 @@ export interface AudioNodes {
 }
 
 export class AudioProcessor {
-  private audioContext: AudioContext | null = null;
+  audioContext: AudioContext | null = null;
   private audioElementMap = new Map<HTMLMediaElement, AudioNodes>();
 
   async setupAudioContext(
@@ -111,7 +111,7 @@ export class AudioProcessor {
 
       // Apply element volume immediately (does not require user gesture)
       if (isFinite(elementVolume)) {
-          element.volume = elementVolume;
+        element.volume = elementVolume;
       }
 
       // Clamp values for filters
@@ -138,16 +138,18 @@ export class AudioProcessor {
       voiceFilter.gain.value = clampedVoice; // Set immediate value
       voiceFilter.gain.setTargetAtTime(clampedVoice, currentTime, timeConstant); // Schedule
 
-
       // ADDED LOGS: Log the values being applied to the nodes
-      console.log(`[AudioProcessor] Applying Node Settings (immediate + setTargetAtTime) at ${currentTime}:`, {
+      console.log(
+        `[AudioProcessor] Applying Node Settings (immediate + setTargetAtTime) at ${currentTime}:`,
+        {
           elementVolume: element.volume, // Log the directly set element volume
           targetGainNodeVolume: gainNodeVolume, // Log target values
           targetBassGain: clampedBass,
           targetVoiceGain: clampedVoice,
           voiceGain: clampedVoice,
-          mono: settings.mono // Log mono setting as it affects connections
-      });
+          mono: settings.mono, // Log mono setting as it affects connections
+        }
+      );
 
       // console.log("AudioProcessor: Settings updated successfully", { // Reduced logging
       //   volume: clampedVolume,
@@ -211,14 +213,21 @@ export class AudioProcessor {
       if (wasPlaying) {
         try {
           // Check if context is running before trying to play
-          if (context.state === 'running') {
+          if (context.state === "running") {
             await nodes.element.play();
           } else {
-             console.warn("AudioProcessor: Context not running, cannot restore playback yet.");
+            console.warn(
+              "AudioProcessor: Context not running, cannot restore playback yet."
+            );
           }
-        } catch (e: any) { // Add type 'any' to access properties like message
+        } catch (e: any) {
+          // Add type 'any' to access properties like message
           console.error(
-            `AudioProcessor: Failed to restore playback for ${nodes.element.src || '(no src)'}. Error: ${e?.message || String(e)}. Context state: ${context.state}. Document focused: ${document.hasFocus()}.`,
+            `AudioProcessor: Failed to restore playback for ${
+              nodes.element.src || "(no src)"
+            }. Error: ${e?.message || String(e)}. Context state: ${
+              context.state
+            }. Document focused: ${document.hasFocus()}.`,
             e // Log the full error object as well
           );
         }
@@ -240,10 +249,13 @@ export class AudioProcessor {
     const nodes = this.audioElementMap.get(element);
     if (!nodes) return false;
 
-    console.log(`[AudioProcessor] Disconnecting nodes for element: ${element.src || '(no src)'}`); // ADDED LOG
+    console.log(
+      `[AudioProcessor] Disconnecting nodes for element: ${
+        element.src || "(no src)"
+      }`
+    ); // ADDED LOG
 
     try {
-
       // Safely disconnect each node
       const safeDisconnect = (node: AudioNode) => {
         try {
@@ -263,7 +275,12 @@ export class AudioProcessor {
       this.audioElementMap.delete(element);
       return true; // Indicate success
     } catch (error) {
-      console.error(`AudioProcessor: Error disconnecting nodes for ${element.src || '(no src)'}:`, error);
+      console.error(
+        `AudioProcessor: Error disconnecting nodes for ${
+          element.src || "(no src)"
+        }:`,
+        error
+      );
       // Attempt to remove from map even if disconnect failed partially
       this.audioElementMap.delete(element);
       return false; // Indicate failure
@@ -272,12 +289,12 @@ export class AudioProcessor {
 
   // Keep the old private method for resetAllToDisabled for now, or refactor resetAllToDisabled to use the public one.
   private disconnectAudioNodes(element: HTMLMediaElement): void {
-      this.disconnectElementNodes(element); // Just call the public version
+    this.disconnectElementNodes(element); // Just call the public version
   }
 
-
   async updateAudioEffects(settings: AudioSettings): Promise<void> {
-    console.log( // ADDED LOG
+    console.log(
+      // ADDED LOG
       "[AudioProcessor] Updating audio effects with settings:",
       JSON.stringify(settings)
     );
@@ -288,8 +305,11 @@ export class AudioProcessor {
         // connections (like for mono) are updated along with values.
         // connectNodes internally calls updateNodeSettings.
         await this.connectNodes(nodes, settings);
-        console.log( // ADDED LOG
-          `[AudioProcessor] Reconnected nodes and updated settings for element: ${element.src || '(no src)'}`
+        console.log(
+          // ADDED LOG
+          `[AudioProcessor] Reconnected nodes and updated settings for element: ${
+            element.src || "(no src)"
+          }`
         );
       } catch (error) {
         console.error(
@@ -337,8 +357,7 @@ export class AudioProcessor {
         console.error("AudioProcessor: Failed to resume AudioContext:", error);
       }
     } else if (this.audioContext) {
-       // console.log(`AudioProcessor: AudioContext state is already "${this.audioContext.state}", no resume needed.`); // Reduced logging
+      // console.log(`AudioProcessor: AudioContext state is already "${this.audioContext.state}", no resume needed.`); // Reduced logging
     }
   }
-
 } // End of AudioProcessor class
