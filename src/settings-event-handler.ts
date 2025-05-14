@@ -22,17 +22,25 @@ const activeTabs = new Set<number>();
 
 // Register content script activation only if runtime.onConnect is available
 if (chrome.runtime.onConnect && typeof chrome.runtime.onConnect.addListener === 'function') {
-  chrome.runtime.onConnect.addListener((port) => {
-    if (port.name === "contentScript") {
-      const tabId = port.sender?.tab?.id ?? -1;
-      if (tabId !== -1) {
-        activeTabs.add(tabId);
-        port.onDisconnect.addListener(() => {
-          activeTabs.delete(tabId);
-        });
+  try {
+    chrome.runtime.onConnect.addListener((port) => {
+      if (port.name === "contentScript") {
+        const tabId = port.sender?.tab?.id ?? -1;
+        if (tabId !== -1) {
+          activeTabs.add(tabId);
+          port.onDisconnect.addListener(() => {
+            activeTabs.delete(tabId);
+          });
+        }
       }
-    }
-  });
+    });
+  } catch (error) {
+    console.warn(
+      "SettingsEventHandler: Error adding onConnect listener - tab tracking disabled",
+      error
+    );
+    // Fallback: Assume all tabs are active if listener setup fails
+  }
 } else {
   console.warn(
     "SettingsEventHandler: chrome.runtime.onConnect not available - tab tracking disabled"
