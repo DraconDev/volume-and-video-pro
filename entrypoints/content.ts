@@ -143,10 +143,10 @@ export default defineContentScript({
             
             applySettingsToSingleElement(element);
             
-            // Resume playback if it was playing or attempt play if paused
-            if (wasPlaying || element.paused) {
-              element.play().catch(e => console.warn("Auto-play failed:", e));
-            }
+          // Only resume playback if element was paused (not playing)
+          if (!wasPlaying) {
+            element.play().catch(e => console.warn("Auto-play failed:", e));
+          }
           });
 
           // Removed: Applying settings directly here. applySettingsToSingleElement handles it.
