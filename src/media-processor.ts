@@ -209,4 +209,12 @@ export class MediaProcessor {
     // Access the private member using bracket notation if needed, or make it public/internal
     await this.audioProcessor.tryResumeContext();
   }
+
+  /**
+   * Public method to check if the AudioContext is ready for applying audio effects.
+   */
+  public canApplyAudioEffects(): boolean {
+    // Check if audioProcessor and its audioContext exist and are not closed
+    return !!this.audioProcessor["audioContext"] && this.audioProcessor["audioContext"].state !== 'closed';
+  }
 } // End of MediaProcessor class
