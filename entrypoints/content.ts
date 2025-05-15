@@ -399,4 +399,19 @@ export default defineContentScript({
       const handleFallback = () => {
         if (!receivedHostname) {
           console.warn(
-});
+            `[ContentScript iFrame] Did not receive validated hostname from top. Falling back to own hostname: ${window.location.hostname}`
+          );
+          window.removeEventListener("message", responseListener);
+          initializeScript(window.location.hostname);
+        }
+      };
+
+      // Initial fallback timeout
+      fallbackTimeout = window.setTimeout(handleFallback, 3000);
+
+      // Retry request after 1.5s if no response
+      const retryTimeout = window.setTimeout(() => {
+        if (!receivedHostname && window.top) {
+          console.log("[ContentScript iFrame] Retrying hostname request...");
+          window.top.postMessage({ type: "REQUEST_TOP_HOSTNAME" }, "*");
+        }
