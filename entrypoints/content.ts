@@ -20,21 +20,21 @@ export default defineContentScript({
         try {
           await settingsHandler.ensureInitialized();
           const settings = settingsHandler.getCurrentSettings();
-        `[ContentScript] Initializing script for hostname: ${hostname}`
-      );
-      settingsHandler.initialize(hostname); // Initialize with the correct hostname
+          const needsProcessing = settingsHandler.needsAudioProcessing();
+          
+          if (needsProcessing) {
+            await mediaProcessor.attemptContextResume();
+            await mediaProcessor.processMediaElements(
+              [element], 
+              settings,
+              needsProcessing
+            );
+          }
+        } catch (error) {
+          console.error("Error handling media element:", error);
+        }
+      };
 
-      // --- AudioContext Resume Handler --- (Moved inside initializeScript)
-      const resumeContextHandler = async (event: Event) => {
-        console.log(
-          "Content: Media interaction detected, attempting to resume AudioContext."
-        );
-        await mediaProcessor.attemptContextResume();
-        console.log(
-          "Content: Context potentially resumed, applying audio effects..."
-        );
-        const targetElement = event.target as HTMLMediaElement;
-        if (targetElement) {
           try {
             // Ensure settings are initialized before applying effects
             await settingsHandler.ensureInitialized();
