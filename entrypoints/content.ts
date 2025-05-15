@@ -217,38 +217,26 @@ export default defineContentScript({
               applySettingsToSingleElement(element);
             });
 
-            // Also attempt to apply settings immediately in case events already fired
-            // Apply settings immediately with playback state preservation
+            // Apply settings immediately to the element after adding listeners.
+            // This handles elements present on initial load and newly added elements.
             applySettingsToSingleElement(element);
 
-            // Force immediate settings application for playing elements with more lenient state check
-            if (
-              !element.paused &&
-              element.readyState >= HTMLMediaElement.HAVE_METADATA
-            ) {
-              console.log(
-                `[ContentScript] Force applying settings to element ${
-                  element.src || "(no src)"
-                } with HAVE_METADATA state`
-              );
-              mediaProcessor.applySettingsImmediately(
-                [element],
-                settingsHandler.getCurrentSettings()
-              );
-            }
+            // Removed the specific check for HAVE_METADATA and applySettingsImmediately here,
+            // as applySettingsToSingleElement already handles immediate settings application.
 
             // Removed auto-play attempt to avoid interfering with user interactions
             // Settings will be applied when user manually plays the video via the play event listener
           });
 
-          // Apply settings to all elements immediately after initialization
-          console.log(
-            `[ContentScript] Applying settings to all elements immediately for ${window.location.hostname}`
-          );
-          mediaProcessor.applySettingsImmediately(
-            mediaElements,
-            settingsHandler.getCurrentSettings()
-          );
+          // The loop above now applies settings to all found elements immediately.
+          // The following line is redundant and can be removed.
+          // console.log(
+          //   `[ContentScript] Applying settings to all elements immediately for ${window.location.hostname}`
+          // );
+          // mediaProcessor.applySettingsImmediately(
+          //   mediaElements,
+          //   settingsHandler.getCurrentSettings()
+          // );
         } catch (processingError) {
           console.error(
             `[ContentScript DEBUG] Error during media processing steps on ${window.location.hostname} (after initialization succeeded):`,
