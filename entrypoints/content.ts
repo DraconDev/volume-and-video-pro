@@ -193,14 +193,21 @@ export default defineContentScript({
             element.addEventListener("canplay", (event) =>
               applySettingsToSingleElement(event.target as HTMLMediaElement)
             ); // Correct listener
+            
+            // Add loadstart listener for dynamically loaded videos
+            element.addEventListener("loadstart", () => {
+              console.log(`[ContentScript] loadstart detected on ${element.src || "(no src)"}, reapplying settings`);
+              // Reapply settings when new media starts loading
+              applySettingsToSingleElement(element);
+            });
 
             // Also attempt to apply settings immediately in case events already fired
             // Apply settings immediately with playback state preservation
             applySettingsToSingleElement(element);
             
-            // Force immediate settings application for playing elements
-            if (!element.paused && element.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
-              console.log(`[ContentScript] Force applying settings to already playing element ${element.src || "(no src)"}`);
+            // Force immediate settings application for playing elements with more lenient state check
+            if (!element.paused && element.readyState >= HTMLMediaElement.HAVE_METADATA) {
+              console.log(`[ContentScript] Force applying settings to element ${element.src || "(no src)"} with HAVE_METADATA state`);
               mediaProcessor.applySettingsImmediately([element], settingsHandler.getCurrentSettings());
             }
 
