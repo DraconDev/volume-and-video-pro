@@ -89,14 +89,15 @@ export default defineContentScript({
           // Apply immediate settings (speed, volume)
           mediaProcessor.applySettingsImmediately([element], currentSettings);
 
-          // Apply audio effects if needed and context is resumable/running
-          if (needsProcessing && mediaProcessor.canApplyAudioEffects()) {
-            // Use public method
-            // Attempt to resume context before processing audio effects
-            await mediaProcessor.attemptContextResume();
-            // Check context state again after attempting resume
+          // Apply audio effects if needed
+          if (needsProcessing) {
+            // Check if context is ready or can be resumed
             if (mediaProcessor.canApplyAudioEffects()) {
-              // Use public method
+              console.log(
+                `[ContentScript DEBUG] AudioContext ready for ${
+                  element.src || "(no src)"
+                }, applying audio effects.`
+              );
               await mediaProcessor.processMediaElements(
                 [element],
                 currentSettings,
@@ -104,21 +105,32 @@ export default defineContentScript({
               );
             } else {
               console.log(
-                `[ContentScript DEBUG] AudioContext not running for ${
+                `[ContentScript DEBUG] AudioContext not ready for ${
                   element.src || "(no src)"
-                }, audio effects will apply on play gesture.`
+                }. Attempting to resume and apply effects.`
               );
+              // Attempt to resume context (requires user gesture)
+              await mediaProcessor.attemptContextResume();
+              // Check again after attempting resume
+              if (mediaProcessor.canApplyAudioEffects()) {
+                console.log(
+                  `[ContentScript DEBUG] AudioContext resumed for ${
+                    element.src || "(no src)"
+                  }, applying audio effects.`
+                );
+                await mediaProcessor.processMediaElements(
+                  [element],
+                  currentSettings,
+                  needsProcessing
+                );
+              } else {
+                console.log(
+                  `[ContentScript DEBUG] AudioContext still not ready for ${
+                    element.src || "(no src)"
+                  }, audio effects will apply on play gesture.`
+                );
+              }
             }
-          } else if (
-            needsProcessing &&
-            !mediaProcessor.canApplyAudioEffects()
-          ) {
-            // Use public method
-            console.log(
-              `[ContentScript DEBUG] AudioContext not yet ready for ${
-                element.src || "(no src)"
-              }, audio effects will apply on play gesture.`
-            );
           }
         } catch (error) {
           console.error(
