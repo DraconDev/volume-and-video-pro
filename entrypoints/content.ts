@@ -380,6 +380,14 @@ export default defineContentScript({
         } catch (error) {
           console.error("Error processing hostname response:", error);
         }
+      };
+      window.addEventListener("message", responseListener);
+
+      // Request the hostname from the top window
+      if (window.top) {
+        window.top.postMessage({ type: "REQUEST_TOP_HOSTNAME" }, "*"); // Use '*' for simplicity
+      } else {
+        console.error(
           "[ContentScript iFrame] window.top is null, cannot request hostname."
         );
         // Initialize with own hostname immediately if top is inaccessible
@@ -387,16 +395,8 @@ export default defineContentScript({
         return; // Exit early
       }
 
-      // Fallback timeout in case the message never arrives
-      fallbackTimeout = window.setTimeout(() => {
+      // Enhanced fallback with retry mechanism
+      const handleFallback = () => {
         if (!receivedHostname) {
           console.warn(
-            `[ContentScript iFrame] Did not receive hostname from top after timeout. Falling back to own hostname: ${window.location.hostname}`
-          );
-          window.removeEventListener("message", responseListener); // Clean up listener
-          initializeScript(window.location.hostname); // Initialize with own hostname as fallback
-        }
-      }, 3000); // 3 second timeout (reduced from 5)
-    }
-  },
 });
