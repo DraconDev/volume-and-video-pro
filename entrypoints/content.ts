@@ -355,30 +355,22 @@ export default defineContentScript({
       let receivedHostname = false;
       let fallbackTimeout: number | null = null;
 
-      // Enhanced listener for hostname response with security checks
+      // Listener for the response from the top window
       const responseListener = (event: MessageEvent) => {
-        try {
-          // Validate message origin matches top window origin when possible
-          const isValidOrigin = !window.top || 
-            (event.origin === window.top.origin || 
-             event.origin === window.location.origin);
-          
-          if (
-            isValidOrigin &&
-            event.source === window.top &&
-            event.data?.type === "TOP_HOSTNAME_INFO" &&
-            typeof event.data.hostname === "string"
-          ) {
-            receivedHostname = true;
-            if (fallbackTimeout) clearTimeout(fallbackTimeout);
-            console.log(
-              `[ContentScript iFrame] Received validated hostname from top: ${event.data.hostname}`
-            );
-            window.removeEventListener("message", responseListener);
-            initializeScript(event.data.hostname);
-          }
-        } catch (error) {
-          console.error("Error processing hostname response:", error);
+        // Basic security check - could be enhanced by checking event.origin against window.top.origin (if accessible)
+        if (
+          event.source === window.top &&
+          event.data &&
+          event.data.type === "TOP_HOSTNAME_INFO" &&
+          event.data.hostname
+        ) {
+          receivedHostname = true;
+          if (fallbackTimeout) clearTimeout(fallbackTimeout); // Cancel fallback timeout
+          console.log(
+            `[ContentScript iFrame] Received hostname from top: ${event.data.hostname}`
+          );
+          window.removeEventListener("message", responseListener); // Clean up listener
+          initializeScript(event.data.hostname); // Initialize with received hostname
         }
       };
       window.addEventListener("message", responseListener);
@@ -395,23 +387,16 @@ export default defineContentScript({
         return; // Exit early
       }
 
-      // Enhanced fallback with retry mechanism
-      const handleFallback = () => {
+      // Fallback timeout in case the message never arrives
+      fallbackTimeout = window.setTimeout(() => {
         if (!receivedHostname) {
           console.warn(
-            `[ContentScript iFrame] Did not receive validated hostname from top. Falling back to own hostname: ${window.location.hostname}`
+            `[ContentScript iFrame] Did not receive hostname from top after timeout. Falling back to own hostname: ${window.location.hostname}`
           );
-          window.removeEventListener("message", responseListener);
-          initializeScript(window.location.hostname);
+          window.removeEventListener("message", responseListener); // Clean up listener
+          initializeScript(window.location.hostname); // Initialize with own hostname as fallback
         }
-      };
-
-      // Initial fallback timeout
-      fallbackTimeout = window.setTimeout(handleFallback, 3000);
-
-      // Retry request after 1.5s if no response
-      const retryTimeout = window.setTimeout(() => {
-        if (!receivedHostname && window.top) {
-          console.log("[ContentScript iFrame] Retrying hostname request...");
-          window.top.postMessage({ type: "REQUEST_TOP_HOSTNAME" }, "*");
-        }
+      }, 3000); // 3 second timeout (reduced from 5)
+    }
+  },
+});
