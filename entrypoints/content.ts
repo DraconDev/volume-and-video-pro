@@ -355,31 +355,31 @@ export default defineContentScript({
       let receivedHostname = false;
       let fallbackTimeout: number | null = null;
 
-      // Listener for the response from the top window
+      // Enhanced listener for hostname response with security checks
       const responseListener = (event: MessageEvent) => {
-        // Basic security check - could be enhanced by checking event.origin against window.top.origin (if accessible)
-        if (
-          event.source === window.top &&
-          event.data &&
-          event.data.type === "TOP_HOSTNAME_INFO" &&
-          event.data.hostname
-        ) {
-          receivedHostname = true;
-          if (fallbackTimeout) clearTimeout(fallbackTimeout); // Cancel fallback timeout
-          console.log(
-            `[ContentScript iFrame] Received hostname from top: ${event.data.hostname}`
-          );
-          window.removeEventListener("message", responseListener); // Clean up listener
-          initializeScript(event.data.hostname); // Initialize with received hostname
+        try {
+          // Validate message origin matches top window origin when possible
+          const isValidOrigin = !window.top || 
+            (event.origin === window.top.origin || 
+             event.origin === window.location.origin);
+          
+          if (
+            isValidOrigin &&
+            event.source === window.top &&
+            event.data?.type === "TOP_HOSTNAME_INFO" &&
+            typeof event.data.hostname === "string"
+          ) {
+            receivedHostname = true;
+            if (fallbackTimeout) clearTimeout(fallbackTimeout);
+            console.log(
+              `[ContentScript iFrame] Received validated hostname from top: ${event.data.hostname}`
+            );
+            window.removeEventListener("message", responseListener);
+            initializeScript(event.data.hostname);
+          }
+        } catch (error) {
+          console.error("Error processing hostname response:", error);
         }
-      };
-      window.addEventListener("message", responseListener);
-
-      // Request the hostname from the top window
-      if (window.top) {
-        window.top.postMessage({ type: "REQUEST_TOP_HOSTNAME" }, "*"); // Use '*' for simplicity
-      } else {
-        console.error(
           "[ContentScript iFrame] window.top is null, cannot request hostname."
         );
         // Initialize with own hostname immediately if top is inaccessible
