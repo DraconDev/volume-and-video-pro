@@ -1,25 +1,25 @@
 import { defineContentScript } from "wxt/sandbox";
 import { MediaProcessor } from "./../src/media-processor";
 import { SettingsHandler } from "../src/settings-handler";
-import { MessageType, UpdateSettingsMessage } from "../src/types";
+import { MessageType } from "../src/types";
 
 export default defineContentScript({
-  matches: ["<all_urls>"],
-  allFrames: true, // Add this line
-  runAt: "document_idle", // Changed from document_start
+  matches: ["<all_url>"],
+  allFrames: true,
+  runAt: "document_idle",
   main: async () => {
-    console.log(
-      "Content: Script starting - This log should always appear",
-      window.location.href
-    );
+    console.log("Content script initialized");
 
-    // Initialize core components
     const settingsHandler = new SettingsHandler();
     const mediaProcessor = new MediaProcessor();
 
-    // Function to initialize settings and the rest of the script logic
     const initializeScript = async (hostname: string) => {
-      console.log(
+      await settingsHandler.initialize(hostname);
+
+      const handleMediaElement = async (element: HTMLMediaElement) => {
+        try {
+          await settingsHandler.ensureInitialized();
+          const settings = settingsHandler.getCurrentSettings();
         `[ContentScript] Initializing script for hostname: ${hostname}`
       );
       settingsHandler.initialize(hostname); // Initialize with the correct hostname
