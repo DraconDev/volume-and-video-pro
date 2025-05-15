@@ -209,29 +209,8 @@ export class AudioProcessor {
       // Apply settings
       await this.updateNodeSettings(nodes, settings);
 
-      // Restore playback state if needed (handle potential errors)
-      if (wasPlaying) {
-        try {
-          // Check if context is running before trying to play
-          if (context.state === "running") {
-            await nodes.element.play();
-          } else {
-            console.warn(
-              "AudioProcessor: Context not running, cannot restore playback yet."
-            );
-          }
-        } catch (e: any) {
-          // Add type 'any' to access properties like message
-          console.error(
-            `AudioProcessor: Failed to restore playback for ${
-              nodes.element.src || "(no src)"
-            }. Error: ${e?.message || String(e)}. Context state: ${
-              context.state
-            }. Document focused: ${document.hasFocus()}.`,
-            e // Log the full error object as well
-          );
-        }
-      }
+      // Removed automatic playback restoration after connecting nodes.
+      // Playback should be initiated by user gesture and handled by the content script's play listener.
 
       // console.log("AudioProcessor: Nodes connected successfully"); // Reduced logging
     } catch (error) {
