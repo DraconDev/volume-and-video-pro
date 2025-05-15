@@ -133,6 +133,13 @@ export class MediaProcessor {
           if (wasPlaying) {
             element
               .play()
+              .then(() => {
+                if (element.paused) {
+                  console.warn(
+                    `MediaProcessor: Playback did not resume after settings update for ${element.src || "(no src)"}. Autoplay blocked?`
+                  );
+                }
+              })
               .catch((e) =>
                 console.warn(
                   "MediaProcessor: Failed to resume playback after settings update:",
