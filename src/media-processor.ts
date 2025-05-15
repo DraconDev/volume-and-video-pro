@@ -106,8 +106,10 @@ export class MediaProcessor {
     );
 
     // Skip if settings haven't changed
-    if (this.lastAppliedSettings && 
-        JSON.stringify(this.lastAppliedSettings) === JSON.stringify(settings)) {
+    if (
+      this.lastAppliedSettings &&
+      JSON.stringify(this.lastAppliedSettings) === JSON.stringify(settings)
+    ) {
       return;
     }
     this.lastAppliedSettings = { ...settings };
@@ -115,7 +117,7 @@ export class MediaProcessor {
     // Batch update for better performance
     const batchSize = 5;
     const updateQueue = [...mediaElements];
-    
+
     const processBatch = () => {
       const batch = updateQueue.splice(0, batchSize);
       batch.forEach((element) => {
@@ -129,14 +131,29 @@ export class MediaProcessor {
           element.defaultPlaybackRate = settings.speed / 100;
           element.volume = settings.volume / 100;
 
-          // Removed attempt to restore playback state here.
-          // Playback should be initiated by user gesture and handled by the content script's play listener.
-
-          // Ensure it stays paused at the same position if it was paused
-          if (element.paused) {
-              element.currentTime = currentTime;
+          // Restore playback state if needed
+          if (wasPlaying) {
+            element
+              .play()
+              .then(() => {
+                if (element.paused) {
+                  console.warn(
+                    `MediaProcessor: Playback did not resume after settings update for ${
+                      element.src || "(no src)"
+                    }. Autoplay blocked?`
+                  );
+                }
+              })
+              .catch((e) =>
+                console.warn(
+                  "MediaProcessor: Failed to resume playback after settings update:",
+                  e
+                )
+              );
+          } else {
+            // Ensure it stays paused at the same position
+            element.currentTime = currentTime;
           }
-
         } catch (e) {
           console.error(
             `MediaProcessor: Error applying settings to ${
@@ -222,6 +239,9 @@ export class MediaProcessor {
    */
   public canApplyAudioEffects(): boolean {
     // Check if audioProcessor and its audioContext exist and are not closed
-    return !!this.audioProcessor["audioContext"] && this.audioProcessor["audioContext"].state !== 'closed';
+    return (
+      !!this.audioProcessor["audioContext"] &&
+      this.audioProcessor["audioContext"].state !== "closed"
+    );
   }
 } // End of MediaProcessor class
