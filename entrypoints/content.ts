@@ -290,14 +290,17 @@ export default defineContentScript({
             );
             settingsHandler.updateSettings(message.settings);
             console.log(
-              "Content: Settings updated via message, reprocessing media elements..."
+              "Content: Settings updated via message, forcing audio effects update and reprocessing media elements..."
             );
             (async () => {
               try {
+                // Force update audio effects on existing context
+                await mediaProcessor.forceAudioEffectsUpdate(message.settings);
+                // Reprocess media to handle new elements or elements without context
                 await processMedia();
               } catch (error) {
                 console.error(
-                  "Content: Error during processMedia after settings update:",
+                  "Content: Error during settings update processing:",
                   error
                 );
               }
