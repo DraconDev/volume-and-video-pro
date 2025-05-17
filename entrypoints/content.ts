@@ -296,8 +296,14 @@ export default defineContentScript({
               try {
                 // Force update audio effects on existing context
                 await mediaProcessor.forceAudioEffectsUpdate(message.settings);
-                // Reprocess media to handle new elements or elements without context
-                await processMedia();
+
+                // Apply settings immediately to all existing media elements
+                const mediaElements = mediaProcessor.findMediaElements();
+                console.log(`[ContentScript Listener] Found ${mediaElements.length} media elements to update immediately.`);
+                for (const element of mediaElements) {
+                  await applySettingsToSingleElement(element);
+                }
+
               } catch (error) {
                 console.error(
                   "Content: Error during settings update processing:",
