@@ -26,13 +26,8 @@ export class MediaProcessor {
       if (wasPlaying) {
         // If playing, changing playbackRate should ideally not stop it.
         // Avoid resetting currentTime which can cause a stutter.
-        // Call play() to ensure it continues (e.g. if rate change paused it, or no-op if already playing).
-        element.play().catch((e) =>
-          console.warn(
-            "MediaProcessor: Failed to resume playback after speed change:", // More specific message
-            e
-          )
-        );
+        // Removed attempt to resume playback state here.
+        // Playback should be initiated by user gesture and handled by the content script's play listener.
       } else {
         // If it was paused, set the currentTime to ensure it stays at the same spot.
         element.currentTime = currentTime;
