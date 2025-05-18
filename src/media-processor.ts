@@ -4,17 +4,34 @@ import { MediaManager } from "./media-manager";
 
 export class MediaProcessor {
   audioProcessor: AudioProcessor;
+  private activeMediaElements = new Set<HTMLMediaElement>();
 
   constructor() {
     this.audioProcessor = new AudioProcessor();
   }
 
+  // Method to get currently managed media elements, filtering for connected ones
+  public getManagedMediaElements(): HTMLMediaElement[] {
+    this.activeMediaElements.forEach(el => {
+      if (!el.isConnected) {
+        this.activeMediaElements.delete(el);
+        console.log(`[MediaProcessor] Removed disconnected element from active list: ${el.src || '(no src)'}`);
+      }
+    });
+    return Array.from(this.activeMediaElements);
+  }
+
   private updatePlaybackSpeed(element: HTMLMediaElement, speed: number): void {
-    console.log(
-      `[MediaProcessor] Updating speed for element ${
-        element.src || "(no src)"
-      } to ${speed}`
-    ); // ADDED LOG
+    if (!element.isConnected) {
+      console.warn(`[MediaProcessor] Attempted to update speed on disconnected element: ${element.src || '(no src)'}`);
+      this.activeMediaElements.delete(element); // Clean up if found in active list
+      return;
+    }
+    // console.log( // This log can be very noisy, enable if needed for specific speed debugging
+    //   `[MediaProcessor] Updating speed for element ${
+    //     element.src || "(no src)"
+    //   } to ${speed}`
+    // );
     try {
       const wasPlaying = !element.paused;
       const currentTime = element.currentTime;
@@ -26,14 +43,12 @@ export class MediaProcessor {
       if (wasPlaying) {
         // If playing, changing playbackRate should ideally not stop it.
         // Avoid resetting currentTime which can cause a stutter.
-        // Removed attempt to resume playback state here.
-        // Playback should be initiated by user gesture and handled by the content script's play listener.
       } else {
         // If it was paused, set the currentTime to ensure it stays at the same spot.
         element.currentTime = currentTime;
       }
     } catch (e) {
-      console.error("MediaProcessor: Error setting speed:", e);
+      console.error(`MediaProcessor: Error setting speed for ${element.src || '(no src)'}:`, e);
     }
   }
 
@@ -50,18 +65,26 @@ export class MediaProcessor {
     // Playback speed is generally handled by applySettingsImmediately via content.ts.
     // This call ensures it's also updated if processMediaElements is called directly
     // or if applySettingsImmediately failed for some reason.
-    mediaElements.forEach((element) =>
-      this.updatePlaybackSpeed(element, settings.speed)
-    );
+    mediaElements.forEach((element) => {
+      if (element.isConnected) { // Ensure element is still in DOM before updating speed
+        this.updatePlaybackSpeed(element, settings.speed);
+      } else {
+        this.activeMediaElements.delete(element); // Clean up if disconnected
+      }
+    });
 
     if (needsAudioEffectsSetup) {
       console.log("[MediaProcessor] Audio effects setup is requested.");
       for (const element of mediaElements) {
+        if (!element.isConnected) {
+          this.activeMediaElements.delete(element);
+          continue;
+        }
         try {
-          // This should connect the element to the audio graph, creating the context if necessary.
-          // It's assumed audioProcessor.setupAudioContext handles new elements with an existing context correctly.
           console.log(`[MediaProcessor] Calling setupAudioContext for element: ${element.src || "(no src)"}`);
           await this.audioProcessor.setupAudioContext(element, settings);
+          this.activeMediaElements.add(element); // Add to active list on successful setup
+          console.log(`[MediaProcessor] Added to activeMediaElements: ${element.src || "(no src)"}. Count: ${this.activeMediaElements.size}`);
         } catch (e) {
           console.error(
             `[MediaProcessor] Error in setupAudioContext for element ${element.src || "(no src)"}:`, e
@@ -69,9 +92,6 @@ export class MediaProcessor {
         }
       }
 
-      // After attempting to set up all elements, if a context exists and is running,
-      // update the effects globally on that context.
-      // This ensures the effects chain reflects the latest settings.
       if (this.audioProcessor.audioContext && this.audioProcessor.audioContext.state === 'running') {
         console.log("[MediaProcessor] AudioContext is running, calling updateAudioEffects to apply/update global effects.");
         await this.audioProcessor.updateAudioEffects(settings);
@@ -79,22 +99,44 @@ export class MediaProcessor {
         console.log("[MediaProcessor] AudioContext not running or does not exist after setup attempts. Skipping global updateAudioEffects.");
       }
     } else {
-      console.log("[MediaProcessor] Audio effects setup not requested. Ensuring any existing processing for these elements is disconnected.");
-      // If audio effects are not needed, attempt to disconnect these elements from processing.
-      // This relies on a method in AudioProcessor, e.g., disconnectElement or resetElement.
+      console.log("[MediaProcessor] Audio effects setup not requested. Ensuring any existing processing for these elements is disconnected/bypassed.");
       for (const element of mediaElements) {
+        if (!element.isConnected) {
+          this.activeMediaElements.delete(element);
+          continue;
+        }
         try {
-          // Assuming a method like this exists or will be added to AudioProcessor:
-          if (typeof (this.audioProcessor as any).disconnectElement === 'function') {
+          // Attempt to bypass or disconnect effects for this element
+          if (typeof (this.audioProcessor as any).bypassEffectsForElement === 'function') {
+            console.log(`[MediaProcessor] Calling bypassEffectsForElement for: ${element.src || "(no src)"}`);
+            await (this.audioProcessor as any).bypassEffectsForElement(element);
+          } else if (typeof (this.audioProcessor as any).disconnectElement === 'function') {
              console.log(`[MediaProcessor] Calling disconnectElement for: ${element.src || "(no src)"}`);
             await (this.audioProcessor as any).disconnectElement(element);
           } else {
-            console.log(`[MediaProcessor] disconnectElement method not found on audioProcessor for ${element.src || "(no src)"}. Effects may remain if previously active.`);
+            console.log(`[MediaProcessor] No method found on audioProcessor to bypass/disconnect effects for ${element.src || "(no src)"}.`);
+          }
+          // Whether disconnection was successful or not, if effects are not needed,
+          // it's safer to remove it from active list to prevent unintended processing later.
+          // However, it might still be controlled for speed/volume.
+          // For now, let's assume if effects are off, we might not "actively manage" it in the same way.
+          // This part needs careful consideration based on AudioProcessor's capabilities.
+          // A simple approach: if effects are off, it's not "active" in terms of audio graph.
+          if (this.activeMediaElements.has(element)) {
+            // console.log(`[MediaProcessor] Removing from activeMediaElements (effects off): ${element.src || "(no src)"}`);
+            // this.activeMediaElements.delete(element); // Re-evaluating if this is correct. Speed/volume still apply.
           }
         } catch (e) {
-          console.error(`[MediaProcessor] Error disconnecting element ${element.src || "(no src)"}:`, e);
+          console.error(`[MediaProcessor] Error bypassing/disconnecting effects for element ${element.src || "(no src)"}:`, e);
         }
       }
+      // If effects are globally turned off, ensure the main audio effects chain is also reset/bypassed
+      if (this.audioProcessor.audioContext && typeof (this.audioProcessor as any).bypassAllEffects === 'function') {
+        console.log("[MediaProcessor] Needs no audio effects, calling bypassAllEffects on AudioProcessor.");
+        await (this.audioProcessor as any).bypassAllEffects();
+      }
+
+
     }
   }
 
@@ -127,6 +169,10 @@ export class MediaProcessor {
 
       batch.forEach((element) => {
         try {
+          if (!element.isConnected) {
+            this.activeMediaElements.delete(element); // Clean up if disconnected
+            return; // Skip disconnected elements in the batch
+          }
           // Store current state
           const wasPlaying = !element.paused;
           const currentTime = element.currentTime;
@@ -134,7 +180,7 @@ export class MediaProcessor {
           // Apply playback speed if different
           const targetSpeed = settings.speed / 100;
           if (Math.abs(element.playbackRate - targetSpeed) > EPSILON) {
-            console.log(`[MediaProcessor] Updating playbackRate for ${element.src || '(no src)'} from ${element.playbackRate} to ${targetSpeed}`);
+            // console.log(`[MediaProcessor Immediate] Updating playbackRate for ${element.src || '(no src)'} from ${element.playbackRate} to ${targetSpeed}`);
             element.playbackRate = targetSpeed;
           }
           // Always set defaultPlaybackRate as it's less likely to be contested
@@ -147,24 +193,27 @@ export class MediaProcessor {
           // Apply volume if different
           const targetVolume = settings.volume / 100;
           if (Math.abs(element.volume - targetVolume) > EPSILON) {
-            console.log(`[MediaProcessor] Updating volume for ${element.src || '(no src)'} from ${element.volume} to ${targetVolume}`);
+            // console.log(`[MediaProcessor Immediate] Updating volume for ${element.src || '(no src)'} from ${element.volume} to ${targetVolume}`);
             element.volume = targetVolume;
           }
+          
+          // If we apply settings, it's considered "managed" for speed/volume at least.
+          // This might lead to elements being added here even if audio effects are off.
+          // This is acceptable as speed/volume should always apply.
+          if (!this.activeMediaElements.has(element)) {
+             // console.log(`[MediaProcessor Immediate] Adding to activeMediaElements via immediate settings: ${element.src || "(no src)"}`);
+             // this.activeMediaElements.add(element); // Decided against adding here, setupAudioContext is the gatekeeper for "active" audio processing
+          }
 
-          // Removed attempt to restore playback state here.
-          // Playback should be initiated by user gesture and handled by the content script's play listener.
 
           // Ensure it stays paused at the same position if it was paused
-          // This currentTime adjustment should ideally only happen if playbackRate or volume actually changed
-          // and the element was paused. However, for simplicity, we'll keep it as is for now.
-          // A more complex check might involve seeing if any property was actually written.
           if (element.paused) {
               element.currentTime = currentTime;
           }
 
         } catch (e) {
           console.error(
-            `MediaProcessor: Error applying settings to ${
+            `MediaProcessor: Error applying settings immediately to ${
               element.src || "(no src)"
             }:`,
             e
