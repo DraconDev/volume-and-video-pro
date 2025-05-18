@@ -263,12 +263,15 @@ export default defineContentScript({
             console.log(
               "Content: Applying settings update received via message."
             );
-            settingsHandler.updateSettings(message.settings);
-            console.log(
-              "Content: Settings updated via message, forcing audio effects update and reprocessing media elements..."
-            );
+            // Ensure settingsHandler is initialized before applying the update
             (async () => {
               try {
+                await settingsHandler.ensureInitialized(); // Wait for initialization
+                settingsHandler.updateSettings(message.settings);
+                console.log(
+                  "Content: Settings updated via message, forcing audio effects update and reprocessing media elements..."
+                );
+                
                 // Force update audio effects on existing context
                 await mediaProcessor.forceAudioEffectsUpdate(message.settings);
 
@@ -282,7 +285,7 @@ export default defineContentScript({
                 }
               } catch (error) {
                 console.error(
-                  "Content: Error during settings update processing:",
+                  "Content: Error during settings update processing (after ensuring initialized):",
                   error
                 );
               }
