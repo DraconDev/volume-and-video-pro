@@ -411,7 +411,7 @@ export default defineContentScript({
           window.removeEventListener("message", responseListener); // Clean up listener
           initializeScript(window.location.hostname); // Initialize with own hostname as fallback
         }
-      }, 5000); // 5 second timeout
+      }, 10000); // 10 second timeout
     }
   },
 });
