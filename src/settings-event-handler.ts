@@ -33,8 +33,13 @@ async function sendMessageToTab(tabId: number, message: MessageType, frameId?: n
     const options = frameId !== undefined ? { frameId } : {};
     await chrome.tabs.sendMessage(tabId, message, options);
   } catch (error) {
-    // Only warn for critical errors
-    if (error && !String(error).includes("Could not establish connection")) {
+    const errorMessage = String(error);
+    if (errorMessage.includes("Could not establish connection")) {
+      console.debug(
+        `SettingsEventHandler: Could not establish connection to tab ${tabId} for message type ${message.type}. Content script might not be ready. Error:`,
+        error
+      );
+    } else if (error) { // Handle other errors as warnings
       console.warn(
         `SettingsEventHandler: Error sending message to tab ${tabId}. Type: ${message.type}. Error:`,
         error
