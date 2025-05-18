@@ -327,72 +327,93 @@ export default defineContentScript({
 
       // Listen for requests from iframes
       window.addEventListener("message", (event: MessageEvent) => {
-        // Basic security check - could be enhanced by checking event.origin
         if (
-          event.source &&
+          event.source && // Ensure source exists
           event.data &&
+          typeof event.data === 'object' && // Ensure data is an object
           event.data.type === "REQUEST_TOP_HOSTNAME"
         ) {
           console.log(
-            `[ContentScript Top] Received hostname request from an iframe. Responding with: ${topHostname}`
+            `[ContentScript Top] Received REQUEST_TOP_HOSTNAME from an iframe (Source origin: ${event.origin}). Responding with hostname: ${topHostname}. Event data:`, JSON.stringify(event.data)
           );
           // Respond directly to the iframe that sent the message
           (event.source as Window).postMessage(
-            { type: "TOP_HOSTNAME_INFO", hostname: topHostname },
-            "*"
-          ); // Use '*' for simplicity, restrict if needed
+            { type: "TOP_HOSTNAME_INFO", hostname: topHostname, success: true },
+            event.origin // Respond to the specific origin of the iframe
+          );
+        } else if (event.data && typeof event.data === 'object' && event.data.type) {
+          // Log other messages received by top window for debugging
+          // console.log(`[ContentScript Top] Received other message type: ${event.data.type} from origin ${event.origin}`, event.data);
         }
       });
     } else {
       // --- Running in an IFRAME ---
+      const iframeOwnHostname = window.location.hostname;
       console.log(
-        `[ContentScript] Running in IFRAME. Own hostname: ${window.location.hostname}. Requesting hostname from top...`
+        `[ContentScript iFrame] Running in IFRAME. Own hostname: ${iframeOwnHostname}. Attempting to request hostname from top window.`
       );
       let receivedHostname = false;
       let fallbackTimeout: number | null = null;
 
       // Listener for the response from the top window
       const responseListener = (event: MessageEvent) => {
-        // Basic security check - could be enhanced by checking event.origin against window.top.origin (if accessible)
         if (
           event.source === window.top &&
           event.data &&
+          typeof event.data === 'object' &&
           event.data.type === "TOP_HOSTNAME_INFO" &&
-          event.data.hostname
+          typeof event.data.hostname === 'string'
         ) {
+          if (fallbackTimeout) {
+            clearTimeout(fallbackTimeout);
+            fallbackTimeout = null; // Clear the timeout ID
+          }
+          if (receivedHostname) {
+            console.log(`[ContentScript iFrame] Already received hostname. Ignoring duplicate TOP_HOSTNAME_INFO from top. Origin: ${event.origin}. Data:`, JSON.stringify(event.data));
+            return;
+          }
           receivedHostname = true;
-          if (fallbackTimeout) clearTimeout(fallbackTimeout); // Cancel fallback timeout
           console.log(
-            `[ContentScript iFrame] Received hostname from top: ${event.data.hostname}`
+            `[ContentScript iFrame] Successfully received TOP_HOSTNAME_INFO from top: ${event.data.hostname}. Origin: ${event.origin}. Initializing script. Event data:`, JSON.stringify(event.data)
           );
           window.removeEventListener("message", responseListener); // Clean up listener
           initializeScript(event.data.hostname); // Initialize with received hostname
+        } else if (event.data && typeof event.data === 'object' && event.data.type) {
+           // Log other messages received by iframe for debugging
+           // console.log(`[ContentScript iFrame] Received other message type: ${event.data.type} from origin ${event.origin}`, event.data);
         }
       };
       window.addEventListener("message", responseListener);
 
       // Request the hostname from the top window
-      if (window.top) {
-        window.top.postMessage({ type: "REQUEST_TOP_HOSTNAME" }, "*"); // Use '*' for simplicity
+      if (window.top && window.top !== window.self) {
+        console.log(`[ContentScript iFrame] Sending REQUEST_TOP_HOSTNAME to top window (Origin: ${window.location.origin}).`);
+        window.top.postMessage({ type: "REQUEST_TOP_HOSTNAME", fromIframe: true, iframeOrigin: window.location.origin }, "*"); // Keep '*' for now, but ideally top.location.origin if accessible and safe
       } else {
-        console.error(
-          "[ContentScript iFrame] window.top is null, cannot request hostname."
+        console.warn(
+          `[ContentScript iFrame] window.top is null, same as self, or inaccessible. Cannot request hostname from top. Initializing with own hostname: ${iframeOwnHostname}.`
         );
-        // Initialize with own hostname immediately if top is inaccessible
-        initializeScript(window.location.hostname);
+        // Initialize with own hostname immediately if top is inaccessible or is self
+        initializeScript(iframeOwnHostname);
+        window.removeEventListener("message", responseListener); // Clean up listener as it's not needed
         return; // Exit early
       }
 
       // Fallback timeout in case the message never arrives
+      const TIMEOUT_DURATION = 5000; // Reduced timeout to 5 seconds
+      console.log(`[ContentScript iFrame] Setting fallback timeout for ${TIMEOUT_DURATION}ms.`);
       fallbackTimeout = window.setTimeout(() => {
+        fallbackTimeout = null; // Clear the timeout ID
         if (!receivedHostname) {
           console.warn(
-            `[ContentScript iFrame] Did not receive hostname from top after timeout. Falling back to own hostname: ${window.location.hostname}`
+            `[ContentScript iFrame] Did not receive hostname from top after ${TIMEOUT_DURATION}ms. Falling back to own hostname: ${iframeOwnHostname}. Removing response listener.`
           );
           window.removeEventListener("message", responseListener); // Clean up listener
-          initializeScript(window.location.hostname); // Initialize with own hostname as fallback
+          initializeScript(iframeOwnHostname); // Initialize with own hostname as fallback
+        } else {
+          console.log(`[ContentScript iFrame] Fallback timeout triggered, but hostname was already received. No action needed.`);
         }
-      }, 10000); // 10 second timeout
+      }, TIMEOUT_DURATION);
     }
   },
 });
