@@ -19,7 +19,7 @@ function getHostname(url: string | undefined): string | null {
 
 
 // Helper to send message to a specific tab, ignoring errors
-async function sendMessageToTab(tabId: number, message: MessageType) {
+async function sendMessageToTab(tabId: number, message: MessageType, frameId?: number) {
   try {
     // Check if tab exists before sending
     const tab = await chrome.tabs.get(tabId).catch(() => null);
@@ -28,7 +28,10 @@ async function sendMessageToTab(tabId: number, message: MessageType) {
       return;
     }
     
-    await chrome.tabs.sendMessage(tabId, message);
+    // If frameId is provided, send to specific frame, otherwise defaults to all frames.
+    // For settings updates, we typically want to target the main frame (0).
+    const options = frameId !== undefined ? { frameId } : {};
+    await chrome.tabs.sendMessage(tabId, message, options);
   } catch (error) {
     // Only warn for critical errors
     if (error && !String(error).includes("Could not establish connection")) {
@@ -80,7 +83,7 @@ export async function broadcastSiteSettingsUpdate(
       console.log(
         `[EventHandler] Sending settings to main frame (frameId 0) in tab ${tab.id} (${hostname})`
       );
-      sendMessageToTab(tab.id as number, message);
+      sendMessageToTab(tab.id as number, message, 0); // Specify main frame
     }
   }
 }
@@ -124,7 +127,7 @@ export async function broadcastGlobalSettingsUpdate(
             `[EventHandler] Sending global update to tab ${tab.id} (${tabHostname})`,
             message
           ); // ADDED LOG
-          sendMessageToTab(tab.id, message);
+          sendMessageToTab(tab.id, message, 0); // Specify main frame
         }
       }
     }
@@ -164,7 +167,7 @@ export async function broadcastSiteModeUpdate(
         `[EventHandler] Sending site mode update (as UPDATE_SETTINGS) to tab ${tab.id} (${hostname})`,
         message
       ); // ADDED LOG
-      sendMessageToTab(tab.id, message);
+      sendMessageToTab(tab.id, message, 0); // Specify main frame
     }
   }
 }
