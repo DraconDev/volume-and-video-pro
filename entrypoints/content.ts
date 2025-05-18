@@ -276,22 +276,30 @@ export default defineContentScript({
                   `Content: Settings updated via message. New effective settings: ${JSON.stringify(newSettings)}. Needs audio processing: ${needsProcessingNow}. Reprocessing media elements...`
                 );
                                 
-                // Apply settings (including audio effects setup/teardown) to all existing media elements
-                const mediaElements = mediaProcessor.findMediaElements();
+                // Get the list of currently managed media elements from MediaProcessor
+                const managedMediaElements = mediaProcessor.getManagedMediaElements();
                 console.log(
-                  `[ContentScript Listener] Found ${mediaElements.length} media elements to re-process with new settings.`
+                  `[ContentScript Listener] Found ${managedMediaElements.length} managed media elements to re-process with new settings.`
                 );
 
-                // First, apply immediate settings like speed and volume to all elements.
-                // This is quick and ensures responsiveness for these properties.
-                mediaProcessor.applySettingsImmediately(mediaElements, newSettings);
+                if (managedMediaElements.length > 0) {
+                  // First, apply immediate settings like speed and volume to all managed elements.
+                  mediaProcessor.applySettingsImmediately(managedMediaElements, newSettings);
+                  
+                  // Then, process for audio effects (setup/teardown) for these managed elements.
+                  await mediaProcessor.processMediaElements(managedMediaElements, newSettings, needsProcessingNow);
+                } else {
+                  console.log("[ContentScript Listener] No managed media elements found to apply settings update to. If a video is playing, it might not have been processed yet by the MediaObserver.");
+                  // Optionally, could try a fresh scan here as a fallback, but it might re-introduce previous issues.
+                  // const freshScanElements = mediaProcessor.findMediaElements();
+                  // if (freshScanElements.length > 0) {
+                  //   console.log(`[ContentScript Listener] Fallback: Found ${freshScanElements.length} elements on fresh scan.`);
+                  //   mediaProcessor.applySettingsImmediately(freshScanElements, newSettings);
+                  //   await mediaProcessor.processMediaElements(freshScanElements, newSettings, needsProcessingNow);
+                  // }
+                }
                 
-                // Then, process for audio effects (which might be async and involve Web Audio API setup/teardown)
-                // This will use the needsProcessingNow flag to correctly setup or bypass/disconnect effects.
-                await mediaProcessor.processMediaElements(mediaElements, newSettings, needsProcessingNow);
-                
-                // The applySettingsToSingleElement loop might be redundant now if the above covers all aspects.
-                // Let's verify if the above two calls are sufficient.
+                // The applySettingsToSingleElement loop is indeed redundant now.
                 // The `forceAudioEffectsUpdate` was more about updating an existing chain,
                 // while `processMediaElements` is about setting up or tearing down based on `needsProcessingNow`.
 
