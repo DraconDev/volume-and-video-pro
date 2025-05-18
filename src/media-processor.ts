@@ -197,14 +197,18 @@ export class MediaProcessor {
             element.volume = targetVolume;
           }
           
-          // If we apply settings, it's considered "managed" for speed/volume at least.
-          // This might lead to elements being added here even if audio effects are off.
-          // This is acceptable as speed/volume should always apply.
-          if (!this.activeMediaElements.has(element)) {
-             // console.log(`[MediaProcessor Immediate] Adding to activeMediaElements via immediate settings: ${element.src || "(no src)"}`);
-             // this.activeMediaElements.add(element); // Decided against adding here, setupAudioContext is the gatekeeper for "active" audio processing
+          // If we've successfully applied any direct setting (speed or volume),
+          // consider this element managed and add it to activeMediaElements if not already present.
+          // This ensures that even if no complex audio effects are active,
+          // the element is tracked for future direct settings updates.
+          if (element.isConnected && !this.activeMediaElements.has(element)) {
+             // Check if any property was actually changed or if it was already compliant.
+             // For simplicity, we'll add it if we went through the motions,
+             // assuming an interaction implies management.
+             // A more precise way would be to track if a write occurred.
+             this.activeMediaElements.add(element);
+             console.log(`[MediaProcessor Immediate] Added to activeMediaElements via immediate settings: ${element.src || "(no src)"}. Count: ${this.activeMediaElements.size}`);
           }
-
 
           // Ensure it stays paused at the same position if it was paused
           if (element.paused) {
