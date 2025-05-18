@@ -267,25 +267,39 @@ export default defineContentScript({
             (async () => {
               try {
                 await settingsHandler.ensureInitialized(); // Wait for initialization
-                settingsHandler.updateSettings(message.settings);
-                console.log(
-                  "Content: Settings updated via message, forcing audio effects update and reprocessing media elements..."
-                );
-                
-                // Force update audio effects on existing context
-                await mediaProcessor.forceAudioEffectsUpdate(message.settings);
+                settingsHandler.updateSettings(message.settings); // Update local settings cache
 
-                // Apply settings immediately to all existing media elements
+                const newSettings = settingsHandler.getCurrentSettings(); // Get the just-updated settings
+                const needsProcessingNow = settingsHandler.needsAudioProcessing(); // Check based on new settings
+
+                console.log(
+                  `Content: Settings updated via message. New effective settings: ${JSON.stringify(newSettings)}. Needs audio processing: ${needsProcessingNow}. Reprocessing media elements...`
+                );
+                                
+                // Apply settings (including audio effects setup/teardown) to all existing media elements
                 const mediaElements = mediaProcessor.findMediaElements();
                 console.log(
-                  `[ContentScript Listener] Found ${mediaElements.length} media elements to update immediately.`
+                  `[ContentScript Listener] Found ${mediaElements.length} media elements to re-process with new settings.`
                 );
-                for (const element of mediaElements) {
-                  await applySettingsToSingleElement(element);
-                }
+
+                // First, apply immediate settings like speed and volume to all elements.
+                // This is quick and ensures responsiveness for these properties.
+                mediaProcessor.applySettingsImmediately(mediaElements, newSettings);
+                
+                // Then, process for audio effects (which might be async and involve Web Audio API setup/teardown)
+                // This will use the needsProcessingNow flag to correctly setup or bypass/disconnect effects.
+                await mediaProcessor.processMediaElements(mediaElements, newSettings, needsProcessingNow);
+                
+                // The applySettingsToSingleElement loop might be redundant now if the above covers all aspects.
+                // Let's verify if the above two calls are sufficient.
+                // The `forceAudioEffectsUpdate` was more about updating an existing chain,
+                // while `processMediaElements` is about setting up or tearing down based on `needsProcessingNow`.
+
+                console.log("[ContentScript Listener] Media elements re-processed after settings update.");
+
               } catch (error) {
                 console.error(
-                  "Content: Error during settings update processing (after ensuring initialized):",
+                  "Content: Error during UPDATE_SETTINGS processing (after ensuring initialized):",
                   error
                 );
               }
