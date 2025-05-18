@@ -21,31 +21,36 @@ export class SettingsHandler {
      */
     async initialize(hostname: string): Promise<void> {
         this.targetHostname = hostname; // Store the target hostname
-        console.log(`SettingsHandler (Target: ${this.targetHostname}): Requesting initial settings.`);
+        console.log(`SettingsHandler (Target: ${this.targetHostname}): Initializing...`);
+
         if (!this.targetHostname) {
-             console.error("SettingsHandler: Initialization attempted without a valid target hostname.");
+             console.error(`SettingsHandler (Target: ${this.targetHostname}): Initialization aborted - no valid target hostname provided.`);
              this.currentSettings = { ...defaultSettings };
              this.resolveInitialization();
              return;
         }
+
+        console.log(`SettingsHandler (Target: ${this.targetHostname}): Attempting to send GET_INITIAL_SETTINGS.`);
         try {
             const response = await chrome.runtime.sendMessage({
                 type: "GET_INITIAL_SETTINGS",
-                hostname: this.targetHostname, // Use the provided hostname
+                hostname: this.targetHostname,
             });
 
+            console.log(`SettingsHandler (Target: ${this.targetHostname}): GET_INITIAL_SETTINGS response received:`, response);
+
             if (response && response.settings) {
-                console.log(`SettingsHandler (Target: ${this.targetHostname}): Received initial settings`, response.settings);
                 this.currentSettings = response.settings;
+                console.log(`SettingsHandler (Target: ${this.targetHostname}): Successfully applied initial settings from background:`, JSON.stringify(this.currentSettings));
             } else {
-                console.warn(`SettingsHandler (Target: ${this.targetHostname}): No/invalid initial settings received, using defaults.`, response);
                 this.currentSettings = { ...defaultSettings };
+                console.warn(`SettingsHandler (Target: ${this.targetHostname}): No valid settings in response or response was null/undefined. Using defaults. Response:`, response, "Current settings now:", JSON.stringify(this.currentSettings));
             }
         } catch (error) {
-            console.error(`SettingsHandler (Target: ${this.targetHostname}): Error requesting initial settings:`, error, "Using defaults.");
             this.currentSettings = { ...defaultSettings };
+            console.error(`SettingsHandler (Target: ${this.targetHostname}): Error during GET_INITIAL_SETTINGS sendMessage or processing:`, error, "Using defaults. Current settings now:", JSON.stringify(this.currentSettings));
         } finally {
-            console.log(`SettingsHandler (Target: ${this.targetHostname}): Initialization complete.`);
+            console.log(`SettingsHandler (Target: ${this.targetHostname}): Initialization promise resolving. Final currentSettings state for this init cycle:`, JSON.stringify(this.currentSettings));
             this.resolveInitialization(); // Signal that initialization is done
         }
     }
