@@ -296,17 +296,28 @@ export default defineContentScript({
       );
 
       // Initial setup (Moved inside initializeScript)
-      // Apply settings immediately on DOM ready or if already ready
-      const applyInitialSettings = async () => {
+      // Apply settings after a short delay to allow the host page to initialize
+      const applyInitialSettings = () => { // No longer async itself, schedules async work
         console.log(
-          `[ContentScript DEBUG] Applying initial settings for ${window.location.hostname}`
+          `[ContentScript DEBUG] Scheduling initial settings application for ${window.location.hostname}`
         );
-        await processMedia(); // processMedia handles finding elements and applying settings
+        setTimeout(async () => {
+          console.log(
+            `[ContentScript DEBUG] Applying initial settings for ${window.location.hostname} (after 100ms delay)`
+          );
+          await processMedia(); // processMedia handles finding elements and applying settings
+        }, 100); // Delay of 100 milliseconds
       };
 
       if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", applyInitialSettings);
+        // Wait for DOMContentLoaded, then schedule the delayed application
+        document.addEventListener("DOMContentLoaded", () => {
+          console.log(`[ContentScript DEBUG] DOMContentLoaded event for ${window.location.hostname}. Scheduling initial settings.`);
+          applyInitialSettings();
+        });
       } else {
+        // DOM is already ready, schedule the delayed application
+        console.log(`[ContentScript DEBUG] DOM already ready for ${window.location.hostname}. Scheduling initial settings.`);
         applyInitialSettings();
       }
 
