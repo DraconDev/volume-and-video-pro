@@ -179,35 +179,33 @@ export class MediaProcessor {
 
           // Apply playback speed if different
           const targetSpeed = settings.speed / 100;
+          let speedChanged = false;
           if (Math.abs(element.playbackRate - targetSpeed) > EPSILON) {
             // console.log(`[MediaProcessor Immediate] Updating playbackRate for ${element.src || '(no src)'} from ${element.playbackRate} to ${targetSpeed}`);
             element.playbackRate = targetSpeed;
+            speedChanged = true;
           }
           // Always set defaultPlaybackRate as it's less likely to be contested
           // and good to have as a baseline.
           if (Math.abs(element.defaultPlaybackRate - targetSpeed) > EPSILON) {
              element.defaultPlaybackRate = targetSpeed;
+             // speedChanged = true; // Not strictly a direct playbackRate change, but related.
           }
 
 
           // Apply volume if different
           const targetVolume = settings.volume / 100;
+          let volumeChanged = false;
           if (Math.abs(element.volume - targetVolume) > EPSILON) {
             // console.log(`[MediaProcessor Immediate] Updating volume for ${element.src || '(no src)'} from ${element.volume} to ${targetVolume}`);
             element.volume = targetVolume;
+            volumeChanged = true;
           }
           
-          // If we've successfully applied any direct setting (speed or volume),
-          // consider this element managed and add it to activeMediaElements if not already present.
-          // This ensures that even if no complex audio effects are active,
-          // the element is tracked for future direct settings updates.
-          if (element.isConnected && !this.activeMediaElements.has(element)) {
-             // Check if any property was actually changed or if it was already compliant.
-             // For simplicity, we'll add it if we went through the motions,
-             // assuming an interaction implies management.
-             // A more precise way would be to track if a write occurred.
+          // If we actually changed speed or volume, and the element is not already tracked, add it.
+          if (element.isConnected && (speedChanged || volumeChanged) && !this.activeMediaElements.has(element)) {
              this.activeMediaElements.add(element);
-             console.log(`[MediaProcessor Immediate] Added to activeMediaElements via immediate settings: ${element.src || "(no src)"}. Count: ${this.activeMediaElements.size}`);
+             console.log(`[MediaProcessor Immediate] Added to activeMediaElements after changing speed/volume: ${element.src || "(no src)"}. Count: ${this.activeMediaElements.size}`);
           }
 
           // Ensure it stays paused at the same position if it was paused
