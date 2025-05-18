@@ -303,10 +303,10 @@ export default defineContentScript({
         );
         setTimeout(async () => {
           console.log(
-            `[ContentScript DEBUG] Applying initial settings for ${window.location.hostname} (after 100ms delay)`
+            `[ContentScript DEBUG] Applying initial settings for ${window.location.hostname} (after 500ms delay)`
           );
           await processMedia(); // processMedia handles finding elements and applying settings
-        }, 100); // Delay of 100 milliseconds
+        }, 500); // Increased delay to 500 milliseconds
       };
 
       if (document.readyState === "loading") {
