@@ -100,14 +100,10 @@ export class MediaProcessor {
       "[MediaProcessor] Applying settings immediately to media elements"
     );
 
-    // Skip if settings haven't changed
-    if (
-      this.lastAppliedSettings &&
-      JSON.stringify(this.lastAppliedSettings) === JSON.stringify(settings)
-    ) {
-      return;
-    }
-    this.lastAppliedSettings = { ...settings };
+    // Removed the lastAppliedSettings check to ensure settings are applied
+    // even if the settings object itself hasn't changed, in case the player
+    // has reset the element's properties.
+    // this.lastAppliedSettings = { ...settings }; // Still useful to update for other potential logic if re-added
 
     // Batch update for better performance
     const batchSize = 5;
