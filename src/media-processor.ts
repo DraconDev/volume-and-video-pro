@@ -111,21 +111,41 @@ export class MediaProcessor {
 
     const processBatch = () => {
       const batch = updateQueue.splice(0, batchSize);
+      const EPSILON = 0.001; // Small value for float comparison
+
       batch.forEach((element) => {
         try {
           // Store current state
           const wasPlaying = !element.paused;
           const currentTime = element.currentTime;
 
-          // Apply settings
-          element.playbackRate = settings.speed / 100;
-          element.defaultPlaybackRate = settings.speed / 100;
-          element.volume = settings.volume / 100;
+          // Apply playback speed if different
+          const targetSpeed = settings.speed / 100;
+          if (Math.abs(element.playbackRate - targetSpeed) > EPSILON) {
+            console.log(`[MediaProcessor] Updating playbackRate for ${element.src || '(no src)'} from ${element.playbackRate} to ${targetSpeed}`);
+            element.playbackRate = targetSpeed;
+          }
+          // Always set defaultPlaybackRate as it's less likely to be contested
+          // and good to have as a baseline.
+          if (Math.abs(element.defaultPlaybackRate - targetSpeed) > EPSILON) {
+             element.defaultPlaybackRate = targetSpeed;
+          }
+
+
+          // Apply volume if different
+          const targetVolume = settings.volume / 100;
+          if (Math.abs(element.volume - targetVolume) > EPSILON) {
+            console.log(`[MediaProcessor] Updating volume for ${element.src || '(no src)'} from ${element.volume} to ${targetVolume}`);
+            element.volume = targetVolume;
+          }
 
           // Removed attempt to restore playback state here.
           // Playback should be initiated by user gesture and handled by the content script's play listener.
 
           // Ensure it stays paused at the same position if it was paused
+          // This currentTime adjustment should ideally only happen if playbackRate or volume actually changed
+          // and the element was paused. However, for simplicity, we'll keep it as is for now.
+          // A more complex check might involve seeing if any property was actually written.
           if (element.paused) {
               element.currentTime = currentTime;
           }
