@@ -40,48 +40,60 @@ export class MediaProcessor {
   async processMediaElements(
     mediaElements: HTMLMediaElement[],
     settings: AudioSettings,
-    needsProcessing: boolean // Keep this param even if unused for now, might be needed later
+    needsAudioEffectsSetup: boolean
   ): Promise<void> {
     console.log(
-      "[MediaProcessor] processMediaElements called with settings:",
+      `[MediaProcessor] processMediaElements called for ${mediaElements.length} element(s). Needs audio effects setup: ${needsAudioEffectsSetup}. Settings:`,
       JSON.stringify(settings)
     );
 
-    // Update speed for all elements
+    // Playback speed is generally handled by applySettingsImmediately via content.ts.
+    // This call ensures it's also updated if processMediaElements is called directly
+    // or if applySettingsImmediately failed for some reason.
     mediaElements.forEach((element) =>
       this.updatePlaybackSpeed(element, settings.speed)
     );
 
-    // Apply settings immediately if audio context exists
-    if (
-      this.audioProcessor["audioContext"] &&
-      this.audioProcessor["audioContext"].state !== "closed"
-    ) {
-      console.log(
-        "[MediaProcessor] Applying settings immediately to existing audio context"
-      );
-      await this.audioProcessor.updateAudioEffects(settings);
-      return;
-    }
-
-    // Setup audio processing only if it doesn't exist for the element
-    for (const element of mediaElements) {
-      try {
-        if (!this.audioProcessor.hasProcessing(element)) {
-          console.log(
-            `[MediaProcessor] Setting up audio context for: ${
-              element.src || "(no src)"
-            }`
-          );
+    if (needsAudioEffectsSetup) {
+      console.log("[MediaProcessor] Audio effects setup is requested.");
+      for (const element of mediaElements) {
+        try {
+          // This should connect the element to the audio graph, creating the context if necessary.
+          // It's assumed audioProcessor.setupAudioContext handles new elements with an existing context correctly.
+          console.log(`[MediaProcessor] Calling setupAudioContext for element: ${element.src || "(no src)"}`);
           await this.audioProcessor.setupAudioContext(element, settings);
+        } catch (e) {
+          console.error(
+            `[MediaProcessor] Error in setupAudioContext for element ${element.src || "(no src)"}:`, e
+          );
         }
-      } catch (e) {
-        console.error(
-          `MediaProcessor: Failed to setup audio context for element ${
-            element.src || "(no src)"
-          }:`,
-          e
-        );
+      }
+
+      // After attempting to set up all elements, if a context exists and is running,
+      // update the effects globally on that context.
+      // This ensures the effects chain reflects the latest settings.
+      if (this.audioProcessor.audioContext && this.audioProcessor.audioContext.state === 'running') {
+        console.log("[MediaProcessor] AudioContext is running, calling updateAudioEffects to apply/update global effects.");
+        await this.audioProcessor.updateAudioEffects(settings);
+      } else {
+        console.log("[MediaProcessor] AudioContext not running or does not exist after setup attempts. Skipping global updateAudioEffects.");
+      }
+    } else {
+      console.log("[MediaProcessor] Audio effects setup not requested. Ensuring any existing processing for these elements is disconnected.");
+      // If audio effects are not needed, attempt to disconnect these elements from processing.
+      // This relies on a method in AudioProcessor, e.g., disconnectElement or resetElement.
+      for (const element of mediaElements) {
+        try {
+          // Assuming a method like this exists or will be added to AudioProcessor:
+          if (typeof (this.audioProcessor as any).disconnectElement === 'function') {
+             console.log(`[MediaProcessor] Calling disconnectElement for: ${element.src || "(no src)"}`);
+            await (this.audioProcessor as any).disconnectElement(element);
+          } else {
+            console.log(`[MediaProcessor] disconnectElement method not found on audioProcessor for ${element.src || "(no src)"}. Effects may remain if previously active.`);
+          }
+        } catch (e) {
+          console.error(`[MediaProcessor] Error disconnecting element ${element.src || "(no src)"}:`, e);
+        }
       }
     }
   }
