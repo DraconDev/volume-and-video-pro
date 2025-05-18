@@ -299,11 +299,12 @@ export default defineContentScript({
 
                 // Apply settings immediately to all existing media elements
                 const mediaElements = mediaProcessor.findMediaElements();
-                console.log(`[ContentScript Listener] Found ${mediaElements.length} media elements to update immediately.`);
+                console.log(
+                  `[ContentScript Listener] Found ${mediaElements.length} media elements to update immediately.`
+                );
                 for (const element of mediaElements) {
                   await applySettingsToSingleElement(element);
                 }
-
               } catch (error) {
                 console.error(
                   "Content: Error during settings update processing:",
@@ -319,7 +320,9 @@ export default defineContentScript({
       // Initial setup (Moved inside initializeScript)
       // Apply settings immediately on DOM ready or if already ready
       const applyInitialSettings = async () => {
-        console.log(`[ContentScript DEBUG] Applying initial settings for ${window.location.hostname}`);
+        console.log(
+          `[ContentScript DEBUG] Applying initial settings for ${window.location.hostname}`
+        );
         await processMedia(); // processMedia handles finding elements and applying settings
       };
 
