@@ -317,10 +317,16 @@ export default defineContentScript({
       );
 
       // Initial setup (Moved inside initializeScript)
+      // Apply settings immediately on DOM ready or if already ready
+      const applyInitialSettings = async () => {
+        console.log(`[ContentScript DEBUG] Applying initial settings for ${window.location.hostname}`);
+        await processMedia(); // processMedia handles finding elements and applying settings
+      };
+
       if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", debouncedInitialization);
+        document.addEventListener("DOMContentLoaded", applyInitialSettings);
       } else {
-        debouncedInitialization();
+        applyInitialSettings();
       }
 
       // Watch for dynamic changes (Moved inside initializeScript)
