@@ -35,7 +35,7 @@ const mediaConfig = {
 export class MediaManager {
   // Keep track of already processed elements to avoid duplicates
   private static processedElements = new WeakSet<HTMLElement>();
-  private static readonly DEBOUNCE_DELAY = 1000; // Reduced debounce delay
+  private static readonly DEBOUNCE_DELAY = 3000; // Increased debounce delay for diagnostics
   private static readonly MAX_DEPTH = 10; // Increased max depth
 
   private static isExtensionContext(): boolean {
