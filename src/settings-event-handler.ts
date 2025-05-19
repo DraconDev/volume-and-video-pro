@@ -56,39 +56,40 @@ export async function broadcastSiteSettingsUpdate(
   hostname: string,
   newSiteSettings: AudioSettings
 ) {
-  console.log(`[!!!] Broadcasting site settings update for ${hostname}`); // ADDED LOG
+  if (!hostname) {
+    console.warn("SettingsEventHandler: broadcastSiteSettingsUpdate called with no hostname.");
+    return;
+  }
+  console.log(`[!!!] Broadcasting site settings update for ${hostname}`);
   console.log(
     `SettingsEventHandler: Broadcasting site settings data for ${hostname}`,
     newSiteSettings
   );
+
+  // Query for tabs that match the hostname directly
+  const tabs = await chrome.tabs.query({ url: `*://${hostname}/*` });
+  
   console.log(
-    "SettingsEventHandler: Broadcasting site settings data for all frames"
+    `[EventHandler] Found ${tabs.length} tabs matching hostname ${hostname} for site settings update.`
   );
-  const tabs = await chrome.tabs.query({});
-  console.log(
-    `[EventHandler] Found ${tabs.length} tabs to check for hostname ${hostname}`
-  ); // Log tab count
+
   for (const tab of tabs) {
+    // Double-check hostname just in case query is too broad or URL changes, though unlikely with specific query
     const tabHostname = getHostname(tab.url);
-    console.log(
-      `[EventHandler] Checking tab ${tab.id} (${tabHostname}) against ${hostname}`
-    ); // Log each tab check
     if (tab.id && tabHostname === hostname) {
       const message: UpdateSettingsMessage = {
         type: "UPDATE_SETTINGS",
-        settings: newSiteSettings, // Send the actual site-specific settings
+        settings: newSiteSettings,
         hostname: hostname,
       };
       console.log(
         `[EventHandler] Sending site settings update to tab ${tab.id} (${hostname})`,
         message
-      ); // ADDED LOG
-
-      // Only send to main frame (frameId 0) to avoid subframe connection issues
-      console.log(
-        `[EventHandler] Sending settings to main frame (frameId 0) in tab ${tab.id} (${hostname})`
       );
       sendMessageToTab(tab.id as number, message, 0); // Specify main frame
+    } else {
+      // This case should ideally not be hit if chrome.tabs.query with URL pattern is accurate
+      console.warn(`[EventHandler] Tab ${tab.id} matched query for ${hostname} but getHostname resolved to ${tabHostname}. Skipping.`);
     }
   }
 }
@@ -148,20 +149,26 @@ export async function broadcastSiteModeUpdate(
   mode: string,
   effectiveSettings: AudioSettings
 ) {
-  console.log(`[!!!] Broadcasting site mode update for ${hostname} to ${mode}`); // ADDED LOG
+  if (!hostname) {
+    console.warn("SettingsEventHandler: broadcastSiteModeUpdate called with no hostname.");
+    return;
+  }
+  console.log(`[!!!] Broadcasting site mode update for ${hostname} to ${mode}`);
   console.log(`SettingsEventHandler: Broadcasting mode data for ${hostname}`, {
     mode,
     effectiveSettings,
   });
-  const tabs = await chrome.tabs.query({});
+
+  // Query for tabs that match the hostname directly
+  const tabs = await chrome.tabs.query({ url: `*://${hostname}/*` });
+
   console.log(
-    `[EventHandler] Found ${tabs.length} tabs to check for mode update on ${hostname}`
-  ); // Log tab count
+    `[EventHandler] Found ${tabs.length} tabs matching hostname ${hostname} for site mode update.`
+  );
+
   for (const tab of tabs) {
+    // Double-check hostname
     const tabHostname = getHostname(tab.url);
-    console.log(
-      `[EventHandler] Checking tab ${tab.id} (${tabHostname}) against ${hostname} for mode update`
-    ); // Log each tab check
     if (tab.id && tabHostname === hostname) {
       const message: UpdateSettingsMessage = {
         type: "UPDATE_SETTINGS", // Still send UPDATE_SETTINGS
@@ -171,8 +178,10 @@ export async function broadcastSiteModeUpdate(
       console.log(
         `[EventHandler] Sending site mode update (as UPDATE_SETTINGS) to tab ${tab.id} (${hostname})`,
         message
-      ); // ADDED LOG
+      );
       sendMessageToTab(tab.id, message, 0); // Specify main frame
+    } else {
+      console.warn(`[EventHandler] Tab ${tab.id} matched query for ${hostname} (mode update) but getHostname resolved to ${tabHostname}. Skipping.`);
     }
   }
 }
