@@ -18,34 +18,27 @@ function getHostname(url: string | undefined): string | null {
 }
 
 
-// Helper to send message to a specific tab, ignoring errors
-async function sendMessageToTab(tabId: number, message: MessageType, frameId?: number) {
-  try {
-    // Check if tab exists before sending
-    const tab = await chrome.tabs.get(tabId).catch(() => null);
-    if (!tab) {
-      console.debug(`SettingsEventHandler: Tab ${tabId} no longer exists`);
-      return;
-    }
-    
-    // If frameId is provided, send to specific frame, otherwise defaults to all frames.
-    // For settings updates, we typically want to target the main frame (0).
-    const options = frameId !== undefined ? { frameId } : {};
-    await chrome.tabs.sendMessage(tabId, message, options);
-  } catch (error) {
-    const errorMessage = String(error);
-    if (errorMessage.includes("Could not establish connection")) {
-      console.debug(
-        `SettingsEventHandler: Could not establish connection to tab ${tabId} for message type ${message.type}. Content script might not be ready. Error:`,
-        error
-      );
-    } else if (error) { // Handle other errors as warnings
-      console.warn(
-        `SettingsEventHandler: Error sending message to tab ${tabId}. Type: ${message.type}. Error:`,
-        error
-      );
-    }
-  }
+// Helper to send message to a specific tab (fire-and-forget for broadcasts)
+function sendMessageToTab(tabId: number, message: MessageType, frameId?: number) {
+  const options = frameId !== undefined ? { frameId } : {};
+  chrome.tabs.sendMessage(tabId, message, options)
+    .catch(error => {
+      // Catch errors from sendMessage, but don't await it in the broadcast loops.
+      // This makes the broadcast non-blocking for the background script.
+      const errorMessage = String(error);
+      if (errorMessage.includes("Could not establish connection") || errorMessage.includes("No tab with id")) {
+        // These are common if the tab closed or content script isn't ready; log as debug.
+        console.debug(
+          `SettingsEventHandler: Error sending message to tab ${tabId} (type: ${message.type}). Tab might be closed or content script not ready. Error:`,
+          errorMessage
+        );
+      } else if (error) { // Handle other unexpected errors as warnings
+        console.warn(
+          `SettingsEventHandler: Unexpected error sending message to tab ${tabId}. Type: ${message.type}. Error:`,
+          error
+        );
+      }
+    });
 }
 
 /**
