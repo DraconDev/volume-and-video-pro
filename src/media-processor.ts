@@ -52,6 +52,20 @@ export class MediaProcessor {
     }
   }
 
+  private updateVolume(element: HTMLMediaElement, volume: number): void {
+    if (!element.isConnected) {
+      console.warn(`[MediaProcessor] Attempted to update volume on disconnected element: ${element.src || '(no src)'}`);
+      this.activeMediaElements.delete(element);
+      return;
+    }
+    // console.log(`[MediaProcessor] Updating volume for ${element.src || '(no src)'} to ${volume}`);
+    try {
+      element.volume = volume / 100;
+    } catch (e) {
+      console.error(`MediaProcessor: Error setting volume for ${element.src || '(no src)'}:`, e);
+    }
+  }
+
   async processMediaElements(
     mediaElements: HTMLMediaElement[],
     settings: AudioSettings,
@@ -62,12 +76,11 @@ export class MediaProcessor {
       JSON.stringify(settings)
     );
 
-    // Playback speed is generally handled by applySettingsImmediately via content.ts.
-    // This call ensures it's also updated if processMediaElements is called directly
-    // or if applySettingsImmediately failed for some reason.
+    // This method now directly handles speed and volume application for the given elements.
     mediaElements.forEach((element) => {
-      if (element.isConnected) { // Ensure element is still in DOM before updating speed
+      if (element.isConnected) {
         this.updatePlaybackSpeed(element, settings.speed);
+        this.updateVolume(element, settings.volume);
       } else {
         this.activeMediaElements.delete(element); // Clean up if disconnected
       }
