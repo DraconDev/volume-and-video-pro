@@ -51,8 +51,8 @@ bun build:firefox
 5. Create distribution zip:
 
 ```bash
-npm run zip        # Chrome/Edge
-npm run zip:firefox # Firefox
+bun zip        # Chrome/Edge
+bun zip:firefox # Firefox
 ```
 
 ## Project Structure
