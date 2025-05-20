@@ -1,475 +1,239 @@
+// entrypoints/content.ts
+
 import { defineContentScript } from "wxt/sandbox";
-import { MediaProcessor } from "./../src/media-processor";
-import { SettingsHandler } from "../src/settings-handler";
-import { MessageType, UpdateSettingsMessage } from "../src/types";
+import { MediaProcessor } from "./../src/media-processor";     // Path relative to content.ts
+import { SettingsHandler } from "../src/settings-handler";   // Path relative to content.ts
+import { MessageType, UpdateSettingsMessage } from "../src/types"; // Path relative to content.ts
 
 export default defineContentScript({
   matches: ["<all_urls>"],
-  allFrames: true, // Add this line
-  runAt: "document_idle", // Changed from document_start
+  allFrames: true,
+  runAt: "document_idle",
   main: async () => {
-    console.log(
-      "Content: Script starting - This log should always appear",
-      window.location.href
-    );
+    const scriptInstanceId = Math.random().toString(36).substring(2, 7); // Unique ID for logging
+    // console.log(
+    //   `Content (${scriptInstanceId}): Script starting - ${window.location.href} (Top: ${window.self === window.top})`
+    // );
 
-    // Initialize core components
     const settingsHandler = new SettingsHandler();
     const mediaProcessor = new MediaProcessor();
 
-    // Function to initialize settings and the rest of the script logic
-    const initializeScript = async (hostname: string) => {
-      console.log(
-        `[ContentScript] Initializing script for hostname: ${hostname}`
-      );
-      settingsHandler.initialize(hostname); // Initialize with the correct hostname
+    // Store event handlers associated with each media element
+    const elementEventHandlers = new WeakMap<
+      HTMLMediaElement,
+      {
+        playHandler?: (event: Event) => void;
+        metadataHandler?: (event: Event) => void;
+        loadstartHandler?: (event: Event) => void;
+      }
+    >();
 
-      // --- AudioContext Resume Handler --- (Moved inside initializeScript)
-      const resumeContextHandler = async (event: Event) => {
-        console.log(
-          "Content: Media interaction detected, attempting to resume AudioContext."
-        );
-        await mediaProcessor.attemptContextResume();
-        console.log(
-          "Content: Context potentially resumed, applying audio effects..."
-        );
-        const targetElement = event.target as HTMLMediaElement;
-        if (targetElement) {
-          try {
-            // Ensure settings are initialized before applying effects
-            await settingsHandler.ensureInitialized();
-            const currentSettings = settingsHandler.getCurrentSettings();
-            const needsProcessing = settingsHandler.needsAudioProcessing();
-            console.log(
-              `[ContentScript DEBUG] Applying audio effects for played element ${
-                targetElement.src || "(no src)"
-              } with settings:`,
-              JSON.stringify(currentSettings)
-            );
-            // Apply audio effects specifically to the played element
-            await mediaProcessor.processMediaElements(
-              [targetElement],
-              currentSettings,
-              needsProcessing
-            );
-          } catch (error) {
-            console.error(
-              `Content: Error applying audio effects after context resume for ${
-                targetElement.src || "(no src)"
-              }:`,
-              error
-            );
-          }
+    const applySettingsAndEffectsToElement = async (element: HTMLMediaElement, reason: string) => {
+      if (!element.isConnected) {
+        // console.log(`Content (${scriptInstanceId}): Element ${element.src || '(no src)'} disconnected. Skipping apply from ${reason}.`);
+        removeElementListeners(element);
+        mediaProcessor.audioProcessor.disconnectElementNodes(element);
+        return;
+      }
+      // console.log(`Content (${scriptInstanceId}): Applying settings to ${element.src || "(no src)"} due to: ${reason}`);
+      try {
+        await settingsHandler.ensureInitialized();
+        const currentSettings = settingsHandler.getCurrentSettings();
+        const needsAudioGraph = settingsHandler.needsAudioProcessing();
+
+        mediaProcessor.applySettingsImmediately([element], currentSettings);
+        await mediaProcessor.processMediaElements([element], currentSettings, needsAudioGraph);
+
+      } catch (error) {
+        console.error(`Content (${scriptInstanceId}): Error applying settings to ${element.src || "(no src)"} (Reason: ${reason}):`, error);
+      }
+    };
+
+    const createPlayHandler = (element: HTMLMediaElement) => async (event: Event) => {
+      // console.log(`Content (${scriptInstanceId}): "play" event on ${element.src || '(no src)'}`);
+      await mediaProcessor.attemptContextResume();
+      await applySettingsAndEffectsToElement(element, "play event");
+    };
+
+    const createMetadataHandler = (element: HTMLMediaElement) => async (event: Event) => {
+      // console.log(`Content (${scriptInstanceId}): "loadedmetadata/canplay" on ${element.src || '(no src)'}`);
+      await applySettingsAndEffectsToElement(element, "metadata/canplay event");
+    };
+
+    const createLoadstartHandler = (element: HTMLMediaElement) => async (event: Event) => {
+      // console.log(`Content (${scriptInstanceId}): "loadstart" on ${element.src || '(no src)'} - potential src change.`);
+      mediaProcessor.audioProcessor.disconnectElementNodes(element);
+      await applySettingsAndEffectsToElement(element, "loadstart event");
+    };
+
+    const addElementListeners = (element: HTMLMediaElement) => {
+      let handlers = elementEventHandlers.get(element);
+      if (!handlers) {
+        handlers = {};
+        elementEventHandlers.set(element, handlers);
+      }
+
+      if (!handlers.playHandler) {
+        handlers.playHandler = createPlayHandler(element);
+        element.addEventListener("play", handlers.playHandler);
+      }
+      if (!handlers.metadataHandler) {
+        handlers.metadataHandler = createMetadataHandler(element);
+        element.addEventListener("loadedmetadata", handlers.metadataHandler);
+        element.addEventListener("canplay", handlers.metadataHandler);
+      }
+      if (!handlers.loadstartHandler) {
+        handlers.loadstartHandler = createLoadstartHandler(element);
+        element.addEventListener("loadstart", handlers.loadstartHandler);
+      }
+    };
+
+    const removeElementListeners = (element: HTMLMediaElement) => {
+      const handlers = elementEventHandlers.get(element);
+      if (handlers) {
+        if (handlers.playHandler) element.removeEventListener("play", handlers.playHandler);
+        if (handlers.metadataHandler) {
+          element.removeEventListener("loadedmetadata", handlers.metadataHandler);
+          element.removeEventListener("canplay", handlers.metadataHandler);
         }
-      };
-      // --- End AudioContext Resume Handler ---
+        if (handlers.loadstartHandler) element.removeEventListener("loadstart", handlers.loadstartHandler);
+        elementEventHandlers.delete(element);
+      }
+    };
 
-      // Function to apply settings to a single media element
-      const applySettingsToSingleElement = async (
-        element: HTMLMediaElement
-      ) => {
-        console.log(
-          `[ContentScript DEBUG] applySettingsToSingleElement called for ${
-            element.src || "(no src)"
-          }`
-        );
-        try {
-          // Ensure settings are initialized
-          await settingsHandler.ensureInitialized();
-          const currentSettings = settingsHandler.getCurrentSettings();
-          const needsProcessing = settingsHandler.needsAudioProcessing();
+    const initializeScriptLogic = async (effectiveHostname: string) => {
+      // console.log(`Content (${scriptInstanceId}): Initializing script logic for effective hostname: ${effectiveHostname}`);
+      await settingsHandler.initialize(effectiveHostname);
 
-          console.log(
-            `[ContentScript DEBUG] Applying settings to single element ${
-              element.src || "(no src)"
-            }:`,
-            JSON.stringify(currentSettings)
-          );
+      const processAllMedia = async (reason: string) => {
+        // console.log(`Content (${scriptInstanceId}): processAllMedia called due to: ${reason}`);
+        await settingsHandler.ensureInitialized();
 
-          // Apply immediate settings (speed, volume)
-          mediaProcessor.applySettingsImmediately([element], currentSettings);
+        const mediaElements = mediaProcessor.findMediaElements();
+        // console.log(`Content (${scriptInstanceId}): Found ${mediaElements.length} media elements (${reason}).`);
 
-          // Apply audio effects if needed
-          if (needsProcessing) {
-            // Check if context is ready or can be resumed
-            if (mediaProcessor.canApplyAudioEffects()) {
-              console.log(
-                `[ContentScript DEBUG] AudioContext ready for ${
-                  element.src || "(no src)"
-                }, applying audio effects.`
-              );
-              await mediaProcessor.processMediaElements(
-                [element],
-                currentSettings,
-                needsProcessing
-              );
-            } else {
-              console.log(
-                `[ContentScript DEBUG] AudioContext not ready for ${
-                  element.src || "(no src)"
-                }. Attempting to resume and apply effects.`
-              );
-              // Attempt to resume context (requires user gesture)
-              await mediaProcessor.attemptContextResume();
-              // Check again after attempting resume
-              if (mediaProcessor.canApplyAudioEffects()) {
-                console.log(
-                  `[ContentScript DEBUG] AudioContext resumed for ${
-                    element.src || "(no src)"
-                  }, applying audio effects.`
-                );
-                await mediaProcessor.processMediaElements(
-                  [element],
-                  currentSettings,
-                  needsProcessing
-                );
-              } else {
-                console.log(
-                  `[ContentScript DEBUG] AudioContext still not ready for ${
-                    element.src || "(no src)"
-                  }, audio effects will apply on play gesture.`
-                );
-              }
-            }
-          }
-        } catch (error) {
-          console.error(
-            `[ContentScript DEBUG] Error applying settings to single element ${
-              element.src || "(no src)"
-            }:`,
-            error
-          );
+        for (const element of mediaElements) {
+          if (!element.isConnected) continue;
+          removeElementListeners(element); // Always remove before adding to prevent duplicates if re-processed
+          addElementListeners(element);
+          await applySettingsAndEffectsToElement(element, `scan / ${reason}`);
         }
       };
 
-      // Process media with current settings (Moved inside initializeScript)
-      const processMedia = async () => {
-        console.log(
-          `[ContentScript DEBUG] processMedia called for ${window.location.hostname}`
-        );
-        try {
-          console.time("ensureInitialized"); // Start timing
-          await settingsHandler.ensureInitialized();
-          console.timeEnd("ensureInitialized"); // End timing on success
-          console.log(
-            `[ContentScript DEBUG] Settings initialized successfully in processMedia for ${window.location.hostname}. Current settings:`,
-            JSON.stringify(settingsHandler.getCurrentSettings())
-          );
-        } catch (error) {
-          console.timeEnd("ensureInitialized"); // End timing on failure
-          console.error(
-            `[ContentScript DEBUG] Error ensuring settings initialized in processMedia for ${window.location.hostname}:`,
-            error
-          );
-          return false; // Indicate failure
-        }
-
-        // --- Start of processing steps after successful initialization ---
-        try {
-          const mediaElements = mediaProcessor.findMediaElements();
-          console.log(
-            `[ContentScript DEBUG] Found ${mediaElements.length} media elements:`,
-            mediaElements.map((el) => ({
-              src: el.src,
-              tagName: el.tagName,
-              id: el.id,
-              classList: el.classList.toString(),
-            }))
-          );
-
-          mediaElements.forEach((element) => {
-            // Remove previous listeners to prevent duplicates
-            element.removeEventListener(
-              "play",
-              resumeContextHandler as EventListener
-            ); // Cast to EventListener
-            element.removeEventListener("loadedmetadata", (event) =>
-              applySettingsToSingleElement(event.target as HTMLMediaElement)
-            ); // Correct listener
-            element.removeEventListener("canplay", (event) =>
-              applySettingsToSingleElement(event.target as HTMLMediaElement)
-            ); // Correct listener
-
-            // Add listeners
-            element.addEventListener(
-              "play",
-              resumeContextHandler as EventListener,
-              {
-                // Cast to EventListener
-                once: false, // Changed from true to allow multiple triggers
-              }
-            );
-            element.addEventListener("loadedmetadata", (event) =>
-              applySettingsToSingleElement(event.target as HTMLMediaElement)
-            ); // Correct listener
-            element.addEventListener("canplay", (event) =>
-              applySettingsToSingleElement(event.target as HTMLMediaElement)
-            ); // Correct listener
-
-            // Add loadstart listener for dynamically loaded videos
-            element.addEventListener("loadstart", () => {
-              console.log(
-                `[ContentScript] loadstart detected on ${
-                  element.src || "(no src)"
-                }, reapplying settings`
-              );
-              // Reapply settings when new media starts loading
-              applySettingsToSingleElement(element);
-            });
-
-            // Apply settings immediately to the element after adding listeners.
-            // This handles elements present on initial load and newly added elements.
-            applySettingsToSingleElement(element);
-
-            // Removed the specific check for HAVE_METADATA and applySettingsImmediately here,
-            // as applySettingsToSingleElement already handles immediate settings application.
-
-            // Removed auto-play attempt to avoid interfering with user interactions
-            // Settings will be applied when user manually plays the video via the play event listener
-          });
-
-          // The loop above now applies settings to all found elements immediately.
-          // The following line is redundant and can be removed.
-          // console.log(
-          //   `[ContentScript] Applying settings to all elements immediately for ${window.location.hostname}`
-          // );
-          // mediaProcessor.applySettingsImmediately(
-          //   mediaElements,
-          //   settingsHandler.getCurrentSettings()
-          // );
-        } catch (processingError) {
-          console.error(
-            `[ContentScript DEBUG] Error during media processing steps on ${window.location.hostname} (after initialization succeeded):`,
-            processingError
-          );
-          // Do not return false here, as initialization itself succeeded.
-        }
-        // --- End of processing steps ---
-
-        return true; // Indicate initialization success, regardless of processing errors
-      };
-   
-      // Listen for settings updates from the background script (Moved inside initializeScript)
       chrome.runtime.onMessage.addListener(
         (message: MessageType, sender, sendResponse) => {
-          console.log(
-            "[ContentScript Listener] Received message:",
-            JSON.stringify(message)
-          );
           if (message.type === "UPDATE_SETTINGS") {
-            console.log(
-              "[ContentScript Listener] Processing UPDATE_SETTINGS from background/popup"
-            );
-            console.log(
-              "Content: Applying settings update received via message."
-            );
-            // Ensure settingsHandler is initialized before applying the update
+            // console.log(`Content (${scriptInstanceId}): Received UPDATE_SETTINGS from background:`, message);
             (async () => {
-              try {
-                await settingsHandler.ensureInitialized(); // Wait for initialization
-                settingsHandler.updateSettings(message.settings); // Update local settings cache
+              await settingsHandler.ensureInitialized();
+              settingsHandler.updateSettings(message.settings);
+              // console.log(`Content (${scriptInstanceId}): Settings updated locally via message. Reprocessing all media...`);
+              // Re-process all known *and newly found* media elements.
+              // This covers elements that might have been added since the last scan/update.
+              const allCurrentElements = mediaProcessor.findMediaElements();
+              const currentSettings = settingsHandler.getCurrentSettings();
+              const needsAudioGraph = settingsHandler.needsAudioProcessing();
 
-                const newSettings = settingsHandler.getCurrentSettings(); // Get the just-updated settings
-                const needsProcessingNow = settingsHandler.needsAudioProcessing(); // Check based on new settings
-
-                console.log(
-                  `Content: Settings updated via message. New effective settings: ${JSON.stringify(newSettings)}. Needs audio processing: ${needsProcessingNow}. Reprocessing media elements...`
-                );
-                                
-                // Get the list of currently managed media elements from MediaProcessor
-                const managedMediaElements = mediaProcessor.getManagedMediaElements();
-                console.log(
-                  `[ContentScript Listener] Found ${managedMediaElements.length} managed media elements to re-process with new settings.`
-                );
-
-                if (managedMediaElements.length > 0) {
-                  // processMediaElements now handles speed, volume, and audio effects setup/teardown.
-                  console.log(`[ContentScript Listener] Processing ${managedMediaElements.length} managed elements.`);
-                  await mediaProcessor.processMediaElements(managedMediaElements, newSettings, needsProcessingNow);
-                } else {
-                  console.log("[ContentScript Listener] No managed media elements found. Attempting fallback to fresh scan.");
-                  // Fallback: If no elements are "managed", try a fresh scan and process those.
-                  // This can happen if a video starts playing before the observer picks it up AND an update comes in.
-                  const freshScanElements = mediaProcessor.findMediaElements();
-                  if (freshScanElements.length > 0) {
-                    console.log(`[ContentScript Listener] Fallback: Found ${freshScanElements.length} elements on fresh scan. Processing them.`);
-                    await mediaProcessor.processMediaElements(freshScanElements, newSettings, needsProcessingNow);
-                  } else {
-                    console.log("[ContentScript Listener] Fallback: No elements found on fresh scan either.");
+              for (const el of allCurrentElements) {
+                  if(el.isConnected) {
+                    // Ensure listeners are current
+                    removeElementListeners(el);
+                    addElementListeners(el);
+                    // Apply full settings
+                    mediaProcessor.applySettingsImmediately([el], currentSettings);
+                    await mediaProcessor.processMediaElements([el], currentSettings, needsAudioGraph);
                   }
-                }
-                
-                console.log("[ContentScript Listener] Finished processing media elements after settings update.");
-
-              } catch (error) {
-                console.error(
-                  "Content: Error during UPDATE_SETTINGS processing (after ensuring initialized):",
-                  error
-                );
               }
+              if (allCurrentElements.length === 0) {
+                // console.log(`Content (${scriptInstanceId}): No media elements found to apply updated settings to.`);
+              }
+
             })();
           }
-          return false;
+          return false; // We are not using sendResponse here
         }
       );
 
-      // Initial setup (Moved inside initializeScript)
-      // Apply settings after a short delay to allow the host page to initialize
-      const applyInitialSettings = () => { // No longer async itself, schedules async work
-        console.log(
-          `[ContentScript DEBUG] Scheduling initial settings application for ${window.location.hostname}`
-        );
-        setTimeout(async () => {
-          console.log(
-            `[ContentScript DEBUG] Applying initial settings for ${window.location.hostname} (after 500ms delay)`
-          );
-          await processMedia(); // processMedia handles finding elements and applying settings
-        }, 500); // Increased delay to 500 milliseconds
+      const performInitialScan = async () => {
+        // console.log(`Content (${scriptInstanceId}): Performing initial media scan for ${effectiveHostname}`);
+        await processAllMedia("initial script load");
       };
 
       if (document.readyState === "loading") {
-        // Wait for DOMContentLoaded, then schedule the delayed application
-        document.addEventListener("DOMContentLoaded", () => {
-          console.log(`[ContentScript DEBUG] DOMContentLoaded event for ${window.location.hostname}. Scheduling initial settings.`);
-          applyInitialSettings();
-        });
+        document.addEventListener("DOMContentLoaded", () => setTimeout(performInitialScan, 250));
       } else {
-        // DOM is already ready, schedule the delayed application
-        console.log(`[ContentScript DEBUG] DOM already ready for ${window.location.hostname}. Scheduling initial settings.`);
-        applyInitialSettings();
+        setTimeout(performInitialScan, 250); // Delay for SPAs and late hydration
       }
 
-      // Watch for dynamic changes (Moved inside initializeScript)
       mediaProcessor.setupMediaObserver(async () => {
-        await processMedia();
+        // console.log(`Content (${scriptInstanceId}): MediaObserver triggered. Reprocessing media.`);
+        await processAllMedia("media observer");
       });
-    }; // End of initializeScript function
+    };
 
-    // --- Hostname Detection and Initialization Logic ---
+    // Hostname detection and script initialization
     if (window.self === window.top) {
-      // --- Running in the TOP window ---
-      const topHostname = window.location.hostname;
-      console.log(
-        `[ContentScript] Running in TOP window. Hostname: ${topHostname}`
-      );
-      initializeScript(topHostname); // Initialize for the top window
+      const topHostname = window.location.hostname || "unknown_top_host";
+      // console.log(`Content (${scriptInstanceId}): Running in TOP window. Hostname: ${topHostname}`);
+      initializeScriptLogic(topHostname);
 
-      // Listen for requests from iframes
       window.addEventListener("message", (event: MessageEvent) => {
-        let parsedData;
-        if (typeof event.data === 'string') {
+        if (event.source && event.data && typeof event.data === 'string') {
           try {
-            parsedData = JSON.parse(event.data);
-          } catch (e) {
-            // Not a JSON string, or not one we care about.
-            // console.log('[ContentScript Top] Received non-JSON string message or parse error:', event.data, e);
-            return;
-          }
-        } else {
-          // Not a string, so not our VVP_ message.
-          // console.log('[ContentScript Top] Received non-string message:', event.data);
-          return;
-        }
-
-        if (
-          event.source && // Ensure source exists (source is the window object of the sender)
-          parsedData &&
-          parsedData.type === "VVP_REQUEST_TOP_HOSTNAME"
-        ) {
-          console.log(
-            `[ContentScript Top] Received VVP_REQUEST_TOP_HOSTNAME from an iframe (Source origin: ${event.origin}). Responding with hostname: ${topHostname}. Parsed data:`, parsedData
-          );
-          // Respond directly to the iframe that sent the message, with stringified JSON
-          (event.source as Window).postMessage(
-            JSON.stringify({ type: "VVP_TOP_HOSTNAME_INFO", hostname: topHostname, success: true }),
-            event.origin // Respond to the specific origin of the iframe
-          );
-        } else if (parsedData && parsedData.type) {
-          // Log other parsed JSON messages received by top window for debugging if necessary
-          // console.log(`[ContentScript Top] Received other parsed JSON message type: ${parsedData.type} from origin ${event.origin}`, parsedData);
+            const parsedData = JSON.parse(event.data);
+            if (parsedData.type === "VVP_REQUEST_TOP_HOSTNAME") {
+              // console.log(`Content (${scriptInstanceId}): TOP received VVP_REQUEST_TOP_HOSTNAME from origin ${event.origin}. Responding.`);
+              (event.source as Window).postMessage(
+                JSON.stringify({ type: "VVP_TOP_HOSTNAME_INFO", hostname: topHostname, success: true }),
+                event.origin // Important: respond to the specific origin
+              );
+            }
+          } catch (e) { /* Not JSON or not our message */ }
         }
       });
-    } else {
-      // --- Running in an IFRAME ---
-      const iframeOwnHostname = window.location.hostname;
-      console.log(
-        `[ContentScript iFrame] Running in IFRAME. Own hostname: ${iframeOwnHostname}. Attempting to request hostname from top window.`
-      );
-      let receivedHostname = false;
-      let fallbackTimeout: number | null = null;
+    } else { // Running in an iframe
+      const iframeOwnHostname = window.location.hostname || "unknown_iframe_host";
+      // console.log(`Content (${scriptInstanceId}): Running in IFRAME. Own Hostname: ${iframeOwnHostname}. Requesting top hostname.`);
+      let receivedTopHostname = false;
+      let fallbackTimeoutId: number | null = null;
 
-      // Listener for the response from the top window
-      const responseListener = (event: MessageEvent) => {
-        if (event.source !== window.top) return; // Message not from top
-
-        let parsedData;
-        if (typeof event.data === 'string') {
+      const handleTopHostnameResponse = (event: MessageEvent) => {
+        // Ensure message is from top window and is a string (our expected format)
+        if (event.source === window.top && event.data && typeof event.data === 'string') {
           try {
-            parsedData = JSON.parse(event.data);
-          } catch (e) {
-            // console.warn('[ContentScript iFrame] Failed to parse event.data string from top:', event.data, e);
-            return;
-          }
-        } else {
-          // console.warn('[ContentScript iFrame] Received non-string event.data from top:', event.data);
-          return;
-        }
+            const parsedData = JSON.parse(event.data);
+            if (parsedData.type === "VVP_TOP_HOSTNAME_INFO" && typeof parsedData.hostname === 'string') {
+              if (fallbackTimeoutId) clearTimeout(fallbackTimeoutId);
+              fallbackTimeoutId = null;
+              if (receivedTopHostname) return; // Already processed
 
-        if (
-          parsedData &&
-          parsedData.type === "VVP_TOP_HOSTNAME_INFO" &&
-          typeof parsedData.hostname === 'string'
-        ) {
-          if (fallbackTimeout) {
-            clearTimeout(fallbackTimeout);
-            fallbackTimeout = null;
-          }
-          if (receivedHostname) {
-            console.log(`[ContentScript iFrame] Already received hostname. Ignoring duplicate VVP_TOP_HOSTNAME_INFO from top. Origin: ${event.origin}. Parsed Data:`, parsedData);
-            return;
-          }
-          receivedHostname = true;
-          console.log(
-            `[ContentScript iFrame] Successfully received VVP_TOP_HOSTNAME_INFO from top: ${parsedData.hostname}. Origin: ${event.origin}. Initializing script. Parsed data:`, parsedData
-          );
-          window.removeEventListener("message", responseListener);
-          initializeScript(parsedData.hostname);
-        } else if (parsedData && parsedData.type) {
-           // console.log(`[ContentScript iFrame] Received other parsed JSON message type from top: ${parsedData.type} from origin ${event.origin}`, parsedData);
+              receivedTopHostname = true;
+              window.removeEventListener("message", handleTopHostnameResponse);
+              // console.log(`Content (${scriptInstanceId}): IFRAME received top hostname: ${parsedData.hostname} from origin ${event.origin}. Initializing.`);
+              initializeScriptLogic(parsedData.hostname);
+            }
+          } catch (e) { /* Not JSON or not our message */ }
         }
       };
-      window.addEventListener("message", responseListener);
+      window.addEventListener("message", handleTopHostnameResponse);
 
-      // Request the hostname from the top window, sending stringified JSON
-      if (window.top && window.top !== window.self) {
-        console.log(`[ContentScript iFrame] Sending VVP_REQUEST_TOP_HOSTNAME to top window (Origin: ${window.location.origin}).`);
-        const messagePayload = JSON.stringify({ type: "VVP_REQUEST_TOP_HOSTNAME", fromIframe: true, iframeOrigin: window.location.origin });
-        window.top.postMessage(messagePayload, "*");
+      if (window.top && window.top !== window.self) { // Check if top is accessible and different
+        window.top.postMessage(JSON.stringify({ type: "VVP_REQUEST_TOP_HOSTNAME" }), "*"); // For this handshake, "*" is common. Be more specific if possible/needed.
       } else {
-        console.warn(
-          `[ContentScript iFrame] window.top is null, same as self, or inaccessible. Cannot request hostname from top. Initializing with own hostname: ${iframeOwnHostname}.`
-        );
-        // Initialize with own hostname immediately if top is inaccessible or is self
-        initializeScript(iframeOwnHostname);
-        window.removeEventListener("message", responseListener); // Clean up listener as it's not needed
+        // console.warn(`Content (${scriptInstanceId}): IFRAME - window.top is self or inaccessible. Using own hostname: ${iframeOwnHostname}.`);
+        window.removeEventListener("message", handleTopHostnameResponse); // Cleanup
+        initializeScriptLogic(iframeOwnHostname); // Fallback to own hostname
         return; // Exit early
       }
 
-      // Fallback timeout in case the message never arrives
-      const TIMEOUT_DURATION = 5000; // Reduced timeout to 5 seconds
-      console.log(`[ContentScript iFrame] Setting fallback timeout for ${TIMEOUT_DURATION}ms.`);
-      fallbackTimeout = window.setTimeout(() => {
-        fallbackTimeout = null; // Clear the timeout ID
-        if (!receivedHostname) {
-          console.warn(
-            `[ContentScript iFrame] Did not receive hostname from top after ${TIMEOUT_DURATION}ms. Falling back to own hostname: ${iframeOwnHostname}. Removing response listener.`
-          );
-          window.removeEventListener("message", responseListener); // Clean up listener
-          initializeScript(iframeOwnHostname); // Initialize with own hostname as fallback
-        } else {
-          console.log(`[ContentScript iFrame] Fallback timeout triggered, but hostname was already received. No action needed.`);
+      fallbackTimeoutId = window.setTimeout(() => {
+        fallbackTimeoutId = null;
+        if (!receivedTopHostname) {
+          // console.warn(`Content (${scriptInstanceId}): IFRAME - Did not receive hostname from top (timeout). Falling back to own: ${iframeOwnHostname}.`);
+          window.removeEventListener("message", handleTopHostnameResponse);
+          initializeScriptLogic(iframeOwnHostname);
         }
-      }, TIMEOUT_DURATION);
+      }, 3000); // 3-second timeout
     }
   },
 });
