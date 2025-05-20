@@ -20,6 +20,11 @@ export const defaultSettings: AudioSettings = {
   speed: 100,
 };
 
+export interface GetInitialSettingsMessage {
+  type: "GET_INITIAL_SETTINGS";
+  hostname: string;
+}
+
 export const defaultSiteSettings: SiteSettings = {
   enabled: true,
   settings: { ...defaultSettings },
