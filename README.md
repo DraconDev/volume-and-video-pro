@@ -18,7 +18,7 @@ A powerful browser extension for enhancing your audio experience with advanced v
 1. Clone the repository:
 
 ```bash
-git clone [repository-url]
+git clone 
 cd volume-booster-pro
 ```
 
@@ -104,7 +104,7 @@ Audio settings can be customized per-site or globally:
 
 ## License
 
-[License Type] - See LICENSE file for details
+See LICENSE file for details
 
 ## Support
 
