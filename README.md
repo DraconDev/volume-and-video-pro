@@ -5,13 +5,13 @@ A powerful browser extension for enhancing your audio experience with advanced v
 ## Features
 
 -   🔊 **Volume Boost:** Amplify audio beyond browser limitations (up to 1000%).
--   ⚡ **Playback Speed Control:** Adjust playback speed from 0x to 10x.
--   🎵 **Bass Boost:** Enhance low frequencies for richer sound (0-200%).
--   🗣️ **Voice Boost:** Improve voice clarity in videos and audio (0-200%).
--   🎯 **Mono Audio:** Convert stereo audio to mono for accessibility or preference.
--   ⚙️ **Per-Site Settings:** Customize and save audio settings for individual websites, or disable the extension entirely for specific sites.
--   🌍 **Global Settings:** Apply your preferred audio settings across all websites by default.
--   🔄 **Real-time Controls:** Adjust all audio parameters instantly via the popup interface.
+- ⚡ **Playback Speed Control:** Adjust playback speed from 0x to 10x.
+- 🎵 **Bass Boost:** Enhance low frequencies for richer sound (0-200%).
+- 🗣️ **Voice Boost:** Improve voice clarity in videos and audio (0-200%).
+- 🎯 **Mono Audio:** Convert stereo audio to mono for accessibility or preference.
+- ⚙️ **Per-Site Settings:** Customize and save audio settings for individual websites, or disable the extension entirely for specific sites.
+- 🌍 **Global Settings:** Apply your preferred audio settings across all websites by default.
+- 🔄 **Real-time Controls:** Adjust all audio parameters instantly via the popup interface.
 
 ## Installation
 
@@ -57,42 +57,42 @@ bun zip:firefox # Firefox
 
 ## Project Structure
 
--   `/src` - Core functionality and types
-    -   `media-manager.ts` - Audio processing and management
-    -   `media-processor.ts` - Audio effects processing
-    -   `types.ts` - TypeScript type definitions
--   `/components` - React components
--   `/entrypoints` - Extension entry points (popup, content script)
--   `/hooks` - Custom React hooks
--   `/public` - Static assets
--   `/assets` - Extension assets (icons, images)
+- `/src` - Core functionality and types
+  - `media-manager.ts` - Audio processing and management
+  - `media-processor.ts` - Audio effects processing
+  - `types.ts` - TypeScript type definitions
+- `/components` - React components
+- `/entrypoints` - Extension entry points (popup, content script)
+- `/hooks` - Custom React hooks
+- `/public` - Static assets
+- `/assets` - Extension assets (icons, images)
 
 ## Technology Stack
 
--   React 18
--   TypeScript
--   Tailwind CSS
--   WXT (WebExtension Tools)
--   Web Audio API
+- React 18
+- TypeScript
+- Tailwind CSS
+- WXT (WebExtension Tools)
+- Web Audio API
 
 ## Development
 
 The extension uses WXT for development and building. Key commands:
 
--   `npm run dev` - Start development server
--   `npm run build` - Build for production
--   `npm run compile` - Type-check TypeScript
--   `npm run zip` - Create distribution package
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run compile` - Type-check TypeScript
+- `npm run zip` - Create distribution package
 
 ## Configuration
 
 Audio settings can be customized per-site or globally:
 
--   Volume: 0-1000%
--   Bass Boost: 0-200%
--   Voice Boost: 0-200%
--   Playback Speed: 0x-10x
--   Mono Audio: On/Off
+- Volume: 0-1000%
+- Bass Boost: 0-200%
+- Voice Boost: 0-200%
+- Playback Speed: 0x-10x
+- Mono Audio: On/Off
 
 ## Contributing
 
