@@ -181,26 +181,18 @@ export class MediaManager {
     callback: (elements: HTMLMediaElement[]) => void
   ): MutationObserver {
     let debounceTimeout: NodeJS.Timeout | null = null;
-    let lastCheck = Date.now();
 
-    const debouncedCheck = () => {
-      const now = Date.now();
-      if (now - lastCheck < this.DEBOUNCE_DELAY) {
-        return;
-      }
-
-      if (debounceTimeout) {
-        clearTimeout(debounceTimeout);
-      }
-
-      debounceTimeout = setTimeout(() => {
-        lastCheck = now;
+const debouncedCheck = () => {
+    if (this.debounceTimeout) {
+        clearTimeout(this.debounceTimeout);
+    }
+    this.debounceTimeout = setTimeout(() => {
         const elements = this.findMediaElements();
         if (elements.length > 0) {
-          callback(elements);
+            callback(elements);
         }
-      }, this.DEBOUNCE_DELAY);
-    };
+    }, this.DEBOUNCE_DELAY);
+};
 
     // Initial check
     if (!this.isExtensionContext()) {
