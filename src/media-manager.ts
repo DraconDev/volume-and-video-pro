@@ -37,6 +37,7 @@ export class MediaManager {
   private static processedElements = new WeakSet<HTMLElement>();
   private static readonly DEBOUNCE_DELAY = 3000; // Increased debounce delay for diagnostics
   private static readonly MAX_DEPTH = 10; // Increased max depth
+  let debounceTimeout: NodeJS.Timeout | null = null;
 
   private static isExtensionContext(): boolean {
     try {
@@ -180,7 +181,7 @@ export class MediaManager {
   public static setupMediaElementObserver(
     callback: (elements: HTMLMediaElement[]) => void
   ): MutationObserver {
-    let debounceTimeout: NodeJS.Timeout | null = null;
+    
 
     const debouncedCheck = () => {
         if (this.debounceTimeout) {
