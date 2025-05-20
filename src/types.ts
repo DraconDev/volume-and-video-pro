@@ -25,7 +25,6 @@ export interface GetInitialSettingsMessage {
   hostname: string;
 }
 
-
 export const defaultSiteSettings: SiteSettings = {
   enabled: true,
   settings: { ...defaultSettings },
@@ -60,7 +59,8 @@ export interface UpdateSiteModeMessage {
 export type MessageType =
   | UpdateSettingsMessage
   | ContentScriptReadyMessage
-  | UpdateSiteModeMessage;
+  | UpdateSiteModeMessage
+  | GetInitialSettingsMessage;
 
 export type StorageData = {
   globalSettings?: AudioSettings;
