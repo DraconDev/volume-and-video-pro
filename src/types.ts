@@ -25,6 +25,7 @@ export interface GetInitialSettingsMessage {
   hostname: string;
 }
 
+
 export const defaultSiteSettings: SiteSettings = {
   enabled: true,
   settings: { ...defaultSettings },
