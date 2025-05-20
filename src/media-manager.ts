@@ -35,10 +35,9 @@ const mediaConfig = {
 export class MediaManager {
   // Keep track of already processed elements to avoid duplicates
   private static processedElements = new WeakSet<HTMLElement>();
-  private static readonly DEBOUNCE_DELAY = 3000; // Increased debounce delay for diagnostics
+  private static readonly DEBOUNCE_DELAY = 500; // Increased debounce delay for diagnostics
   private static readonly MAX_DEPTH = 10; // Increased max depth
   private static debounceTimeout: NodeJS.Timeout | null = null;
-
 
   private static isExtensionContext(): boolean {
     try {
@@ -182,18 +181,16 @@ export class MediaManager {
   public static setupMediaElementObserver(
     callback: (elements: HTMLMediaElement[]) => void
   ): MutationObserver {
-    
-
     const debouncedCheck = () => {
-        if (this.debounceTimeout) {
-            clearTimeout(this.debounceTimeout);
+      if (this.debounceTimeout) {
+        clearTimeout(this.debounceTimeout);
+      }
+      this.debounceTimeout = setTimeout(() => {
+        const elements = this.findMediaElements();
+        if (elements.length > 0) {
+          callback(elements);
         }
-        this.debounceTimeout = setTimeout(() => {
-            const elements = this.findMediaElements();
-            if (elements.length > 0) {
-                callback(elements);
-            }
-        }, this.DEBOUNCE_DELAY);
+      }, this.DEBOUNCE_DELAY);
     };
 
     // Initial check
