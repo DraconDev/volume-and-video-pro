@@ -57,42 +57,42 @@ bun zip:firefox # Firefox
 
 ## Project Structure
 
-- `/src` - Core functionality and types
-  - `media-manager.ts` - Audio processing and management
-  - `media-processor.ts` - Audio effects processing
-  - `types.ts` - TypeScript type definitions
-- `/components` - React components
-- `/entrypoints` - Extension entry points (popup, content script)
-- `/hooks` - Custom React hooks
-- `/public` - Static assets
-- `/assets` - Extension assets (icons, images)
+-   `/src` - Core functionality and types
+    -   `media-manager.ts` - Audio processing and management
+    -   `media-processor.ts` - Audio effects processing
+    -   `types.ts` - TypeScript type definitions
+-   `/components` - React components
+-   `/entrypoints` - Extension entry points (popup, content script)
+-   `/hooks` - Custom React hooks
+-   `/public` - Static assets
+-   `/assets` - Extension assets (icons, images)
 
 ## Technology Stack
 
-- React 18
-- TypeScript
-- Tailwind CSS
-- WXT (WebExtension Tools)
-- Web Audio API
+-   React 18
+-   TypeScript
+-   Tailwind CSS
+-   WXT (WebExtension Tools)
+-   Web Audio API
 
 ## Development
 
 The extension uses WXT for development and building. Key commands:
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run compile` - Type-check TypeScript
-- `npm run zip` - Create distribution package
+-   `bun dev` - Start development server
+-   `bun build` - Build for production
+-   `bun compile` - Type-check TypeScript
+-   `bun zip` - Create distribution package
 
 ## Configuration
 
 Audio settings can be customized per-site or globally:
 
-- Volume: 0-1000%
-- Bass Boost: 0-200%
-- Voice Boost: 0-200%
-- Playback Speed: 0x-10x
-- Mono Audio: On/Off
+-   Volume: 0-1000%
+-   Bass Boost: 0-200%
+-   Voice Boost: 0-200%
+-   Playback Speed: 0x-10x
+-   Mono Audio: On/Off
 
 ## Contributing
 
