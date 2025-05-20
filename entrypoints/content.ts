@@ -1,6 +1,6 @@
 import { defineContentScript } from "wxt/sandbox";
 import { MediaProcessor } from "./../src/media-processor";
-import { SettingsHandler } from "../src/settings-handler";
+import { setupMessageHandler } from "../src/settings-handler";
 import { MessageType, UpdateSettingsMessage } from "../src/types";
 
 export default defineContentScript({
