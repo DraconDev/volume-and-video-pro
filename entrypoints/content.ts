@@ -1,7 +1,7 @@
 // This is what your ACTUAL settings-handler.ts should contain
 // (or a file with a similar purpose that content.ts imports)
 
-import { AudioSettings, defaultSettings } from "...//types"; // Adjust path if needed
+import { AudioSettings, defaultSettings } from "../src/types"; // Adjust path if needed
 
 export class SettingsHandler {
     private currentSettings: AudioSettings;
