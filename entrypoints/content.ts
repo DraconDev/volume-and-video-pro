@@ -1,7 +1,7 @@
-// This is what your ACTUAL settings-handler.ts should contain
-// (or a file with a similar purpose that content.ts imports)
-
+import { defineUnlistedScript } from 'wxt/sandbox';
 import { AudioSettings, defaultSettings } from "../src/types"; // Adjust path if needed
+
+export default defineUnlistedScript(() => {
 
 export class SettingsHandler {
     private currentSettings: AudioSettings;
@@ -14,7 +14,7 @@ export class SettingsHandler {
         this.initializationComplete = new Promise((resolve) => {
             this.resolveInitialization = resolve;
         });
-    }
+    });
 
     async initialize(hostname: string): Promise<void> {
         this.targetHostname = hostname;
