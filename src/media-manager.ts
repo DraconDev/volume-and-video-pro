@@ -180,7 +180,8 @@ export class MediaManager {
   public static setupMediaElementObserver(
     callback: (elements: HTMLMediaElement[]) => void
   ): MutationObserver {
-    let debounceTimeout: NodeJS.Timeout | null = null;
+    private static debounceTimeout: NodeJS.Timeout | null = null;
+
 
     const debouncedCheck = () => {
         if (this.debounceTimeout) {
