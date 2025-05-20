@@ -25,27 +25,27 @@ cd volume-booster-pro
 2. Install dependencies:
 
 ```bash
-npm install
+bun install
 ```
 
 3. Development:
 
 ```bash
 # For Chrome/Edge development
-npm run dev
+bun dev
 
 # For Firefox development
-npm run dev:firefox
+bun dev:firefox
 ```
 
 4. Build for production:
 
 ```bash
 # For Chrome/Edge
-npm run build
+bun build
 
 # For Firefox
-npm run build:firefox
+bun build:firefox
 ```
 
 5. Create distribution zip:

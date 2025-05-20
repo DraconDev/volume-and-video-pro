@@ -2,7 +2,7 @@
   "name": "",
   "description": "manifest.json description",
   "private": true,
-  "version": "2.4.61",
+  "version": "2.4.62",
   "type": "module",
   "scripts": {
     "dev": "wxt",
