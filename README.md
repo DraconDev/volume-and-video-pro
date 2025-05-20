@@ -18,7 +18,7 @@ A powerful browser extension for enhancing your audio experience with advanced v
 1. Clone the repository:
 
 ```bash
-git clone 
+git clone https://github.com/DraconDev/volume-and-video-pro
 cd volume-booster-pro
 ```
 
