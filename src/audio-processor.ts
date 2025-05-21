@@ -162,65 +162,53 @@ export class AudioProcessor {
 
   private async connectNodes(
     nodes: AudioNodes,
-    settings: AudioSettings,
-    forceReconnect: boolean = false // New parameter
+    settings: AudioSettings
   ): Promise<void> {
     const { source, bassFilter, voiceFilter, gain, splitter, merger, context } =
       nodes;
 
-    // Only disconnect and reconnect if forceReconnect is true, or if mono setting has changed
-    const monoSettingChanged = nodes.mono !== settings.mono;
+    console.log(
+      `[AudioProcessor] Reconnecting nodes for ${
+        nodes.element.src || "(no src)"
+      } (always forcing full reconnection).`
+    );
 
-    if (forceReconnect || monoSettingChanged) {
-      console.log(
-        `[AudioProcessor] Reconnecting nodes for ${
-          nodes.element.src || "(no src)"
-        }. Force: ${forceReconnect}, Mono changed: ${monoSettingChanged}`
-      );
-
-      // Use try/catch for each disconnect to handle cases where nodes aren't connected
-      const safeDisconnect = (node: AudioNode) => {
-        try {
-          node.disconnect();
-        } catch (e) {
-          // Ignore disconnect errors
-        }
-      };
-
-      // Disconnect existing connections
-      safeDisconnect(gain);
-      safeDisconnect(voiceFilter);
-      safeDisconnect(bassFilter);
-      safeDisconnect(splitter);
-      safeDisconnect(merger);
-      safeDisconnect(source);
-
-      // Create new connections based on settings
-      if (settings.mono) {
-        source.connect(bassFilter);
-        bassFilter.connect(voiceFilter);
-        voiceFilter.connect(splitter);
-        splitter.connect(merger, 0, 0);
-        splitter.connect(merger, 0, 1);
-        merger.connect(gain);
-      } else {
-        source.connect(bassFilter);
-        bassFilter.connect(voiceFilter);
-        voiceFilter.connect(gain);
+    // Use try/catch for each disconnect to handle cases where nodes aren't connected
+    const safeDisconnect = (node: AudioNode) => {
+      try {
+        node.disconnect();
+      } catch (e) {
+        // Ignore disconnect errors
       }
-      gain.connect(context.destination);
+    };
 
-      // Update the stored mono setting for this element
-      nodes.mono = settings.mono;
+    // Disconnect existing connections
+    safeDisconnect(gain);
+    safeDisconnect(voiceFilter);
+    safeDisconnect(bassFilter);
+    safeDisconnect(splitter);
+    safeDisconnect(merger);
+    safeDisconnect(source);
+
+    // Create new connections based on settings
+    if (settings.mono) {
+      source.connect(bassFilter);
+      bassFilter.connect(voiceFilter);
+      voiceFilter.connect(splitter);
+      splitter.connect(merger, 0, 0);
+      splitter.connect(merger, 0, 1);
+      merger.connect(gain);
     } else {
-      console.log(
-        `[AudioProcessor] Skipping full reconnection for ${
-          nodes.element.src || "(no src)"
-        }. Only updating node settings.`
-      );
+      source.connect(bassFilter);
+      bassFilter.connect(voiceFilter);
+      voiceFilter.connect(gain);
     }
+    gain.connect(context.destination);
 
-    // Always apply settings, whether reconnected or not
+    // Update the stored mono setting for this element
+    nodes.mono = settings.mono;
+
+    // Always apply settings
     await this.updateNodeSettings(nodes, settings);
 
     // Removed automatic playback restoration after connecting nodes.
