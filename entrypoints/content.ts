@@ -253,24 +253,42 @@ export default defineContentScript({
                   `[ContentScript Listener] Found ${managedMediaElements.length} managed media elements to re-process with new settings.`
                 );
 
+                // Apply immediate settings (speed, volume) to all managed elements first
                 if (managedMediaElements.length > 0) {
-                  // processMediaElements now handles speed, volume, and audio effects setup/teardown.
-                  console.log(`[ContentScript Listener] Processing ${managedMediaElements.length} managed elements.`);
-                  await mediaProcessor.processMediaElements(managedMediaElements, newSettings, needsProcessingNow);
-                } else {
-                  console.log("[ContentScript Listener] No managed media elements found. Attempting fallback to fresh scan.");
-                  // Fallback: If no elements are "managed", try a fresh scan and process those.
-                  // This can happen if a video starts playing before the observer picks it up AND an update comes in.
-                  const freshScanElements = mediaProcessor.findMediaElements();
-                  if (freshScanElements.length > 0) {
-                    console.log(`[ContentScript Listener] Fallback: Found ${freshScanElements.length} elements on fresh scan. Processing them.`);
-                    await mediaProcessor.processMediaElements(freshScanElements, newSettings, needsProcessingNow);
+                  console.log(`[ContentScript Listener] Applying immediate settings to ${managedMediaElements.length} managed elements.`);
+                  mediaProcessor.applySettingsImmediately(managedMediaElements, newSettings);
+                }
+
+                // Then, process audio effects if needed
+                if (needsProcessingNow) {
+                  if (managedMediaElements.length > 0) {
+                    console.log(`[ContentScript Listener] Processing audio effects for ${managedMediaElements.length} managed elements.`);
+                    await mediaProcessor.processMediaElements(managedMediaElements, newSettings, needsProcessingNow);
                   } else {
-                    console.log("[ContentScript Listener] Fallback: No elements found on fresh scan either.");
+                    console.log("[ContentScript Listener] No managed media elements found for audio effects. Attempting fallback to fresh scan.");
+                    const freshScanElements = mediaProcessor.findMediaElements();
+                    if (freshScanElements.length > 0) {
+                      console.log(`[ContentScript Listener] Fallback: Found ${freshScanElements.length} elements on fresh scan for audio effects. Processing them.`);
+                      mediaProcessor.applySettingsImmediately(freshScanElements, newSettings); // Apply immediate settings to fallback elements too
+                      await mediaProcessor.processMediaElements(freshScanElements, newSettings, needsProcessingNow);
+                    } else {
+                      console.log("[ContentScript Listener] Fallback: No elements found on fresh scan either for audio effects.");
+                    }
+                  }
+                } else {
+                  console.log("[ContentScript Listener] Audio effects not needed. Ensuring any existing processing for managed elements is disconnected/bypassed.");
+                  // If audio effects are turned off, ensure they are properly disconnected
+                  if (managedMediaElements.length > 0) {
+                    await mediaProcessor.processMediaElements(managedMediaElements, newSettings, needsProcessingNow);
+                  } else {
+                    const freshScanElements = mediaProcessor.findMediaElements();
+                    if (freshScanElements.length > 0) {
+                      await mediaProcessor.processMediaElements(freshScanElements, newSettings, needsProcessingNow);
+                    }
                   }
                 }
                 
-                console.log("[ContentScript Listener] Finished processing media elements after settings update.");
+                console.log("[ContentScript Listener] Finished applying settings and processing media elements after settings update.");
 
               } catch (error) {
                 console.error(
