@@ -165,14 +165,28 @@ export class AudioProcessor {
 
   private async connectNodes(
     nodes: AudioNodes,
-    settings: AudioSettings
+    settings: AudioSettings,
+    forceReconnect: boolean = false // New parameter
+  ): Promise<void> {
     const { source, bassFilter, voiceFilter, gain, splitter, merger, context } =
       nodes;
 
-    try {
-    goye{
-.cwPlyt= des!.elTrlt eai.peus t;andle cases where nodes aren't connected
-      const c Tm = node.disconnec)uc Ti   // Ignore disconnect errors
+    // Only disconnect and reconnect if forceReconnect is true, or if mono setting has changed
+    const monoSettingChanged = nodes.mono !== settings.mono;
+
+    if (forceReconnect || monoSettingChanged) {
+      console.log(
+        `[AudioProcessor] Reconnecting nodes for ${
+          nodes.element.src || "(no src)"
+        }. Force: ${forceReconnect}, Mono changed: ${monoSettingChanged}`
+      );
+
+      // Use try/catch for each disconnect to handle cases where nodes aren't connected
+      const safeDisconnect = (node: AudioNode) => {
+        try {
+          node.disconnect();
+        } catch (e) {
+          // Ignore disconnect errors
         }
       };
 
@@ -199,26 +213,38 @@ export class AudioProcessor {
       }
       gain.connect(context.destination);
 
-      // Apply settings
-      await this.updateNodeSettings(nodes, settings);
-
-      // Removed automatic playback restoration after connecting nodes.
-      // Playback should be initiated by user gesture and handled by the content script's play listener.
-
-      // console.log("AudioProcessor: Nodes connected successfully"); // Reduced logging
-    } ca 
-  public disconnectElementNodes(element: HTMLMediaElement): boolean {
-    const nodes = this.audioElementMap.get(element);
-      if (!nodes) return false;
-  
-    console.log(
-        `[AudioProcessor] Disconnecting nodes for element: ${
-      catch (error) {     element.src || "(no src)"
-      console.error("AudioProcessor: Failed to connect nodes:", error);      }`
-      throw error;
+      // Update the stored mono setting for this element
+      nodes.mono = settings.mono;
+    } else {
+      console.log(
+        `[AudioProcessor] Skipping full reconnection for ${
+          nodes.element.src || "(no src)"
+        }. Only updating node settings.`
+      );
     }
+
+    // Always apply settings, whether reconnected or not
+    await this.updateNodeSettings(nodes, settings);
+
+    // Removed automatic playback restoration after connecting nodes.
+    // Playback should be initiated by user gesture and handled by the content script's play listener.
+
+    // console.log("AudioProcessor: Nodes connected successfully"); // Reduced logging
   }
 
+  /**
+   * Disconnects audio nodes for a specific element and removes it from the map.
+   * @param element The HTMLMediaElement to disconnect.
+   * @returns True if nodes were found and disconnected, false otherwise.
+   */
+  public disconnectElementNodes(element: HTMLMediaElement): boolean {
+    const nodes = this.audioElementMap.get(element);
+    if (!nodes) return false;
+
+    console.log(
+      `[AudioProcessor] Disconnecting nodes for element: ${
+        element.src || "(no src)"
+      }`
     ); // ADDED LOG
 
     try {
@@ -238,20 +264,7 @@ export class AudioProcessor {
       safeDisconnect(nodes.merger);
       safeDisconnect(nodes.source);
 
-          node.disconnect();
-        } catch (e) {
-          // Ignore disconnect errors
-      th}
-is    };
-
-      safeDisco.nect(naudsigain);
-      safeDisconnect(nooes.voiceFilter);
-      safeDElementMapnodes.bassFilter);
-      safeDisconnect(nodes.splitter);
-      safeDisconnect(nodes.merger);
-      safeDisconnect(nodes.source);
-
-      this.audioElementMap.delete(element.delete(element);
+      this.audioElementMap.delete(element);
       return true; // Indicate success
     } catch (error) {
       console.error(
@@ -280,15 +293,17 @@ is    };
 
     for (const [element, nodes] of this.audioElementMap.entries()) {
       try {
-        // Call connectNodes instead of updateNodeSettings to ensure
-        // connections (like for mono) are updated along with values.
-        // connectNodes internally calls updateNodeSettings.
-        await this.connectNodes(nodes, settings);
+        // Determine if a full reconnection is needed (e.g., if mono setting changed)
+        const needsFullReconnect = nodes.mono !== settings.mono;
+
+        // Call connectNodes, which will handle reconnection if needed, or just update settings
+        await this.connectNodes(nodes, settings, needsFullReconnect);
+
         console.log(
           // ADDED LOG
-          `[AudioProcessor] Reconnected nodes and updated settings for element: ${
+          `[AudioProcessor] Updated settings for element: ${
             element.src || "(no src)"
-          }`
+          }. Full reconnect: ${needsFullReconnect}`
         );
       } catch (error) {
         console.error(
