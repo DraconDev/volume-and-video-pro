@@ -17,6 +17,39 @@ export default defineContentScript({
     const settingsHandler = new SettingsHandler();
     const mediaProcessor = new MediaProcessor();
 
+    // Attempt to resume AudioContext on any user gesture (e.g., click)
+    // This is crucial for Web Audio API to work, as contexts are often suspended initially.
+    const resumeAudioContextOnGesture = async () => {
+      console.log("[ContentScript] User gesture detected, attempting to resume AudioContext.");
+      await mediaProcessor.attemptContextResume();
+      // After resuming, re-process all media elements to ensure effects are applied
+      // This is important because effects might not apply until context is running.
+      const currentSettings = settingsHandler.getCurrentSettings();
+      const needsProcessing = settingsHandler.needsAudioProcessing();
+      const managedMediaElements = mediaProcessor.getManagedMediaElements();
+      if (managedMediaElements.length > 0) {
+        console.log("[ContentScript] Re-processing managed media elements after context resume.");
+        mediaProcessor.applySettingsImmediately(managedMediaElements, currentSettings);
+        await mediaProcessor.processMediaElements(managedMediaElements, currentSettings, needsProcessing);
+      } else {
+        // Fallback for elements not yet managed
+        const freshScanElements = mediaProcessor.findMediaElements();
+        if (freshScanElements.length > 0) {
+          console.log("[ContentScript] Re-processing fresh scan elements after context resume.");
+          mediaProcessor.applySettingsImmediately(freshScanElements, currentSettings);
+          await mediaProcessor.processMediaElements(freshScanElements, currentSettings, needsProcessing);
+        }
+      }
+      // Remove this listener after it fires once
+      document.removeEventListener("click", resumeAudioContextOnGesture);
+      document.removeEventListener("mousedown", resumeAudioContextOnGesture);
+    };
+
+    // Add listeners for user gestures to resume AudioContext
+    document.addEventListener("click", resumeAudioContextOnGesture, { once: true });
+    document.addEventListener("mousedown", resumeAudioContextOnGesture, { once: true });
+
+
     // Function to initialize settings and the rest of the script logic
     const initializeScript = async (hostname: string) => {
       console.log(
