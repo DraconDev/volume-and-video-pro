@@ -271,24 +271,19 @@ export class AudioProcessor {
 
   async updateAudioEffects(settings: AudioSettings): Promise<void> {
     console.log(
-      // ADDED LOG
-      "[AudioProcessor] Updating audio effects with settings:",
+      "[AudioProcessor] Updating audio effects with settings (forcing full reconnection for all elements):",
       JSON.stringify(settings)
     );
 
     for (const [element, nodes] of this.audioElementMap.entries()) {
       try {
-        // Determine if a full reconnection is needed (e.g., if mono setting changed)
-        const needsFullReconnect = nodes.mono !== settings.mono;
-
-        // Call connectNodes, which will handle reconnection if needed, or just update settings
-        await this.connectNodes(nodes, settings, needsFullReconnect);
+        // Call connectNodes, which now always performs a full reconnection
+        await this.connectNodes(nodes, settings);
 
         console.log(
-          // ADDED LOG
           `[AudioProcessor] Updated settings for element: ${
             element.src || "(no src)"
-          }. Full reconnect: ${needsFullReconnect}`
+          }. Full reconnection performed.`
         );
       } catch (error) {
         console.error(
