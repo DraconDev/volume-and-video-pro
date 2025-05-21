@@ -128,15 +128,12 @@ export class AudioProcessor {
       const timeConstant = 0.01; // Apply quickly
       const currentTime = context.currentTime; // Use current context time as start time
 
-      // Set immediate value AND schedule target - Belt-and-suspenders approach
-      gain.gain.value = gainNodeVolume; // Set immediate value
-      gain.gain.setTargetAtTime(gainNodeVolume, currentTime, timeConstant); // Schedule
+      // Set immediate value
+      gain.gain.value = gainNodeVolume;
 
-      bassFilter.gain.value = clampedBass; // Set immediate value
-      bassFilter.gain.setTargetAtTime(clampedBass, currentTime, timeConstant); // Schedule
+      bassFilter.gain.value = clampedBass;
 
-      voiceFilter.gain.value = clampedVoice; // Set immediate value
-      voiceFilter.gain.setTargetAtTime(clampedVoice, currentTime, timeConstant); // Schedule
+      voiceFilter.gain.value = clampedVoice;
 
       // ADDED LOGS: Log the values being applied to the nodes
       console.log(
