@@ -166,20 +166,13 @@ export class AudioProcessor {
   private async connectNodes(
     nodes: AudioNodes,
     settings: AudioSettings
-  ): Promise<void> {
     const { source, bassFilter, voiceFilter, gain, splitter, merger, context } =
       nodes;
 
     try {
-      const wasPlaying = !nodes.element.paused;
-      const currentTime = nodes.element.currentTime;
-
-      // Use try/catch for each disconnect to handle cases where nodes aren't connected
-      const safeDisconnect = (node: AudioNode) => {
-        try {
-          node.disconnect();
-        } catch (e) {
-          // Ignore disconnect errors
+    goye{
+.cwPlyt= des!.elTrlt eai.peus t;andle cases where nodes aren't connected
+      const c Tm = node.disconnec)uc Ti   // Ignore disconnect errors
         }
       };
 
@@ -213,25 +206,19 @@ export class AudioProcessor {
       // Playback should be initiated by user gesture and handled by the content script's play listener.
 
       // console.log("AudioProcessor: Nodes connected successfully"); // Reduced logging
-    } catch (error) {
-      console.error("AudioProcessor: Failed to connect nodes:", error);
+    } ca 
+  public disconnectElementNodes(element: HTMLMediaElement): boolean {
+    const nodes = this.audioElementMap.get(element);
+      if (!nodes) return false;
+  
+    console.log(
+        `[AudioProcessor] Disconnecting nodes for element: ${
+      catch (error) {     element.src || "(no src)"
+      console.error("AudioProcessor: Failed to connect nodes:", error);      }`
       throw error;
     }
   }
 
-  /**
-   * Disconnects audio nodes for a specific element and removes it from the map.
-   * @param element The HTMLMediaElement to disconnect.
-   * @returns True if nodes were found and disconnected, false otherwise.
-   */
-  public disconnectElementNodes(element: HTMLMediaElement): boolean {
-    const nodes = this.audioElementMap.get(element);
-    if (!nodes) return false;
-
-    console.log(
-      `[AudioProcessor] Disconnecting nodes for element: ${
-        element.src || "(no src)"
-      }`
     ); // ADDED LOG
 
     try {
@@ -251,7 +238,20 @@ export class AudioProcessor {
       safeDisconnect(nodes.merger);
       safeDisconnect(nodes.source);
 
-      this.audioElementMap.delete(element);
+          node.disconnect();
+        } catch (e) {
+          // Ignore disconnect errors
+      th}
+is    };
+
+      safeDisco.nect(naudsigain);
+      safeDisconnect(nooes.voiceFilter);
+      safeDElementMapnodes.bassFilter);
+      safeDisconnect(nodes.splitter);
+      safeDisconnect(nodes.merger);
+      safeDisconnect(nodes.source);
+
+      this.audioElementMap.delete(element.delete(element);
       return true; // Indicate success
     } catch (error) {
       console.error(
