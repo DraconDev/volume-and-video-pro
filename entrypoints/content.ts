@@ -65,6 +65,7 @@ export default defineContentScript({
       // --- End AudioContext Resume Handler ---
 
       // Function to apply settings to a single media element
+      // Defined outside to allow consistent reference for add/remove event listeners
       const applySettingsToSingleElement = async (
         element: HTMLMediaElement
       ) => {
@@ -178,75 +179,45 @@ export default defineContentScript({
           );
 
           mediaElements.forEach((element) => {
+            // Create a bound version of applySettingsToSingleElement for this specific element
+            // This ensures we have a stable reference for add/removeEventListener
+            const boundApplySettings = (event: Event) =>
+              applySettingsToSingleElement(event.target as HTMLMediaElement);
+
             // Remove previous listeners to prevent duplicates
             element.removeEventListener(
               "play",
               resumeContextHandler as EventListener
-            ); // Cast to EventListener
-            element.removeEventListener("loadedmetadata", (event) =>
-              applySettingsToSingleElement(event.target as HTMLMediaElement)
-            ); // Correct listener
-            element.removeEventListener("canplay", (event) =>
-              applySettingsToSingleElement(event.target as HTMLMediaElement)
-            ); // Correct listener
+            );
+            // Use the bound function for removal
+            element.removeEventListener("loadedmetadata", boundApplySettings);
+            element.removeEventListener("canplay", boundApplySettings);
+            element.removeEventListener("loadstart", boundApplySettings); // Also remove loadstart
 
             // Add listeners
             element.addEventListener(
               "play",
               resumeContextHandler as EventListener,
               {
-                // Cast to EventListener
-                once: false, // Changed from true to allow multiple triggers
+                once: false,
               }
             );
-            element.addEventListener("loadedmetadata", (event) =>
-              applySettingsToSingleElement(event.target as HTMLMediaElement)
-            ); // Correct listener
-            element.addEventListener("canplay", (event) =>
-              applySettingsToSingleElement(event.target as HTMLMediaElement)
-            ); // Correct listener
-
-            // Add loadstart listener for dynamically loaded videos
-            element.addEventListener("loadstart", () => {
-              console.log(
-                `[ContentScript] loadstart detected on ${
-                  element.src || "(no src)"
-                }, reapplying settings`
-              );
-              // Reapply settings when new media starts loading
-              applySettingsToSingleElement(element);
-            });
+            // Use the bound function for addition
+            element.addEventListener("loadedmetadata", boundApplySettings);
+            element.addEventListener("canplay", boundApplySettings);
+            element.addEventListener("loadstart", boundApplySettings); // Add loadstart with bound function
 
             // Apply settings immediately to the element after adding listeners.
             // This handles elements present on initial load and newly added elements.
             applySettingsToSingleElement(element);
-
-            // Removed the specific check for HAVE_METADATA and applySettingsImmediately here,
-            // as applySettingsToSingleElement already handles immediate settings application.
-
-            // Removed auto-play attempt to avoid interfering with user interactions
-            // Settings will be applied when user manually plays the video via the play event listener
           });
-
-          // The loop above now applies settings to all found elements immediately.
-          // The following line is redundant and can be removed.
-          // console.log(
-          //   `[ContentScript] Applying settings to all elements immediately for ${window.location.hostname}`
-          // );
-          // mediaProcessor.applySettingsImmediately(
-          //   mediaElements,
-          //   settingsHandler.getCurrentSettings()
-          // );
         } catch (processingError) {
           console.error(
             `[ContentScript DEBUG] Error during media processing steps on ${window.location.hostname} (after initialization succeeded):`,
             processingError
           );
-          // Do not return false here, as initialization itself succeeded.
         }
-        // --- End of processing steps ---
-
-        return true; // Indicate initialization success, regardless of processing errors
+        return true;
       };
    
       // Listen for settings updates from the background script (Moved inside initializeScript)
