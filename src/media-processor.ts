@@ -88,6 +88,9 @@ export class MediaProcessor {
 
     if (needsAudioEffectsSetup) {
       console.log("[MediaProcessor] Audio effects setup is requested.");
+      // Attempt to resume AudioContext before setting up/updating effects
+      await this.audioProcessor.tryResumeContext();
+
       for (const element of mediaElements) {
         if (!element.isConnected) {
           this.activeMediaElements.delete(element);
@@ -110,6 +113,8 @@ export class MediaProcessor {
         await this.audioProcessor.updateAudioEffects(settings);
       } else {
         console.log("[MediaProcessor] AudioContext not running or does not exist after setup attempts. Skipping global updateAudioEffects.");
+        // This log is now less critical as tryResumeContext was called.
+        // If it's still not running, it means no user gesture has occurred yet.
       }
     } else {
       console.log("[MediaProcessor] Audio effects setup not requested. Ensuring any existing processing for these elements is disconnected/bypassed.");
