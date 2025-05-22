@@ -375,9 +375,22 @@ export default defineContentScript({
       }
 
       // Watch for dynamic changes (Moved inside initializeScript)
-      mediaProcessor.setupMediaObserver(async () => {
-        await processMedia();
-      });
+      mediaProcessor.setupMediaObserver(
+        async (addedElements) => {
+          // The debouncedCheck in MediaManager already calls findMediaElements,
+          // so processMedia will find all current elements, including the added ones.
+          // We don't need to pass addedElements directly to processMedia here.
+          await processMedia();
+        },
+        (removedElements) => {
+          console.log(`[ContentScript] Cleaning up ${removedElements.length} removed media elements.`);
+          removedElements.forEach((element) => {
+            mediaProcessor.audioProcessor.disconnectElementNodes(element);
+            // Optionally, remove from activeMediaElements in MediaProcessor if it's not already handled by disconnectElementNodes
+            // mediaProcessor.activeMediaElements.delete(element); // This is handled internally by disconnectElementNodes
+          });
+        }
+      );
     }; // End of initializeScript function
 
     // --- Hostname Detection and Initialization Logic ---
