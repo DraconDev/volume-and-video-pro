@@ -249,6 +249,15 @@ export class AudioProcessor {
       safeDisconnect(nodes.merger);
       safeDisconnect(nodes.source);
 
+      // Explicitly nullify references to help garbage collection
+      nodes.source = null as any;
+      nodes.gain = null as any;
+      nodes.bassFilter = null as any;
+      nodes.voiceFilter = null as any;
+      nodes.splitter = null as any;
+      nodes.merger = null as any;
+      // Do not nullify context or element as they are managed elsewhere
+
       this.audioElementMap.delete(element);
       return true; // Indicate success
     } catch (error) {
