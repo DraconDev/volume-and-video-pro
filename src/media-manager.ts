@@ -178,39 +178,71 @@ export class MediaManager {
   }
 
   public static setupMediaElementObserver(
-    callback: (elements: HTMLMediaElement[]) => void
+    onAdded: (elements: HTMLMediaElement[]) => void,
+    onRemoved: (elements: HTMLMediaElement[]) => void // New callback for removed elements
   ): MutationObserver {
     let debounceTimeout: NodeJS.Timeout | null = null;
 
-const debouncedCheck = () => {
-    if (this.debounceTimeout) {
+    const debouncedCheck = () => {
+      if (this.debounceTimeout) {
         clearTimeout(this.debounceTimeout);
-    }
-    this.debounceTimeout = setTimeout(() => {
+      }
+      this.debounceTimeout = setTimeout(() => {
         const elements = this.findMediaElements();
         if (elements.length > 0) {
-            callback(elements);
+          onAdded(elements); // Use onAdded callback
         }
-    }, this.DEBOUNCE_DELAY);
-};
+      }, this.DEBOUNCE_DELAY);
+    };
 
     // Initial check
     if (!this.isExtensionContext()) {
       debouncedCheck();
     }
 
-    // Simplified mutation observer
+    // Mutation observer to detect added/removed nodes
     const observer = new MutationObserver((mutations) => {
-      // Trigger check more aggressively: if any nodes were added anywhere.
-      // This is less performant but more likely to catch late-loading elements.
-      const nodesAdded = mutations.some(
-        (mutation) =>
-          mutation.type === "childList" && mutation.addedNodes.length > 0
-      );
+      const addedMediaElements: HTMLMediaElement[] = [];
+      const removedMediaElements: HTMLMediaElement[] = [];
 
-      if (nodesAdded) {
-        // console.log("[MediaManager Observer] Nodes added, triggering debounced check."); // Optional debug log
-        debouncedCheck();
+      mutations.forEach((mutation) => {
+        if (mutation.type === "childList") {
+          mutation.addedNodes.forEach((node) => {
+            if (node instanceof HTMLMediaElement) {
+              addedMediaElements.push(node);
+            } else if (node instanceof HTMLElement) {
+              // Check for media elements within added non-media elements
+              node.querySelectorAll("video, audio").forEach((el) => {
+                if (el instanceof HTMLMediaElement) {
+                  addedMediaElements.push(el);
+                }
+              });
+            }
+          });
+
+          mutation.removedNodes.forEach((node) => {
+            if (node instanceof HTMLMediaElement) {
+              removedMediaElements.push(node);
+            } else if (node instanceof HTMLElement) {
+              // Check for media elements within removed non-media elements
+              node.querySelectorAll("video, audio").forEach((el) => {
+                if (el instanceof HTMLMediaElement) {
+                  removedMediaElements.push(el);
+                }
+              });
+            }
+          });
+        }
+      });
+
+      if (addedMediaElements.length > 0) {
+        console.log("[MediaManager Observer] Added media elements detected, triggering debounced check.");
+        debouncedCheck(); // Trigger debounced check for added elements
+      }
+
+      if (removedMediaElements.length > 0) {
+        console.log(`[MediaManager Observer] Removed ${removedMediaElements.length} media elements, triggering cleanup.`);
+        onRemoved(removedMediaElements); // Immediately call onRemoved for cleanup
       }
     });
 
