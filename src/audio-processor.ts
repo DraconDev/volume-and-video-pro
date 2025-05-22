@@ -167,54 +167,60 @@ export class AudioProcessor {
     const { source, bassFilter, voiceFilter, gain, splitter, merger, context } =
       nodes;
 
-    console.log(
-      `[AudioProcessor] Reconnecting nodes for ${
-        nodes.element.src || "(no src)"
-      } (always forcing full reconnection).`
-    );
+    // Check if the mono setting has changed, which requires a full reconnection
+    const monoSettingChanged = nodes.mono !== settings.mono;
 
-    // Use try/catch for each disconnect to handle cases where nodes aren't connected
-    const safeDisconnect = (node: AudioNode) => {
-      try {
-        node.disconnect();
-      } catch (e) {
-        // Ignore disconnect errors
+    if (monoSettingChanged) {
+      console.log(
+        `[AudioProcessor] Reconnecting nodes for ${
+          nodes.element.src || "(no src)"
+        } due to mono setting change (from ${nodes.mono} to ${settings.mono}).`
+      );
+
+      // Use try/catch for each disconnect to handle cases where nodes aren't connected
+      const safeDisconnect = (node: AudioNode) => {
+        try {
+          node.disconnect();
+        } catch (e) {
+          // Ignore disconnect errors
+        }
+      };
+
+      // Disconnect existing connections
+      safeDisconnect(gain);
+      safeDisconnect(voiceFilter);
+      safeDisconnect(bassFilter);
+      safeDisconnect(splitter);
+      safeDisconnect(merger);
+      safeDisconnect(source);
+
+      // Create new connections based on settings
+      if (settings.mono) {
+        source.connect(bassFilter);
+        bassFilter.connect(voiceFilter);
+        voiceFilter.connect(splitter);
+        splitter.connect(merger, 0, 0);
+        splitter.connect(merger, 0, 1);
+        merger.connect(gain);
+      } else {
+        source.connect(bassFilter);
+        bassFilter.connect(voiceFilter);
+        voiceFilter.connect(gain);
       }
-    };
+      gain.connect(context.destination);
 
-    // Disconnect existing connections
-    safeDisconnect(gain);
-    safeDisconnect(voiceFilter);
-    safeDisconnect(bassFilter);
-    safeDisconnect(splitter);
-    safeDisconnect(merger);
-    safeDisconnect(source);
-
-    // Create new connections based on settings
-    if (settings.mono) {
-      source.connect(bassFilter);
-      bassFilter.connect(voiceFilter);
-      voiceFilter.connect(splitter);
-      splitter.connect(merger, 0, 0);
-      splitter.connect(merger, 0, 1);
-      merger.connect(gain);
+      // Update the stored mono setting for this element
+      nodes.mono = settings.mono;
     } else {
-      source.connect(bassFilter);
-      bassFilter.connect(voiceFilter);
-      voiceFilter.connect(gain);
+      console.log(
+        `[AudioProcessor] Not re-connecting nodes for ${
+          nodes.element.src || "(no src)"
+        }. Only updating settings.`
+      );
     }
-    gain.connect(context.destination);
 
-    // Update the stored mono setting for this element
-    nodes.mono = settings.mono;
-
-    // Always apply settings
+    // Always apply settings, whether nodes were reconnected or not
     await this.updateNodeSettings(nodes, settings);
-
-    // Removed automatic playback restoration after connecting nodes.
-    // Playback should be initiated by user gesture and handled by the content script's play listener.
-
-    // console.log("AudioProcessor: Nodes connected successfully"); // Reduced logging
   }
 
   /**
@@ -280,19 +286,19 @@ export class AudioProcessor {
 
   async updateAudioEffects(settings: AudioSettings): Promise<void> {
     console.log(
-      "[AudioProcessor] Updating audio effects with settings (forcing full reconnection for all elements):",
+      "[AudioProcessor] Updating audio effects with settings:",
       JSON.stringify(settings)
     );
 
     for (const [element, nodes] of this.audioElementMap.entries()) {
       try {
-        // Call connectNodes, which now always performs a full reconnection
+        // Call connectNodes, which now intelligently decides whether to reconnect
         await this.connectNodes(nodes, settings);
 
         console.log(
           `[AudioProcessor] Updated settings for element: ${
             element.src || "(no src)"
-          }. Full reconnection performed.`
+          }.`
         );
       } catch (error) {
         console.error(
