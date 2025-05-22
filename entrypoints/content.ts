@@ -178,21 +178,25 @@ export default defineContentScript({
             }))
           );
 
-          mediaElements.forEach((element) => {
-            // Create a bound version of applySettingsToSingleElement for this specific element
-            // This ensures we have a stable reference for add/removeEventListener
-            const boundApplySettings = (event: Event) =>
-              applySettingsToSingleElement(event.target as HTMLMediaElement);
+          // Use a WeakMap to store bound functions for each element to ensure stable references
+          const elementListenerMap = new WeakMap<HTMLMediaElement, (event: Event) => Promise<void>>();
 
-            // Remove previous listeners to prevent duplicates
+          mediaElements.forEach((element) => {
+            let boundApplySettings = elementListenerMap.get(element);
+            if (!boundApplySettings) {
+              boundApplySettings = (event: Event) =>
+                applySettingsToSingleElement(event.target as HTMLMediaElement);
+              elementListenerMap.set(element, boundApplySettings);
+            }
+
+            // Remove previous listeners to prevent duplicates (now this will work correctly)
             element.removeEventListener(
               "play",
               resumeContextHandler as EventListener
             );
-            // Use the bound function for removal
             element.removeEventListener("loadedmetadata", boundApplySettings);
             element.removeEventListener("canplay", boundApplySettings);
-            element.removeEventListener("loadstart", boundApplySettings); // Also remove loadstart
+            element.removeEventListener("loadstart", boundApplySettings);
 
             // Add listeners
             element.addEventListener(
@@ -202,13 +206,11 @@ export default defineContentScript({
                 once: false,
               }
             );
-            // Use the bound function for addition
             element.addEventListener("loadedmetadata", boundApplySettings);
             element.addEventListener("canplay", boundApplySettings);
-            element.addEventListener("loadstart", boundApplySettings); // Add loadstart with bound function
+            element.addEventListener("loadstart", boundApplySettings);
 
             // Apply settings immediately to the element after adding listeners.
-            // This handles elements present on initial load and newly added elements.
             applySettingsToSingleElement(element);
           });
         } catch (processingError) {
