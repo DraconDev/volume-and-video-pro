@@ -33,11 +33,11 @@ const mediaConfig = {
 };
 
 export class MediaManager {
-  private static debounceTimeout: NodeJS.Timeout | null = null; // Declare as static property
-  // Keep track of already processed elements to avoid duplicates
+  private static debounceTimeout: NodeJS.Timeout | null = null;
   private static processedElements = new WeakSet<HTMLElement>();
-  private static readonly DEBOUNCE_DELAY = 500; // Reduced debounce delay for faster detection/cleanup
-  private static readonly MAX_DEPTH = 10; // Increased max depth
+  private static processedMediaElements = new WeakSet<HTMLMediaElement>(); // New WeakSet for media elements
+  private static readonly DEBOUNCE_DELAY = 500;
+  private static readonly MAX_DEPTH = 10;
 
   private static isExtensionContext(): boolean {
     try {
@@ -131,7 +131,6 @@ export class MediaManager {
     }
 
     const elements: HTMLMediaElement[] = [];
-    const processedNodes = new Set<Node>();
 
     try {
       // Direct media elements
@@ -139,11 +138,11 @@ export class MediaManager {
       mediaElements.forEach((element) => {
         if (
           element instanceof HTMLMediaElement &&
-          !processedNodes.has(element) &&
+          !this.processedMediaElements.has(element) && // Use static WeakSet
           this.isElementVisible(element)
         ) {
           elements.push(element);
-          processedNodes.add(element);
+          this.processedMediaElements.add(element); // Add to static WeakSet
         }
       });
 
@@ -160,11 +159,11 @@ export class MediaManager {
           mediaInPlayer.forEach((element) => {
             if (
               element instanceof HTMLMediaElement &&
-              !processedNodes.has(element) &&
+              !this.processedMediaElements.has(element) && // Use static WeakSet
               this.isElementVisible(element)
             ) {
               elements.push(element);
-              processedNodes.add(element);
+              this.processedMediaElements.add(element); // Add to static WeakSet
             }
           });
         });
@@ -180,20 +179,18 @@ export class MediaManager {
 
   public static setupMediaElementObserver(
     onAdded: (elements: HTMLMediaElement[]) => void,
-    onRemoved: (elements: HTMLMediaElement[]) => void // New callback for removed elements
+    onRemoved: (elements: HTMLMediaElement[]) => void
   ): MutationObserver {
-    let debounceTimeout: NodeJS.Timeout | null = null;
-
     const debouncedCheck = () => {
-      if (this.debounceTimeout) {
-        clearTimeout(this.debounceTimeout);
+      if (MediaManager.debounceTimeout) { // Use static debounceTimeout
+        clearTimeout(MediaManager.debounceTimeout);
       }
-      this.debounceTimeout = setTimeout(() => {
+      MediaManager.debounceTimeout = setTimeout(() => { // Use static debounceTimeout
         const elements = this.findMediaElements();
         if (elements.length > 0) {
-          onAdded(elements); // Use onAdded callback
+          onAdded(elements);
         }
-      }, this.DEBOUNCE_DELAY);
+      }, MediaManager.DEBOUNCE_DELAY); // Use static DEBOUNCE_DELAY
     };
 
     // Initial check
