@@ -33,6 +33,7 @@ const mediaConfig = {
 };
 
 export class MediaManager {
+  private static debounceTimeout: NodeJS.Timeout | null = null; // Declare as static property
   // Keep track of already processed elements to avoid duplicates
   private static processedElements = new WeakSet<HTMLElement>();
   private static readonly DEBOUNCE_DELAY = 3000; // Increased debounce delay for diagnostics
