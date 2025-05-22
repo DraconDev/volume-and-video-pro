@@ -384,11 +384,17 @@ export default defineContentScript({
         },
         (removedElements: HTMLMediaElement[]) => { // Added type annotation
           console.log(`[ContentScript] Cleaning up ${removedElements.length} removed media elements.`);
-          removedElements.forEach((element: HTMLMediaElement) => { // Added type annotation
+          removedElements.forEach((element: HTMLMediaElement) => {
             mediaProcessor.audioProcessor.disconnectElementNodes(element);
-            // Optionally, remove from activeMediaElements in MediaProcessor if it's not already handled by disconnectElementNodes
-            // mediaProcessor.activeMediaElements.delete(element); // This is handled internally by disconnectElementNodes
           });
+
+          // After cleaning up removed elements, check if there are any managed elements left.
+          // If not, and audio processing is not needed, clean up the AudioContext.
+          const remainingManagedElements = mediaProcessor.getManagedMediaElements();
+          if (remainingManagedElements.length === 0 && !settingsHandler.needsAudioProcessing()) {
+            console.log("[ContentScript] No managed media elements left and no audio processing needed. Cleaning up AudioProcessor.");
+            mediaProcessor.audioProcessor.cleanup();
+          }
         }
       );
     }; // End of initializeScript function
