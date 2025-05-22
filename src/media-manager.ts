@@ -36,7 +36,7 @@ export class MediaManager {
   private static debounceTimeout: NodeJS.Timeout | null = null; // Declare as static property
   // Keep track of already processed elements to avoid duplicates
   private static processedElements = new WeakSet<HTMLElement>();
-  private static readonly DEBOUNCE_DELAY = 3000; // Increased debounce delay for diagnostics
+  private static readonly DEBOUNCE_DELAY = 500; // Reduced debounce delay for faster detection/cleanup
   private static readonly MAX_DEPTH = 10; // Increased max depth
 
   private static isExtensionContext(): boolean {
