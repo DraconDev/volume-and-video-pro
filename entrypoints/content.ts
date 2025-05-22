@@ -397,6 +397,13 @@ export default defineContentScript({
           }
         }
       );
+
+      // Ensure AudioContext is closed when the page unloads
+      window.addEventListener('unload', () => {
+        console.log("[ContentScript] Page is unloading. Performing final AudioProcessor cleanup.");
+        mediaProcessor.audioProcessor.cleanup();
+      });
+
     }; // End of initializeScript function
 
     // --- Hostname Detection and Initialization Logic ---
