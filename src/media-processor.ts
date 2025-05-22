@@ -287,11 +287,11 @@ export class MediaProcessor {
     }
   }
 
-  setupMediaObserver(callback: () => Promise<void>): void {
-    // Assuming MediaManager.setupMediaElementObserver is made public
-    MediaManager.setupMediaElementObserver(async () => {
-      await callback();
-    });
+  public static setupMediaObserver(
+    onAdded: (elements: HTMLMediaElement[]) => Promise<void>,
+    onRemoved: (elements: HTMLMediaElement[]) => void
+  ): void {
+    MediaManager.setupMediaElementObserver(onAdded, onRemoved);
   }
 
   findMediaElements(): HTMLMediaElement[] {
