@@ -356,8 +356,9 @@ export class AudioProcessor {
           element.src,
           error
         );
-        // If update fails, ensure it's removed from the map to prevent further issues
-        this.disconnectElementNodes(element);
+        // If update fails, do NOT disconnect the element nodes, as they should remain reusable.
+        // The AbortError from play() is often benign and doesn't require tearing down the graph.
+        // this.disconnectElementNodes(element); // REMOVED: This was causing the InvalidStateError on subsequent attempts.
       }
     }
   }
