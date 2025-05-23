@@ -319,7 +319,22 @@ export class AudioProcessor {
     );
 
     for (const [element, nodes] of this.audioElementMap.entries()) {
+      // Check if the element is still connected to the DOM before processing
+      if (!element.isConnected) {
+        console.log(`[AudioProcessor] Element ${element.src || "(no src)"} is no longer connected to DOM. Disconnecting and removing.`);
+        this.disconnectElementNodes(element); // Clean up disconnected elements
+        continue;
+      }
+
+      const wasPlaying = !element.paused;
+      const currentTime = element.currentTime; // Store current time
+
       try {
+        if (wasPlaying) {
+          console.log(`[AudioProcessor] Pausing element ${element.src || "(no src)"} temporarily for audio effect update.`);
+          element.pause();
+        }
+
         // Call setupAudioContext, which now handles reusing existing nodes and reconnecting them
         await this.setupAudioContext(element, settings);
 
@@ -328,12 +343,21 @@ export class AudioProcessor {
             element.src || "(no src)"
           }.`
         );
+
+        if (wasPlaying) {
+          console.log(`[AudioProcessor] Resuming element ${element.src || "(no src)"} after audio effect update.`);
+          // Restore current time before playing to avoid seeking issues
+          element.currentTime = currentTime;
+          await element.play();
+        }
       } catch (error) {
         console.error(
           "AudioProcessor: Update failed for element:",
           element.src,
           error
         );
+        // If update fails, ensure it's removed from the map to prevent further issues
+        this.disconnectElementNodes(element);
       }
     }
   }
