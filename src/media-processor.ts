@@ -52,20 +52,6 @@ export class MediaProcessor {
     }
   }
 
-  private updateVolume(element: HTMLMediaElement, volume: number): void {
-    if (!element.isConnected) {
-      console.warn(`[MediaProcessor] Attempted to update volume on disconnected element: ${element.src || '(no src)'}`);
-      this.activeMediaElements.delete(element);
-      return;
-    }
-    // console.log(`[MediaProcessor] Updating volume for ${element.src || '(no src)'} to ${volume}`);
-    try {
-      element.volume = volume / 100;
-    } catch (e) {
-      console.error(`MediaProcessor: Error setting volume for ${element.src || '(no src)'}:`, e);
-    }
-  }
-
   async processMediaElements(
     mediaElements: HTMLMediaElement[],
     settings: AudioSettings,
@@ -76,11 +62,10 @@ export class MediaProcessor {
       JSON.stringify(settings)
     );
 
-    // This method now directly handles speed and volume application for the given elements.
+    // This method now directly handles speed application for the given elements.
     mediaElements.forEach((element) => {
       if (element.isConnected) {
         this.updatePlaybackSpeed(element, settings.speed);
-        this.updateVolume(element, settings.volume);
       } else {
         this.activeMediaElements.delete(element); // Clean up if disconnected
       }
@@ -211,19 +196,10 @@ export class MediaProcessor {
           }
 
 
-          // Apply volume if different
-          const targetVolume = settings.volume / 100;
-          let volumeChanged = false;
-          if (Math.abs(element.volume - targetVolume) > EPSILON) {
-            // console.log(`[MediaProcessor Immediate] Updating volume for ${element.src || '(no src)'} from ${element.volume} to ${targetVolume}`);
-            element.volume = targetVolume;
-            volumeChanged = true;
-          }
-          
-          // If we actually changed speed or volume, and the element is not already tracked, add it.
-          if (element.isConnected && (speedChanged || volumeChanged) && !this.activeMediaElements.has(element)) {
+          // If we actually changed speed, and the element is not already tracked, add it.
+          if (element.isConnected && speedChanged && !this.activeMediaElements.has(element)) {
              this.activeMediaElements.add(element);
-             console.log(`[MediaProcessor Immediate] Added to activeMediaElements after changing speed/volume: ${element.src || "(no src)"}. Count: ${this.activeMediaElements.size}`);
+             console.log(`[MediaProcessor Immediate] Added to activeMediaElements after changing speed: ${element.src || "(no src)"}. Count: ${this.activeMediaElements.size}`);
           }
 
           // Ensure it stays paused at the same position if it was paused
