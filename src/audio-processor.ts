@@ -10,6 +10,7 @@ export interface AudioNodes {
   splitter: ChannelSplitterNode;
   element: HTMLMediaElement;
   mono: boolean; // Track the current mono setting for this element
+  currentSrc: string; // Track the src that the source node was created with
 }
 
 export class AudioProcessor {
