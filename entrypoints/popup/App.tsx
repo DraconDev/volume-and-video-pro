@@ -233,7 +233,7 @@ function App() {
       />
 
       <div className="text-xs text-[var(--color-text-secondary)] text-center mt-2">
-        On some sites, settings may only apply after the video starts or the page is refreshed.
+        On some sites, settings may only apply after a new video starts or the page is refreshed.
       </div>
 
       <button
