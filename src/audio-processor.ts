@@ -286,26 +286,39 @@ export class AudioProcessor {
 
   async updateAudioEffects(settings: AudioSettings): Promise<void> {
     console.log(
-      "[AudioProcessor] Updating audio effects with settings:",
+      "[AudioProcessor] Updating audio effects with settings (forcing re-setup):",
       JSON.stringify(settings)
     );
 
-    for (const [element, nodes] of this.audioElementMap.entries()) {
-      try {
-        // Call connectNodes, which now intelligently decides whether to reconnect
-        await this.connectNodes(nodes, settings);
+    // Create a copy of the map keys to iterate over, as the map will be modified during iteration
+    const elementsToProcess = Array.from(this.audioElementMap.keys());
 
+    for (const element of elementsToProcess) {
+      // Check if the element is still connected to the DOM before processing
+      if (!element.isConnected) {
+        console.log(`[AudioProcessor] Element ${element.src || "(no src)"} is no longer connected to DOM. Disconnecting and removing.`);
+        this.disconnectElementNodes(element); // Clean up disconnected elements
+        continue;
+      }
+
+      try {
+        // Disconnect existing nodes for this element first
+        this.disconnectElementNodes(element);
+        console.log(`[AudioProcessor] Disconnected existing nodes for element: ${element.src || "(no src)"}`);
+
+        // Re-setup the audio context and nodes for this element with the new settings
+        await this.setupAudioContext(element, settings);
         console.log(
-          `[AudioProcessor] Updated settings for element: ${
-            element.src || "(no src)"
-          }.`
+          `[AudioProcessor] Re-setup complete for element: ${element.src || "(no src)"}.`
         );
       } catch (error) {
         console.error(
-          "AudioProcessor: Update failed for element:",
+          "AudioProcessor: Re-setup failed for element:",
           element.src,
           error
         );
+        // If re-setup fails, ensure it's removed from the map to prevent further issues
+        this.disconnectElementNodes(element);
       }
     }
   }
