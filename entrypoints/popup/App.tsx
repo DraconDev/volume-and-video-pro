@@ -232,6 +232,10 @@ function App() {
         onToggle={handleToggleMode}
       />
 
+      <div className="text-xs text-[var(--color-text-secondary)] text-center mt-2">
+        On some sites, settings may only apply after the video starts or the page is refreshed.
+      </div>
+
       <button
         onClick={() => window.open("https://ko-fi.com/adamdracon")}
         className="w-full bg-[var(--color-primary)] text-[var(--color-text)] rounded py-2.5 text-sm font-medium border-none cursor-pointer hover:bg-[var(--color-primary-hover)] transition-colors duration-200"
