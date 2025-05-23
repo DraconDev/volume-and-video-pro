@@ -45,13 +45,8 @@ const mediaConfig = {
     "iframe[src*='soundcloud.com']",
     "iframe[src*='spotify.com']",
     "iframe[src*='wistia.net']",
-:start_line:47
--------
     "iframe[src*='brightcove.com']",
     "iframe[src*='kaltura.com']",
-    // More aggressive generic selectors
-    "div[data-vjs-player]", // Specific for Video.js instances
-    "div:has(video), div:has(audio)", // Any div containing a video or audio element
   ],
   siteSelectors: {
     "problematicsite.com": [
