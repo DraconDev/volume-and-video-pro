@@ -17,6 +17,18 @@ export class AudioProcessor {
   audioContext: AudioContext | null = null;
   private audioElementMap = new Map<HTMLMediaElement, AudioNodes>();
 
+  /**
+   * Safely disconnects an AudioNode, ignoring errors if it's not connected.
+   * @param node The AudioNode to disconnect.
+   */
+  private _safeDisconnect(node: AudioNode): void {
+    try {
+      node.disconnect();
+    } catch (e) {
+      /* Ignore disconnect errors */
+    }
+  }
+
   async setupAudioContext(
     mediaElement: HTMLMediaElement,
     settings: AudioSettings
