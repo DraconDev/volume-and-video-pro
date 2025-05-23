@@ -202,11 +202,11 @@ export class MediaManager {
       mediaElements.forEach((element) => {
         if (
           element instanceof HTMLMediaElement &&
-          !this.processedMediaElements.has(element) && // Use static WeakSet
-          this.isElementVisible(element)
+          !this.processedMediaElements.has(element)
         ) {
           elements.push(element);
           this.processedMediaElements.add(element); // Add to static WeakSet
+          // console.log(`[MediaManager] Found direct media element (visibility check removed): ${element.src || '(no src)'}`);
         }
       });
 
