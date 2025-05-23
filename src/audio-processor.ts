@@ -41,27 +41,27 @@ export class AudioProcessor {
             mediaElement.src || "(no src)"
           }`
         );
-        // Disconnect existing connections before re-connecting with new settings
-        // This is crucial to prevent multiple connections or stale paths
-        const safeDisconnect = (node: AudioNode) => {
-          try {
-            node.disconnect();
-          } catch (e) {
-            /* Ignore disconnect errors */
+        // Check if the media source has changed OR if the source node is somehow null
+        if (this.audioContext && (nodes.currentSrc !== mediaElement.src || !nodes.source)) {
+          console.log(
+            `[AudioProcessor] Media source changed from ${
+              nodes.currentSrc
+            } to ${mediaElement.src || "(no src)"} or source invalid. Recreating source node.`
+          );
+          if (nodes.source) {
+            // If old source exists, disconnect it fully
+            try {
+              nodes.source.disconnect();
+            } catch (e) {
+              /* Ignore disconnect errors if already disconnected or invalid */
+            }
           }
-        };
-        safeDisconnect(nodes.gain);
-        safeDisconnect(nodes.voiceFilter);
-        safeDisconnect(nodes.bassFilter);
-        safeDisconnect(nodes.splitter);
-        safeDisconnect(nodes.merger);
-        // Do NOT disconnect nodes.source here, as we are reusing it.
-        // Its output will be reconnected.
+          nodes.source = this.audioContext.createMediaElementSource(mediaElement);
+          nodes.currentSrc = mediaElement.src;
+        }
+        // nodes.mono will be updated by connectNodes based on settings.mono
 
-        // Update mono setting if it changed, as it affects connections
-        nodes.mono = settings.mono;
-
-        // Reconnect nodes with potentially updated mono setting and apply new audio parameters
+        // connectNodes will now handle full disconnection of the downstream graph and reconnection.
         await this.connectNodes(nodes, settings);
       } else {
         console.log(
@@ -70,8 +70,10 @@ export class AudioProcessor {
           }`
         );
         // Create and configure new nodes
+        // createAudioNodes calls connectNodes internally, which will build the graph.
         nodes = await this.createAudioNodes(mediaElement, settings);
         this.audioElementMap.set(mediaElement, nodes);
+        // No need to call connectNodes again here, as createAudioNodes does it.
       }
 
       console.log("AudioProcessor: Setup complete for:", mediaElement.src);
@@ -113,7 +115,8 @@ export class AudioProcessor {
       splitter,
       merger,
       element: mediaElement,
-      mono: settings.mono, // Initialize mono setting
+      mono: settings.mono, // Initialize mono setting, connectNodes will use settings.mono
+      currentSrc: mediaElement.src, // Initialize currentSrc
     };
 
     // Connect nodes based on settings
@@ -202,62 +205,64 @@ export class AudioProcessor {
     nodes: AudioNodes,
     settings: AudioSettings
   ): Promise<void> {
-    const { source, bassFilter, voiceFilter, gain, splitter, merger, context } =
+    const { source, bassFilter, voiceFilter, gain, splitter, merger, context, element } =
       nodes;
 
-    // Check if the mono setting has changed, which requires a full reconnection
-    const monoSettingChanged = nodes.mono !== settings.mono;
+    console.log(
+      `[AudioProcessor] Connecting/Reconnecting nodes for ${
+        element.src || "(no src)"
+      }. Target Mono: ${settings.mono}, Current Node Mono: ${nodes.mono}`
+    );
 
-    if (monoSettingChanged) {
-      console.log(
-        `[AudioProcessor] Reconnecting nodes for ${
-          nodes.element.src || "(no src)"
-        } due to mono setting change (from ${nodes.mono} to ${settings.mono}).`
-      );
-
-      // Use try/catch for each disconnect to handle cases where nodes aren't connected
-      const safeDisconnect = (node: AudioNode) => {
+    // Fully disconnect all involved nodes from source downstream before reconnecting to ensure a clean state.
+    const safeDisconnect = (node: AudioNode | null) => {
+      if (node) {
         try {
           node.disconnect();
         } catch (e) {
-          // Ignore disconnect errors
+          // console.warn(`[AudioProcessor] Error disconnecting node:`, e); // Optional: for debugging
         }
-      };
-
-      // Disconnect existing connections
-      safeDisconnect(gain);
-      safeDisconnect(voiceFilter);
-      safeDisconnect(bassFilter);
-      safeDisconnect(splitter);
-      safeDisconnect(merger);
-      safeDisconnect(source);
-
-      // Create new connections based on settings
-      if (settings.mono) {
-        source.connect(bassFilter);
-        bassFilter.connect(voiceFilter);
-        voiceFilter.connect(splitter);
-        splitter.connect(merger, 0, 0);
-        splitter.connect(merger, 0, 1);
-        merger.connect(gain);
-      } else {
-        source.connect(bassFilter);
-        bassFilter.connect(voiceFilter);
-        voiceFilter.connect(gain);
       }
-      gain.connect(context.destination);
+    };
 
-      // Update the stored mono setting for this element
-      nodes.mono = settings.mono;
+    // Disconnect in reverse order of connection, or ensure source is disconnected last from its outputs.
+    safeDisconnect(gain);       // Disconnects gain from destination and from merger/voiceFilter
+    safeDisconnect(merger);     // Disconnects merger from gain and splitter from merger
+    safeDisconnect(splitter);   // Disconnects splitter from merger and voiceFilter from splitter
+    safeDisconnect(voiceFilter); // Disconnects voiceFilter from gain/splitter and bassFilter from voiceFilter
+    safeDisconnect(bassFilter);  // Disconnects bassFilter from voiceFilter and source from bassFilter
+
+    // Ensure the source node itself is disconnected from any previous connections.
+    // This is crucial if the source node was just recreated or if the graph was in an inconsistent state.
+    if (source) { // source might be null if context creation failed earlier, though unlikely here
+        safeDisconnect(source);
     } else {
-      console.log(
-        `[AudioProcessor] Not re-connecting nodes for ${
-          nodes.element.src || "(no src)"
-        }. Only updating settings.`
-      );
+        console.error("[AudioProcessor] Source node is null in connectNodes. Cannot connect graph.");
+        // Attempt to apply settings to avoid further errors, though graph is broken.
+        await this.updateNodeSettings(nodes, settings);
+        return; // Cannot proceed with connections
     }
 
-    // Always apply settings, whether nodes were reconnected or not
+
+    // Create new connections based on current settings
+    if (settings.mono) {
+      source.connect(bassFilter);
+      bassFilter.connect(voiceFilter);
+      voiceFilter.connect(splitter);
+      splitter.connect(merger, 0, 0); // Connect left channel of splitter to left input of merger
+      splitter.connect(merger, 0, 1); // Connect left channel of splitter to right input of merger (mono)
+      merger.connect(gain);
+    } else { // Stereo
+      source.connect(bassFilter);
+      bassFilter.connect(voiceFilter);
+      voiceFilter.connect(gain);
+    }
+    gain.connect(context.destination);
+
+    // Update the stored mono setting for this element to reflect the applied setting
+    nodes.mono = settings.mono;
+
+    // Always apply/update other audio parameters
     await this.updateNodeSettings(nodes, settings);
   }
 
