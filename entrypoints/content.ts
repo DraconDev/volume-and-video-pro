@@ -179,7 +179,10 @@ export default defineContentScript({
           );
 
           // Use a WeakMap to store bound functions for each element to ensure stable references
-          const elementListenerMap = new WeakMap<HTMLMediaElement, (event: Event) => Promise<void>>();
+          const elementListenerMap = new WeakMap<
+            HTMLMediaElement,
+            (event: Event) => Promise<void>
+          >();
 
           mediaElements.forEach((element) => {
             let boundApplySettings = elementListenerMap.get(element);
@@ -272,47 +275,39 @@ export default defineContentScript({
 
                 // Then, process audio effects if needed
                 if (needsProcessingNow) {
-                  if (mediaProcessor.canApplyAudioEffects()) {
-                    // Only apply audio effects if the AudioContext is already running
-                    if (managedMediaElements.length > 0) {
+                  if (managedMediaElements.length > 0) {
+                    console.log(
+                      `[ContentScript Listener] Processing audio effects for ${managedMediaElements.length} managed elements.`
+                    );
+                    await mediaProcessor.processMediaElements(
+                      managedMediaElements,
+                      newSettings,
+                      needsProcessingNow
+                    );
+                  } else {
+                    console.log(
+                      "[ContentScript Listener] No managed media elements found for audio effects. Attempting fallback to fresh scan."
+                    );
+                    const freshScanElements =
+                      mediaProcessor.findMediaElements();
+                    if (freshScanElements.length > 0) {
                       console.log(
-                        `[ContentScript Listener] AudioContext is running. Processing audio effects for ${managedMediaElements.length} managed elements.`
+                        `[ContentScript Listener] Fallback: Found ${freshScanElements.length} elements on fresh scan for audio effects. Processing them.`
                       );
+                      mediaProcessor.applySettingsImmediately(
+                        freshScanElements,
+                        newSettings
+                      ); // Apply immediate settings to fallback elements too
                       await mediaProcessor.processMediaElements(
-                        managedMediaElements,
+                        freshScanElements,
                         newSettings,
                         needsProcessingNow
                       );
                     } else {
                       console.log(
-                        "[ContentScript Listener] AudioContext is running, but no managed media elements found. Attempting fallback to fresh scan."
+                        "[ContentScript Listener] Fallback: No elements found on fresh scan either for audio effects."
                       );
-                      const freshScanElements =
-                        mediaProcessor.findMediaElements();
-                      if (freshScanElements.length > 0) {
-                        console.log(
-                          `[ContentScript Listener] Fallback: Found ${freshScanElements.length} elements on fresh scan for audio effects. Processing them.`
-                        );
-                        mediaProcessor.applySettingsImmediately(
-                          freshScanElements,
-                          newSettings
-                        ); // Apply immediate settings to fallback elements too
-                        await mediaProcessor.processMediaElements(
-                          freshScanElements,
-                          newSettings,
-                          needsProcessingNow
-                        );
-                      } else {
-                        console.log(
-                          "[ContentScript Listener] Fallback: No elements found on fresh scan either for audio effects."
-                        );
-                      }
                     }
-                  } else {
-                    console.log(
-                      "[ContentScript Listener] Audio effects needed, but AudioContext is not running. Deferring full audio effects application until user gesture (e.g., play)."
-                    );
-                    // No action needed here, the 'play' event listener will handle it.
                   }
                 } else {
                   console.log(
@@ -387,7 +382,9 @@ export default defineContentScript({
       // Watch for dynamic changes (Moved inside initializeScript)
       MediaProcessor.setupMediaObserver(
         async (addedElements: HTMLMediaElement[]) => {
-          console.log(`[ContentScript] Processing ${addedElements.length} newly added media elements.`);
+          console.log(
+            `[ContentScript] Processing ${addedElements.length} newly added media elements.`
+          );
           // Ensure settings are initialized before processing new elements
           await settingsHandler.ensureInitialized();
           const currentSettings = settingsHandler.getCurrentSettings();
@@ -400,30 +397,42 @@ export default defineContentScript({
             needsProcessing
           );
           // Also apply immediate settings to them
-          mediaProcessor.applySettingsImmediately(addedElements, currentSettings);
+          mediaProcessor.applySettingsImmediately(
+            addedElements,
+            currentSettings
+          );
         },
         (removedElements: HTMLMediaElement[]) => {
-          console.log(`[ContentScript] Cleaning up ${removedElements.length} removed media elements.`);
+          console.log(
+            `[ContentScript] Cleaning up ${removedElements.length} removed media elements.`
+          );
           removedElements.forEach((element: HTMLMediaElement) => {
             mediaProcessor.audioProcessor.disconnectElementNodes(element);
           });
 
           // After cleaning up removed elements, check if there are any managed elements left.
           // If not, and audio processing is not needed, clean up the AudioContext.
-          const remainingManagedElements = mediaProcessor.getManagedMediaElements();
-          if (remainingManagedElements.length === 0 && !settingsHandler.needsAudioProcessing()) {
-            console.log("[ContentScript] No managed media elements left and no audio processing needed. Cleaning up AudioProcessor.");
+          const remainingManagedElements =
+            mediaProcessor.getManagedMediaElements();
+          if (
+            remainingManagedElements.length === 0 &&
+            !settingsHandler.needsAudioProcessing()
+          ) {
+            console.log(
+              "[ContentScript] No managed media elements left and no audio processing needed. Cleaning up AudioProcessor."
+            );
             mediaProcessor.audioProcessor.cleanup();
           }
         }
       );
 
       // Ensure AudioContext is closed when the page unloads
-      window.addEventListener('unload', () => {
-        console.log("[ContentScript] Page is unloading. Performing final AudioProcessor cleanup.");
+      window.addEventListener("unload", () => {
+        console.log(
+          "[ContentScript] Page is unloading. Performing final AudioProcessor cleanup."
+        );
         mediaProcessor.audioProcessor.cleanup();
       });
-
     }; // End of initializeScript function
 
     // --- Hostname Detection and Initialization Logic ---
