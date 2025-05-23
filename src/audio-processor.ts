@@ -348,6 +348,8 @@ export class AudioProcessor {
           console.log(`[AudioProcessor] Resuming element ${element.src || "(no src)"} after audio effect update.`);
           // Restore current time before playing to avoid seeking issues
           element.currentTime = currentTime;
+          // Add a small delay before attempting to play
+          await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay
           await element.play();
         }
       } catch (error) {
