@@ -425,3 +425,23 @@ export class AudioProcessor {
     }
   }
 } // End of AudioProcessor class
+    console.log("AudioProcessor: Cleanup completed");
+  }
+
+  /**
+   * Attempts to resume the AudioContext if it's suspended.
+   * Should be called after a user gesture.
+   */
+  async tryResumeContext(): Promise<void> {
+    if (this.audioContext && this.audioContext.state === "suspended") {
+      try {
+        await this.audioContext.resume();
+        console.log("AudioProcessor: AudioContext resumed successfully.");
+      } catch (error) {
+        console.error("AudioProcessor: Failed to resume AudioContext:", error);
+      }
+    } else if (this.audioContext) {
+      // console.log(`AudioProcessor: AudioContext state is already "${this.audioContext.state}", no resume needed.`); // Reduced logging
+    }
+  }
+} // End of AudioProcessor class
