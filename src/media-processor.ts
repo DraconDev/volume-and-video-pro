@@ -297,4 +297,4 @@ export class MediaProcessor {
       this.audioProcessor["audioContext"].state !== "closed"
     );
   }
-} /w/ End of MediaProcessor class
+}

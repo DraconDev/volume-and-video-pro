@@ -326,7 +326,15 @@ export class AudioProcessor {
         continue;
       }
 
+      const wasPlaying = !element.paused;
+      const currentTime = element.currentTime; // Store current time
+
       try {
+        if (wasPlaying) {
+          console.log(`[AudioProcessor] Pausing element ${element.src || "(no src)"} temporarily for audio effect update.`);
+          element.pause();
+        }
+
         // Call setupAudioContext, which now handles reusing existing nodes and reconnecting them
         await this.setupAudioContext(element, settings);
 
@@ -335,12 +343,24 @@ export class AudioProcessor {
             element.src || "(no src)"
           }.`
         );
+
+        if (wasPlaying) {
+          console.log(`[AudioProcessor] Resuming element ${element.src || "(no src)"} after audio effect update.`);
+          // Restore current time before playing to avoid seeking issues
+          element.currentTime = currentTime;
+          // Add a small delay before attempting to play
+          await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay
+          await element.play();
+        }
       } catch (error) {
         console.error(
           "AudioProcessor: Update failed for element:",
           element.src,
           error
         );
+        // If update fails, do NOT disconnect the element nodes, as they should remain reusable.
+        // The AbortError from play() is often benign and doesn't require tearing down the graph.
+        // this.disconnectElementNodes(element); // REMOVED: This was causing the InvalidStateError on subsequent attempts.
       }
     }
   }
@@ -365,6 +385,26 @@ export class AudioProcessor {
       this.audioContext.close();
       this.audioContext = null;
     }
+    console.log("AudioProcessor: Cleanup completed");
+  }
+
+  /**
+   * Attempts to resume the AudioContext if it's suspended.
+   * Should be called after a user gesture.
+   */
+  async tryResumeContext(): Promise<void> {
+    if (this.audioContext && this.audioContext.state === "suspended") {
+      try {
+        await this.audioContext.resume();
+        console.log("AudioProcessor: AudioContext resumed successfully.");
+      } catch (error) {
+        console.error("AudioProcessor: Failed to resume AudioContext:", error);
+      }
+    } else if (this.audioContext) {
+      // console.log(`AudioProcessor: AudioContext state is already "${this.audioContext.state}", no resume needed.`); // Reduced logging
+    }
+  }
+} // End of AudioProcessor class
     console.log("AudioProcessor: Cleanup completed");
   }
 
