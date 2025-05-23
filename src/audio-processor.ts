@@ -48,7 +48,8 @@ export class AudioProcessor {
         safeDisconnect(nodes.bassFilter);
         safeDisconnect(nodes.splitter);
         safeDisconnect(nodes.merger);
-        safeDisconnect(nodes.source); // Disconnect source to ensure clean reconnection
+        // Do NOT disconnect nodes.source here, as we are reusing it.
+        // Its output will be reconnected.
 
         // Update mono setting if it changed, as it affects connections
         nodes.mono = settings.mono;
