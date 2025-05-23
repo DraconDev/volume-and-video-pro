@@ -32,9 +32,37 @@ export class AudioProcessor {
         // Resume will be called later after a user gesture
       }
 
-      // Create and configure nodes
-      const nodes = await this.createAudioNodes(mediaElement, settings);
-      this.audioElementMap.set(mediaElement, nodes);
+      let nodes = this.audioElementMap.get(mediaElement);
+
+      if (nodes) {
+        console.log(`[AudioProcessor] Reusing existing audio nodes for element: ${mediaElement.src || "(no src)"}`);
+        // Disconnect existing connections before re-connecting with new settings
+        // This is crucial to prevent multiple connections or stale paths
+        const safeDisconnect = (node: AudioNode) => {
+          try {
+            node.disconnect();
+          } catch (e) { /* Ignore disconnect errors */ }
+        };
+        safeDisconnect(nodes.gain);
+        safeDisconnect(nodes.voiceFilter);
+        safeDisconnect(nodes.bassFilter);
+        safeDisconnect(nodes.splitter);
+        safeDisconnect(nodes.merger);
+        // Do NOT disconnect nodes.source here, as we are reusing it.
+        // Its output will be reconnected.
+
+        // Update mono setting if it changed, as it affects connections
+        nodes.mono = settings.mono;
+
+        // Reconnect nodes with potentially updated mono setting and apply new audio parameters
+        await this.connectNodes(nodes, settings);
+
+      } else {
+        console.log(`[AudioProcessor] Creating new audio nodes for element: ${mediaElement.src || "(no src)"}`);
+        // Create and configure new nodes
+        nodes = await this.createAudioNodes(mediaElement, settings);
+        this.audioElementMap.set(mediaElement, nodes);
+      }
 
       console.log("AudioProcessor: Setup complete for:", mediaElement.src);
     } catch (error) {
