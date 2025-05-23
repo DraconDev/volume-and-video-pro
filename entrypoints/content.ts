@@ -46,10 +46,6 @@ export default defineContentScript({
               } with settings:`,
               JSON.stringify(currentSettings)
             );
-            // Add a small delay before processing media elements with audio effects
-            // This gives the media element a moment to stabilize after play event
-            await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
-
             // Apply audio effects specifically to the played element
             await mediaProcessor.processMediaElements(
               [targetElement],
