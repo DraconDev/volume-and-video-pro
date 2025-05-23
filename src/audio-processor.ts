@@ -326,44 +326,15 @@ export class AudioProcessor {
         continue;
       }
 
-      const wasPlaying = !element.paused;
-      const currentTime = element.currentTime; // Store current time
-      const originalSrc = element.src; // Store original src
-
       try {
-        if (wasPlaying) {
-          console.log(`[AudioProcessor] Pausing element ${element.src || "(no src)"} temporarily for audio effect update.`);
-          element.pause();
-        }
-
-        // Force detachment of media source to ensure full re-initialization
-        console.log(`[AudioProcessor] Detaching media source for ${element.src || "(no src)"}.`);
-        element.src = ''; // Detach the source
-        element.load(); // Load the empty source to force a reset
-
-        // Wait a microtask tick to allow browser to process detachment
-        await new Promise(resolve => setTimeout(resolve, 0));
-
         // Call setupAudioContext, which now handles reusing existing nodes and reconnecting them
         await this.setupAudioContext(element, settings);
-
-        // Restore original media source
-        console.log(`[AudioProcessor] Restoring media source for ${element.src || "(no src)"}.`);
-        element.src = originalSrc;
-        element.load(); // Load the original source
 
         console.log(
           `[AudioProcessor] Updated settings for element: ${
             element.src || "(no src)"
           }.`
         );
-
-        if (wasPlaying) {
-          console.log(`[AudioProcessor] Resuming element ${element.src || "(no src)"} after audio effect update.`);
-          element.currentTime = currentTime;
-          await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay before play
-          await element.play();
-        }
       } catch (error) {
         console.error(
           "AudioProcessor: Update failed for element:",
@@ -371,8 +342,6 @@ export class AudioProcessor {
           error
         );
         // If update fails, do NOT disconnect the element nodes, as they should remain reusable.
-        // The AbortError from play() is often benign and doesn't require tearing down the graph.
-        // this.disconnectElementNodes(element); // REMOVED: This was causing the InvalidStateError on subsequent attempts.
       }
     }
   }
