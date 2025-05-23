@@ -1,3 +1,5 @@
+import { root } from "postcss";
+
 const mediaConfig = {
   baseSelectors: [
     "video",
@@ -43,8 +45,13 @@ const mediaConfig = {
     "iframe[src*='soundcloud.com']",
     "iframe[src*='spotify.com']",
     "iframe[src*='wistia.net']",
+:start_line:47
+-------
     "iframe[src*='brightcove.com']",
     "iframe[src*='kaltura.com']",
+    // More aggressive generic selectors
+    "div[data-vjs-player]", // Specific for Video.js instances
+    "div:has(video), div:has(audio)", // Any div containing a video or audio element
   ],
   siteSelectors: {
     "problematicsite.com": [
@@ -220,10 +227,12 @@ export class MediaManager {
     onRemoved: (elements: HTMLMediaElement[]) => void
   ): MutationObserver {
     const debouncedCheck = () => {
-      if (MediaManager.debounceTimeout) { // Use static debounceTimeout
+      if (MediaManager.debounceTimeout) {
+        // Use static debounceTimeout
         clearTimeout(MediaManager.debounceTimeout);
       }
-      MediaManager.debounceTimeout = setTimeout(() => { // Use static debounceTimeout
+      MediaManager.debounceTimeout = setTimeout(() => {
+        // Use static debounceTimeout
         const elements = this.findMediaElements();
         if (elements.length > 0) {
           onAdded(elements);
@@ -272,12 +281,16 @@ export class MediaManager {
       });
 
       if (addedMediaElements.length > 0) {
-        console.log("[MediaManager Observer] Added media elements detected, triggering debounced check.");
+        console.log(
+          "[MediaManager Observer] Added media elements detected, triggering debounced check."
+        );
         debouncedCheck(); // Trigger debounced check for added elements
       }
 
       if (removedMediaElements.length > 0) {
-        console.log(`[MediaManager Observer] Removed ${removedMediaElements.length} media elements, triggering cleanup.`);
+        console.log(
+          `[MediaManager Observer] Removed ${removedMediaElements.length} media elements, triggering cleanup.`
+        );
         onRemoved(removedMediaElements); // Immediately call onRemoved for cleanup
       }
     });
