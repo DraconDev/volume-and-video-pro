@@ -10,6 +10,7 @@ export interface AudioNodes {
   splitter: ChannelSplitterNode;
   element: HTMLMediaElement;
   mono: boolean; // Track the current mono setting for this element
+  currentSrc: string; // Track the src that the source node was created with
 }
 
 export class AudioProcessor {
@@ -33,15 +34,33 @@ export class AudioProcessor {
       }
 
       let nodes = this.audioElementMap.get(mediaElement);
+      const currentMediaSrc = mediaElement.src;
 
       if (nodes) {
+        // Check if the media source has changed for an existing element
+        if (nodes.currentSrc !== currentMediaSrc) {
+          console.log(
+            `[AudioProcessor] Media source changed for element: ${
+              currentMediaSrc || "(no src)"
+            }. Recreating source node.`
+          );
+          // Disconnect old source node
+          try {
+            nodes.source.disconnect();
+          } catch (e) {
+            /* Ignore disconnect errors */
+          }
+          // Recreate source node for the new media
+          nodes.source = this.audioContext.createMediaElementSource(mediaElement);
+          nodes.currentSrc = currentMediaSrc; // Update the stored src
+        }
+
         console.log(
           `[AudioProcessor] Reusing existing audio nodes for element: ${
-            mediaElement.src || "(no src)"
+            currentMediaSrc || "(no src)"
           }`
         );
-        // Disconnect existing connections before re-connecting with new settings
-        // This is crucial to prevent multiple connections or stale paths
+        // Disconnect existing connections (excluding source, which might have been recreated)
         const safeDisconnect = (node: AudioNode) => {
           try {
             node.disconnect();
@@ -54,7 +73,7 @@ export class AudioProcessor {
         safeDisconnect(nodes.bassFilter);
         safeDisconnect(nodes.splitter);
         safeDisconnect(nodes.merger);
-        // Do NOT disconnect nodes.source here, as we are reusing it.
+        // Do NOT disconnect nodes.source here, as it's either reused or just recreated.
         // Its output will be reconnected.
 
         // Update mono setting if it changed, as it affects connections
@@ -65,7 +84,7 @@ export class AudioProcessor {
       } else {
         console.log(
           `[AudioProcessor] Creating new audio nodes for element: ${
-            mediaElement.src || "(no src)"
+            currentMediaSrc || "(no src)"
           }`
         );
         // Create and configure new nodes
@@ -113,6 +132,7 @@ export class AudioProcessor {
       merger,
       element: mediaElement,
       mono: settings.mono, // Initialize mono setting
+      currentSrc: mediaElement.src, // Initialize currentSrc
     };
 
     // Connect nodes based on settings
