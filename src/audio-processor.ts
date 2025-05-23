@@ -328,6 +328,7 @@ export class AudioProcessor {
 
       const wasPlaying = !element.paused;
       const currentTime = element.currentTime; // Store current time
+      const originalSrc = element.src; // Store original src
 
       try {
         if (wasPlaying) {
@@ -335,8 +336,21 @@ export class AudioProcessor {
           element.pause();
         }
 
+        // Force detachment of media source to ensure full re-initialization
+        console.log(`[AudioProcessor] Detaching media source for ${element.src || "(no src)"}.`);
+        element.src = ''; // Detach the source
+        element.load(); // Load the empty source to force a reset
+
+        // Wait a microtask tick to allow browser to process detachment
+        await new Promise(resolve => setTimeout(resolve, 0));
+
         // Call setupAudioContext, which now handles reusing existing nodes and reconnecting them
         await this.setupAudioContext(element, settings);
+
+        // Restore original media source
+        console.log(`[AudioProcessor] Restoring media source for ${element.src || "(no src)"}.`);
+        element.src = originalSrc;
+        element.load(); // Load the original source
 
         console.log(
           `[AudioProcessor] Updated settings for element: ${
@@ -346,10 +360,8 @@ export class AudioProcessor {
 
         if (wasPlaying) {
           console.log(`[AudioProcessor] Resuming element ${element.src || "(no src)"} after audio effect update.`);
-          // Restore current time before playing to avoid seeking issues
           element.currentTime = currentTime;
-          // Add a small delay before attempting to play
-          await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay
+          await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay before play
           await element.play();
         }
       } catch (error) {
