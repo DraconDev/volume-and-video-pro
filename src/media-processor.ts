@@ -353,10 +353,10 @@ export class MediaProcessor {
    * Public method to check if the AudioContext is ready for applying audio effects.
    */
   public canApplyAudioEffects(): boolean {
-    // Check if audioProcessor and its audioContext exist and are not closed
+    // Check if audioProcessor and its audioContext exist and are in 'running' state
     return (
       !!this.audioProcessor["audioContext"] &&
-      this.audioProcessor["audioContext"].state !== "closed"
+      this.audioProcessor["audioContext"].state === "running"
     );
   }
 } // End of MediaProcessor class
