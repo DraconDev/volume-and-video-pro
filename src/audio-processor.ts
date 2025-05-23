@@ -35,13 +35,19 @@ export class AudioProcessor {
       let nodes = this.audioElementMap.get(mediaElement);
 
       if (nodes) {
-        console.log(`[AudioProcessor] Reusing existing audio nodes for element: ${mediaElement.src || "(no src)"}`);
+        console.log(
+          `[AudioProcessor] Reusing existing audio nodes for element: ${
+            mediaElement.src || "(no src)"
+          }`
+        );
         // Disconnect existing connections before re-connecting with new settings
         // This is crucial to prevent multiple connections or stale paths
         const safeDisconnect = (node: AudioNode) => {
           try {
             node.disconnect();
-          } catch (e) { /* Ignore disconnect errors */ }
+          } catch (e) {
+            /* Ignore disconnect errors */
+          }
         };
         safeDisconnect(nodes.gain);
         safeDisconnect(nodes.voiceFilter);
@@ -56,9 +62,12 @@ export class AudioProcessor {
 
         // Reconnect nodes with potentially updated mono setting and apply new audio parameters
         await this.connectNodes(nodes, settings);
-
       } else {
-        console.log(`[AudioProcessor] Creating new audio nodes for element: ${mediaElement.src || "(no src)"}`);
+        console.log(
+          `[AudioProcessor] Creating new audio nodes for element: ${
+            mediaElement.src || "(no src)"
+          }`
+        );
         // Create and configure new nodes
         nodes = await this.createAudioNodes(mediaElement, settings);
         this.audioElementMap.set(mediaElement, nodes);
@@ -321,7 +330,11 @@ export class AudioProcessor {
     for (const [element, nodes] of this.audioElementMap.entries()) {
       // Check if the element is still connected to the DOM before processing
       if (!element.isConnected) {
-        console.log(`[AudioProcessor] Element ${element.src || "(no src)"} is no longer connected to DOM. Disconnecting and removing.`);
+        console.log(
+          `[AudioProcessor] Element ${
+            element.src || "(no src)"
+          } is no longer connected to DOM. Disconnecting and removing.`
+        );
         this.disconnectElementNodes(element); // Clean up disconnected elements
         continue;
       }
