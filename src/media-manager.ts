@@ -153,11 +153,11 @@ export class MediaManager {
       elements.forEach((element) => {
         if (
           element instanceof HTMLElement &&
-          !this.processedElements.has(element) &&
-          this.isElementVisible(element)
+          !this.processedElements.has(element)
         ) {
           this.processedElements.add(element);
           customPlayers.push(element);
+          // console.log(`[MediaManager] Found custom player container (visibility check removed): ${element.tagName} ${element.className || element.id}`);
         }
       });
     } catch (e) {
@@ -173,13 +173,13 @@ export class MediaManager {
       if (
         elem instanceof HTMLElement &&
         !this.processedElements.has(elem) &&
-        this.isElementVisible(elem) &&
         // Check if the element is not a media element itself but contains one
         !(elem.tagName === "VIDEO" || elem.tagName === "AUDIO") &&
         elem.querySelector("video, audio")
       ) {
         this.processedElements.add(elem);
         customPlayers.push(elem);
+        // console.log(`[MediaManager] Found element containing media (visibility check removed): ${elem.tagName} ${elem.className || elem.id}`);
       }
     });
 
@@ -223,11 +223,11 @@ export class MediaManager {
           mediaInPlayer.forEach((element) => {
             if (
               element instanceof HTMLMediaElement &&
-              !this.processedMediaElements.has(element) && // Use static WeakSet
-              this.isElementVisible(element)
+              !this.processedMediaElements.has(element)
             ) {
               elements.push(element);
               this.processedMediaElements.add(element); // Add to static WeakSet
+              // console.log(`[MediaManager] Found media element within custom player (visibility check removed): ${element.src || '(no src)'}`);
             }
           });
         });
