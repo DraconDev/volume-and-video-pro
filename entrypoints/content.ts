@@ -377,14 +377,24 @@ export default defineContentScript({
       }
 
       // Watch for dynamic changes (Moved inside initializeScript)
-      MediaProcessor.setupMediaObserver( // Changed to static call
-        async (addedElements: HTMLMediaElement[]) => { // Added type annotation
-          // The debouncedCheck in MediaManager already calls findMediaElements,
-          // so processMedia will find all current elements, including the added ones.
-          // We don't need to pass addedElements directly to processMedia here.
-          await processMedia();
+      MediaProcessor.setupMediaObserver(
+        async (addedElements: HTMLMediaElement[]) => {
+          console.log(`[ContentScript] Processing ${addedElements.length} newly added media elements.`);
+          // Ensure settings are initialized before processing new elements
+          await settingsHandler.ensureInitialized();
+          const currentSettings = settingsHandler.getCurrentSettings();
+          const needsProcessing = settingsHandler.needsAudioProcessing();
+
+          // Process only the newly added elements
+          await mediaProcessor.processMediaElements(
+            addedElements,
+            currentSettings,
+            needsProcessing
+          );
+          // Also apply immediate settings to them
+          mediaProcessor.applySettingsImmediately(addedElements, currentSettings);
         },
-        (removedElements: HTMLMediaElement[]) => { // Added type annotation
+        (removedElements: HTMLMediaElement[]) => {
           console.log(`[ContentScript] Cleaning up ${removedElements.length} removed media elements.`);
           removedElements.forEach((element: HTMLMediaElement) => {
             mediaProcessor.audioProcessor.disconnectElementNodes(element);
