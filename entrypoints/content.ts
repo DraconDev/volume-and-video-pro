@@ -272,39 +272,47 @@ export default defineContentScript({
 
                 // Then, process audio effects if needed
                 if (needsProcessingNow) {
-                  if (managedMediaElements.length > 0) {
-                    console.log(
-                      `[ContentScript Listener] Processing audio effects for ${managedMediaElements.length} managed elements.`
-                    );
-                    await mediaProcessor.processMediaElements(
-                      managedMediaElements,
-                      newSettings,
-                      needsProcessingNow
-                    );
-                  } else {
-                    console.log(
-                      "[ContentScript Listener] No managed media elements found for audio effects. Attempting fallback to fresh scan."
-                    );
-                    const freshScanElements =
-                      mediaProcessor.findMediaElements();
-                    if (freshScanElements.length > 0) {
+                  if (mediaProcessor.canApplyAudioEffects()) {
+                    // Only apply audio effects if the AudioContext is already running
+                    if (managedMediaElements.length > 0) {
                       console.log(
-                        `[ContentScript Listener] Fallback: Found ${freshScanElements.length} elements on fresh scan for audio effects. Processing them.`
+                        `[ContentScript Listener] AudioContext is running. Processing audio effects for ${managedMediaElements.length} managed elements.`
                       );
-                      mediaProcessor.applySettingsImmediately(
-                        freshScanElements,
-                        newSettings
-                      ); // Apply immediate settings to fallback elements too
                       await mediaProcessor.processMediaElements(
-                        freshScanElements,
+                        managedMediaElements,
                         newSettings,
                         needsProcessingNow
                       );
                     } else {
                       console.log(
-                        "[ContentScript Listener] Fallback: No elements found on fresh scan either for audio effects."
+                        "[ContentScript Listener] AudioContext is running, but no managed media elements found. Attempting fallback to fresh scan."
                       );
+                      const freshScanElements =
+                        mediaProcessor.findMediaElements();
+                      if (freshScanElements.length > 0) {
+                        console.log(
+                          `[ContentScript Listener] Fallback: Found ${freshScanElements.length} elements on fresh scan for audio effects. Processing them.`
+                        );
+                        mediaProcessor.applySettingsImmediately(
+                          freshScanElements,
+                          newSettings
+                        ); // Apply immediate settings to fallback elements too
+                        await mediaProcessor.processMediaElements(
+                          freshScanElements,
+                          newSettings,
+                          needsProcessingNow
+                        );
+                      } else {
+                        console.log(
+                          "[ContentScript Listener] Fallback: No elements found on fresh scan either for audio effects."
+                        );
+                      }
                     }
+                  } else {
+                    console.log(
+                      "[ContentScript Listener] Audio effects needed, but AudioContext is not running. Deferring full audio effects application until user gesture (e.g., play)."
+                    );
+                    // No action needed here, the 'play' event listener will handle it.
                   }
                 } else {
                   console.log(
