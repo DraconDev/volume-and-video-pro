@@ -147,9 +147,11 @@ export class MediaManager {
     const baseSelectors: string[] = mediaConfig.baseSelectors; // from reference file
     // Append extra selectors if needed
     const selectors = baseSelectors.concat(this.getExtraSelectorsForSite());
+    console.log(`[MediaManager] findCustomPlayers: Searching with selectors: ${selectors.join(", ")}`);
 
     try {
       const elements = root.querySelectorAll(selectors.join(","));
+      console.log(`[MediaManager] findCustomPlayers: QuerySelectorAll found ${elements.length} elements.`);
       elements.forEach((element) => {
         if (
           element instanceof HTMLElement &&
@@ -157,7 +159,9 @@ export class MediaManager {
         ) {
           this.processedElements.add(element);
           customPlayers.push(element);
-          // console.log(`[MediaManager] Found custom player container (visibility check removed): ${element.tagName} ${element.className || element.id}`);
+          console.log(`[MediaManager] findCustomPlayers: Added custom player container: ${element.tagName} ${element.className || element.id} (src: ${element.getAttribute('src') || 'N/A'})`);
+        } else if (element instanceof HTMLElement) {
+          console.log(`[MediaManager] findCustomPlayers: Skipping already processed custom player container: ${element.tagName} ${element.className || element.id}`);
         }
       });
     } catch (e) {
@@ -169,6 +173,7 @@ export class MediaManager {
     // This ensures we catch players that don't match specific selectors but wrap media.
     const allElements =
       root instanceof Element ? Array.from(root.getElementsByTagName("*")) : [];
+    console.log(`[MediaManager] findCustomPlayers: Scanning all ${allElements.length} elements for descendants.`);
     allElements.forEach((elem) => {
       if (
         elem instanceof HTMLElement &&
@@ -179,7 +184,9 @@ export class MediaManager {
       ) {
         this.processedElements.add(elem);
         customPlayers.push(elem);
-        // console.log(`[MediaManager] Found element containing media (visibility check removed): ${elem.tagName} ${elem.className || elem.id}`);
+        console.log(`[MediaManager] findCustomPlayers: Added element containing media: ${elem.tagName} ${elem.className || elem.id} (src: ${elem.getAttribute('src') || 'N/A'})`);
+      } else if (elem instanceof HTMLElement) {
+        // console.log(`[MediaManager] findCustomPlayers: Skipping already processed or non-media-containing element: ${elem.tagName} ${elem.className || elem.id}`);
       }
     });
 
@@ -195,10 +202,12 @@ export class MediaManager {
     }
 
     const elements: HTMLMediaElement[] = [];
+    console.log(`[MediaManager] findMediaElements: Starting search in root: ${root.nodeName}`);
 
     try {
       // Direct media elements
       const mediaElements = root.querySelectorAll("video, audio");
+      console.log(`[MediaManager] findMediaElements: QuerySelectorAll for "video, audio" found ${mediaElements.length} elements.`);
       mediaElements.forEach((element) => {
         if (
           element instanceof HTMLMediaElement &&
@@ -206,7 +215,9 @@ export class MediaManager {
         ) {
           elements.push(element);
           this.processedMediaElements.add(element); // Add to static WeakSet
-          // console.log(`[MediaManager] Found direct media element (visibility check removed): ${element.src || '(no src)'}`);
+          console.log(`[MediaManager] findMediaElements: Added direct media element: ${element.tagName} (src: ${element.src || '(no src)'}, id: ${element.id || 'N/A'})`);
+        } else if (element instanceof HTMLMediaElement) {
+          console.log(`[MediaManager] findMediaElements: Skipping already processed direct media element: ${element.tagName} (src: ${element.src || '(no src)'})`);
         }
       });
 
@@ -217,9 +228,12 @@ export class MediaManager {
 
       // Custom players (only at top level)
       if (depth === 0) {
+        console.log(`[MediaManager] findMediaElements: Calling findCustomPlayers for top level.`);
         const customPlayers = this.findCustomPlayers(root);
+        console.log(`[MediaManager] findMediaElements: findCustomPlayers returned ${customPlayers.length} custom player containers.`);
         customPlayers.forEach((player) => {
           const mediaInPlayer = player.querySelectorAll("video, audio");
+          console.log(`[MediaManager] findMediaElements: Found ${mediaInPlayer.length} media elements within custom player container: ${player.tagName} ${player.className || player.id}`);
           mediaInPlayer.forEach((element) => {
             if (
               element instanceof HTMLMediaElement &&
@@ -227,7 +241,9 @@ export class MediaManager {
             ) {
               elements.push(element);
               this.processedMediaElements.add(element); // Add to static WeakSet
-              // console.log(`[MediaManager] Found media element within custom player (visibility check removed): ${element.src || '(no src)'}`);
+              console.log(`[MediaManager] findMediaElements: Added media element from custom player: ${element.tagName} (src: ${element.src || '(no src)'}, id: ${element.id || 'N/A'})`);
+            } else if (element instanceof HTMLMediaElement) {
+              console.log(`[MediaManager] findMediaElements: Skipping already processed media element from custom player: ${element.tagName} (src: ${element.src || '(no src)'})`);
             }
           });
         });
@@ -237,6 +253,7 @@ export class MediaManager {
         console.warn("Error finding media elements:", e);
       }
     }
+    console.log(`[MediaManager] findMediaElements: Returning ${elements.length} unique media elements.`);
 
     return Array.from(new Set(elements));
   }
