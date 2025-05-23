@@ -224,6 +224,22 @@ export class MediaProcessor {
     };
 
     processBatch();
+
+    // Check if non-speed audio settings have changed and trigger effects update
+    if (this.lastAppliedSettings &&
+        (Math.abs(this.lastAppliedSettings.volume - settings.volume) > EPSILON ||
+         Math.abs(this.lastAppliedSettings.bass - settings.bass) > EPSILON ||
+         Math.abs(this.lastAppliedSettings.treble - settings.treble) > EPSILON)) {
+      // Use setTimeout to avoid blocking the immediate settings application
+      setTimeout(() => {
+        this.forceAudioEffectsUpdate(settings).catch(e => {
+          console.error("[MediaProcessor] Error updating audio effects:", e);
+        });
+      }, 0);
+    }
+
+    // Update last applied settings for future comparisons
+    this.lastAppliedSettings = { ...settings };
   }
 
   /**
