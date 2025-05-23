@@ -2,19 +2,49 @@ const mediaConfig = {
   baseSelectors: [
     "video",
     "audio",
+    // Generic class/ID based selectors
     "[class*='player']",
     "[class*='video']",
     "[class*='audio']",
+    "[id*='player']",
+    "[id*='video']",
+    "[id*='audio']",
+    // Common player libraries/frameworks
     ".video-js",
     ".jwplayer",
-    ".html5-video-player",
+    ".html5-video-player", // YouTube
     ".plyr",
+    ".vjs-tech", // Video.js tech element
+    ".shaka-video", // Shaka Player
+    ".flowplayer", // Flowplayer
+    ".mejs__container", // MediaElement.js
+    ".uppod-video", // Uppod player
+    ".dplayer", // DPlayer
+    ".artplayer-app", // ArtPlayer
+    ".xgplayer-container", // XGPlayer
+    // Data attributes
     "[data-media]",
+    "[data-player-id]",
+    "[data-video-id]",
+    "[data-audio-id]",
+    "[data-component*='player']",
+    // ARIA roles (use with caution, can be broad)
+    "[role='application'][aria-label*='player']",
+    "[role='media']",
+    // Schema.org markup
+    "div[itemtype*='schema.org/VideoObject']",
+    "div[itemtype*='schema.org/AudioObject']",
+    // Common iframe sources
     "iframe[src*='youtube.com']",
     "iframe[src*='vimeo.com']",
     "iframe[src*='dailymotion.com']",
     "iframe[src*='twitch.tv']",
     "iframe[src*='facebook.com']",
+    "iframe[src*='soundcloud.com']",
+    "iframe[src*='spotify.com']",
+    "iframe[src*='wistia.net']",
+    "iframe[src*='brightcove.com']",
+    "iframe[src*='kaltura.com']",
   ],
   siteSelectors: {
     "problematicsite.com": [
