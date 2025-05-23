@@ -55,6 +55,14 @@ const mediaConfig = {
     "youtube.com": [
       ".html5-video-player", // Correct selector for the main player container
     ],
+    "odysee.com": [
+      ".vjs-tech", // Common Video.js tech element
+      ".video-js", // Main Video.js container
+      ".vjs-control-bar", // Video.js control bar
+      "div[class*='player']", // General div with 'player' in class
+      "div[data-player-type='odysee']", // Hypothetical Odysee specific data attribute
+      "video", // Ensure direct video tag is also considered for Odysee
+    ],
     "netflix.com": ["[data-uia='video-player']", ".PlayerControls"],
     "hulu.com": ["video", ".HuluPlayer"],
     "amazon.com": ["[data-player='AmazonVideo']", ".avc-container"],
