@@ -100,8 +100,7 @@ const mediaConfig = {
 
 export class MediaManager {
   private static debounceTimeout: NodeJS.Timeout | null = null;
-  private static processedElements = new WeakSet<HTMLElement>();
-  private static processedMediaElements = new WeakSet<HTMLMediaElement>(); // New WeakSet for media elements
+  private static processedElements = new WeakSet<HTMLElement>(); // Keep for custom player containers
   private static readonly DEBOUNCE_DELAY = 500;
   private static readonly MAX_DEPTH = 10;
 
@@ -209,15 +208,9 @@ export class MediaManager {
       const mediaElements = root.querySelectorAll("video, audio");
       console.log(`[MediaManager] findMediaElements: QuerySelectorAll for "video, audio" found ${mediaElements.length} elements.`);
       mediaElements.forEach((element) => {
-        if (
-          element instanceof HTMLMediaElement &&
-          !this.processedMediaElements.has(element)
-        ) {
+        if (element instanceof HTMLMediaElement) {
           elements.push(element);
-          this.processedMediaElements.add(element); // Add to static WeakSet
           console.log(`[MediaManager] findMediaElements: Added direct media element: ${element.tagName} (src: ${element.src || '(no src)'}, id: ${element.id || 'N/A'})`);
-        } else if (element instanceof HTMLMediaElement) {
-          console.log(`[MediaManager] findMediaElements: Skipping already processed direct media element: ${element.tagName} (src: ${element.src || '(no src)'})`);
         }
       });
 
@@ -235,15 +228,9 @@ export class MediaManager {
           const mediaInPlayer = player.querySelectorAll("video, audio");
           console.log(`[MediaManager] findMediaElements: Found ${mediaInPlayer.length} media elements within custom player container: ${player.tagName} ${player.className || player.id}`);
           mediaInPlayer.forEach((element) => {
-            if (
-              element instanceof HTMLMediaElement &&
-              !this.processedMediaElements.has(element)
-            ) {
+            if (element instanceof HTMLMediaElement) {
               elements.push(element);
-              this.processedMediaElements.add(element); // Add to static WeakSet
               console.log(`[MediaManager] findMediaElements: Added media element from custom player: ${element.tagName} (src: ${element.src || '(no src)'}, id: ${element.id || 'N/A'})`);
-            } else if (element instanceof HTMLMediaElement) {
-              console.log(`[MediaManager] findMediaElements: Skipping already processed media element from custom player: ${element.tagName} (src: ${element.src || '(no src)'})`);
             }
           });
         });
