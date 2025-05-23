@@ -30,12 +30,38 @@ const mediaConfig = {
     "[data-video-id]",
     "[data-audio-id]",
     "[data-component*='player']",
+    // More generic data attributes
+    "[data-src*='video']",
+    "[data-src*='audio']",
+    "[data-url*='video']",
+    "[data-url*='audio']",
+    "[data-type*='video']",
+    "[data-type*='audio']",
+    "[data-media-id]",
+    "[data-media-src]",
     // ARIA roles (use with caution, can be broad)
     "[role='application'][aria-label*='player']",
     "[role='media']",
-    // Schema.org markup
+    "[role='img'][aria-label*='video']", // Sometimes video players are just images with role img
+    // Schema.org markup and other microdata
     "div[itemtype*='schema.org/VideoObject']",
     "div[itemtype*='schema.org/AudioObject']",
+    "[itemprop*='video']",
+    "[itemprop*='audio']",
+    // Elements with tabindex that might be interactive players
+    "[tabindex][class*='player']",
+    "[tabindex][class*='video']",
+    "[tabindex][class*='audio']",
+    // More common player classes/IDs
+    ".media-player",
+    ".player-container",
+    ".video-container",
+    ".audio-container",
+    ".embed-responsive-item", // Bootstrap video embeds
+    ".wp-video", // WordPress video
+    ".wp-audio", // WordPress audio
+    ".elementor-video", // Elementor video widget
+    ".elementor-audio", // Elementor audio widget
     // Common iframe sources
     "iframe[src*='youtube.com']",
     "iframe[src*='vimeo.com']",
@@ -138,26 +164,24 @@ export class MediaManager {
       console.warn("Error finding custom players using selectors:", e);
     }
 
-    // Fallback: if no custom players found, scan all visible elements for descendant media
-    if (customPlayers.length === 0) {
-      const allElements =
-        root instanceof Element
-          ? Array.from(root.getElementsByTagName("*"))
-          : [];
-      allElements.forEach((elem) => {
-        if (
-          elem instanceof HTMLElement &&
-          !this.processedElements.has(elem) &&
-          this.isElementVisible(elem) &&
-          // Check if the element is not a media element itself but contains one
-          !(elem.tagName === "VIDEO" || elem.tagName === "AUDIO") &&
-          elem.querySelector("video, audio")
-        ) {
-          this.processedElements.add(elem);
-          customPlayers.push(elem);
-        }
-      });
-    }
+    // Always perform a broader scan for elements that contain media,
+    // regardless of whether initial selectors found anything.
+    // This ensures we catch players that don't match specific selectors but wrap media.
+    const allElements =
+      root instanceof Element ? Array.from(root.getElementsByTagName("*")) : [];
+    allElements.forEach((elem) => {
+      if (
+        elem instanceof HTMLElement &&
+        !this.processedElements.has(elem) &&
+        this.isElementVisible(elem) &&
+        // Check if the element is not a media element itself but contains one
+        !(elem.tagName === "VIDEO" || elem.tagName === "AUDIO") &&
+        elem.querySelector("video, audio")
+      ) {
+        this.processedElements.add(elem);
+        customPlayers.push(elem);
+      }
+    });
 
     return customPlayers;
   }
