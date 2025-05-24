@@ -434,10 +434,10 @@ export default defineContentScript({
         }
       );
 
-      // Ensure AudioContext is closed when the page unloads
-      window.addEventListener("unload", () => {
+      // Ensure AudioContext is closed when the page is hidden or navigated away from
+      window.addEventListener("pagehide", () => {
         console.log(
-          "[ContentScript] Page is unloading. Performing final AudioProcessor cleanup."
+          "[ContentScript] Page is hiding/unloading. Performing final AudioProcessor cleanup."
         );
         mediaProcessor.audioProcessor.cleanup();
       });
