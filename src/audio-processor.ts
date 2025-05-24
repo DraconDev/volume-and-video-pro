@@ -27,6 +27,16 @@ export class AudioProcessor {
         settings
       );
 
+      // Check if the media element is ready to be used as an audio source
+      // HTMLMediaElement.HAVE_METADATA (1) means enough data is available that the duration of the resource is available.
+      // createMediaElementSource typically requires at least HAVE_METADATA.
+      if (mediaElement.readyState < HTMLMediaElement.HAVE_METADATA) {
+        console.warn(
+          `AudioProcessor: Media element ${mediaElement.src || "(no src)"} is not ready (readyState: ${mediaElement.readyState}). Deferring audio context setup.`
+        );
+        return; // Defer processing until the element is ready
+      }
+
       // Initialize audio context if needed
       if (!this.audioContext) {
         this.audioContext = new AudioContext();
