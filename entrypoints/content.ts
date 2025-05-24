@@ -545,6 +545,57 @@ export default defineContentScript({
           // console.log(`[ContentScript iFrame] Received other parsed JSON message type from top: ${parsedData.type} from origin ${event.origin}`, parsedData);
         }
       };
+      // Listener for the response from the top window
+      const responseListener = (event: MessageEvent) => {
+        // Only process messages from the top window
+        if (event.source !== window.top) {
+          // console.log(`[ContentScript iFrame] Received message from non-top source: ${event.origin}`, event.data);
+          return;
+        }
+
+        let parsedData;
+        if (typeof event.data === "string") {
+          try {
+            parsedData = JSON.parse(event.data);
+          } catch (e) {
+            // console.warn('[ContentScript iFrame] Failed to parse event.data string from top:', event.data, e);
+            return;
+          }
+        } else {
+          // console.warn('[ContentScript iFrame] Received non-string event.data from top:', event.data);
+          return;
+        }
+
+        // Log all messages received from top for debugging
+        // console.log(`[ContentScript iFrame] Received message from top: ${event.origin}`, parsedData);
+
+        if (
+          parsedData &&
+          parsedData.type === "VVP_TOP_HOSTNAME_INFO" &&
+          typeof parsedData.hostname === "string"
+        ) {
+          if (fallbackTimeout) {
+            clearTimeout(fallbackTimeout);
+            fallbackTimeout = null;
+          }
+          if (receivedHostname) {
+            console.log(
+              `[ContentScript iFrame] Already received hostname. Ignoring duplicate VVP_TOP_HOSTNAME_INFO from top. Origin: ${event.origin}. Parsed Data:`,
+              parsedData
+            );
+            return;
+          }
+          receivedHostname = true;
+          console.log(
+            `[ContentScript iFrame] Successfully received VVP_TOP_HOSTNAME_INFO from top: ${parsedData.hostname}. Origin: ${event.origin}. Initializing script. Parsed data:`,
+            parsedData
+          );
+          window.removeEventListener("message", responseListener);
+          initializeScript(parsedData.hostname);
+        } else if (parsedData && parsedData.type) {
+          // console.log(`[ContentScript iFrame] Received other parsed JSON message type from top: ${parsedData.type} from origin ${event.origin}`, parsedData);
+        }
+      };
       window.addEventListener("message", responseListener);
 
       // Request the hostname from the top window, sending stringified JSON
@@ -569,7 +620,7 @@ export default defineContentScript({
       }
 
       // Fallback timeout in case the message never arrives
-      const TIMEOUT_DURATION = 5000; // Reduced timeout to 5 seconds
+      const TIMEOUT_DURATION = 10000; // Increased timeout to 10 seconds
       console.log(
         `[ContentScript iFrame] Setting fallback timeout for ${TIMEOUT_DURATION}ms.`
       );
