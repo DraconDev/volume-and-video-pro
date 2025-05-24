@@ -214,10 +214,18 @@ export class AudioProcessor {
       }. Target Mono: ${settings.mono}, Current Node Mono: ${nodes.mono}`
     );
 
-    // Fully disconnect all involved nodes from source downstream before reconnecting to ensure a clean state.
+    // Log the current mono state before potential change
+    console.log(
+      `[AudioProcessor] connectNodes: Current mono state for element: ${nodes.mono}, Target mono state: ${settings.mono}`
+    );
+
+    // Disconnect all nodes from their outputs to ensure a clean slate before re-connecting.
+    // It's crucial to disconnect the source first from its previous connections,
+    // then other nodes in any order, as long as they are disconnected from their outputs.
     const safeDisconnect = (node: AudioNode | null) => {
       if (node) {
         try {
+          // Disconnect all connections from this node
           node.disconnect();
         } catch (e) {
           // console.warn(`[AudioProcessor] Error disconnecting node:`, e); // Optional: for debugging
@@ -225,22 +233,24 @@ export class AudioProcessor {
       }
     };
 
-    // Disconnect in reverse order of connection, or ensure source is disconnected last from its outputs.
-    safeDisconnect(gain);       // Disconnects gain from destination and from merger/voiceFilter
-    safeDisconnect(merger);     // Disconnects merger from gain and splitter from merger
-    safeDisconnect(splitter);   // Disconnects splitter from merger and voiceFilter from splitter
-    safeDisconnect(voiceFilter); // Disconnects voiceFilter from gain/splitter and bassFilter from voiceFilter
-    safeDisconnect(bassFilter);  // Disconnects bassFilter from voiceFilter and source from bassFilter
+    // Disconnect all nodes from their outputs. Order matters for preventing errors,
+    // but less so if we disconnect all outputs from a node.
+    // Disconnecting source first ensures it's not connected to a stale graph.
+    safeDisconnect(source);
+    safeDisconnect(bassFilter);
+    safeDisconnect(voiceFilter);
+    safeDisconnect(splitter);
+    safeDisconnect(merger);
+    safeDisconnect(gain);
 
-    // Ensure the source node itself is disconnected from any previous connections.
-    // This is crucial if the source node was just recreated or if the graph was in an inconsistent state.
-    if (source) { // source might be null if context creation failed earlier, though unlikely here
-        safeDisconnect(source);
-    } else {
-        console.error("[AudioProcessor] Source node is null in connectNodes. Cannot connect graph.");
-        // Attempt to apply settings to avoid further errors, though graph is broken.
-        await this.updateNodeSettings(nodes, settings);
-        return; // Cannot proceed with connections
+    // Ensure source is valid before proceeding
+    if (!source) {
+      console.error(
+        "[AudioProcessor] Source node is null in connectNodes. Cannot connect graph."
+      );
+      // Attempt to apply settings to avoid further errors, though graph is broken.
+      await this.updateNodeSettings(nodes, settings);
+      return; // Cannot proceed with connections
     }
 
 
