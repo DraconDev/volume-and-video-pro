@@ -14,20 +14,21 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
 
     // Listen for requests from iframes
     window.addEventListener("message", (event: MessageEvent) => {
-      let parsedData;
-      if (typeof event.data === "string") {
-        try {
-          parsedData = JSON.parse(event.data);
-        } catch (e) {
-          console.warn('[ContentScript Top] Failed to parse event.data string from iframe:', event.data, e);
-          return;
-        }
-      } else {
-        console.log('[ContentScript Top] Received non-string message from iframe:', event.data);
+      // Only process messages that are strings and look like our JSON messages
+      if (typeof event.data !== "string" || !event.data.startsWith('{') || !event.data.endsWith('}')) {
+        // console.log('[ContentScript Top] Ignoring non-JSON or non-VVP message from iframe:', event.data);
         return;
       }
 
-      console.log(`[ContentScript Top] Received message from iframe (Origin: ${event.origin}):`, parsedData);
+      let parsedData;
+      try {
+        parsedData = JSON.parse(event.data);
+      } catch (e) {
+        console.warn('[ContentScript Top] Failed to parse event.data string from iframe (likely not our message):', event.data, e);
+        return;
+      }
+
+      // console.log(`[ContentScript Top] Received potential VVP message from iframe (Origin: ${event.origin}):`, parsedData);
 
       if (
         event.source && // Ensure source exists (source is the window object of the sender)
@@ -47,8 +48,8 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
           event.origin // Respond to the specific origin of the iframe
         );
         console.log(`[ContentScript Top] Sent VVP_TOP_HOSTNAME_INFO response to iframe at ${event.origin}.`);
-      } else if (parsedData && parsedData.type) {
-        console.log(`[ContentScript Top] Received other parsed JSON message type: ${parsedData.type} from origin ${event.origin}`, parsedData);
+      } else {
+        // console.log(`[ContentScript Top] Received other parsed JSON message type (not VVP_REQUEST_TOP_HOSTNAME): ${parsedData.type} from origin ${event.origin}`, parsedData);
       }
     });
   } else {
