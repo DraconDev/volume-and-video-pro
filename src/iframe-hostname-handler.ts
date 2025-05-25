@@ -69,16 +69,17 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
         return;
       }
 
+      // Only process messages that are strings and look like our JSON messages
+      if (typeof event.data !== "string" || !event.data.startsWith('{') || !event.data.endsWith('}')) {
+        // console.log('[ContentScript iFrame] Ignoring non-JSON or non-VVP message from top:', event.data);
+        return;
+      }
+
       let parsedData;
-      if (typeof event.data === "string") {
-        try {
-          parsedData = JSON.parse(event.data);
-        } catch (e) {
-          console.warn('[ContentScript iFrame] Failed to parse event.data string from top:', event.data, e);
-          return;
-        }
-      } else {
-        console.log('[ContentScript iFrame] Received non-string event.data from top:', event.data);
+      try {
+        parsedData = JSON.parse(event.data);
+      } catch (e) {
+        console.warn('[ContentScript iFrame] Failed to parse event.data string from top:', event.data, e);
         return;
       }
 
