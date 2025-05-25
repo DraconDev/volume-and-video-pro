@@ -6,6 +6,7 @@ import { initializeContentScript } from "../src/content-script-init";
 
 export default defineContentScript({
   matches: ["<all_urls>"],
+  exclude_matches: ["*://chrome.google.com/*", "*://extensions/*", "*://about.google/*", "*://edge.microsoft.com/*", "*://settings/*", "*://newtab/*", "*://*/*?*"],
   allFrames: true,
   runAt: "document_idle",
   main: async () => {
