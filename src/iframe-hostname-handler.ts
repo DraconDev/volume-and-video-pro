@@ -20,6 +20,11 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
         return;
       }
 
+      // Add a check for our specific message types before parsing
+      if (!event.data.includes("VVP_REQUEST_TOP_HOSTNAME") && !event.data.includes("VVP_TOP_HOSTNAME_INFO")) {
+          // console.log('[ContentScript Top] Ignoring non-VVP message from iframe:', event.data);
+          return;
+      }
       let parsedData;
       try {
         parsedData = JSON.parse(event.data);
@@ -75,6 +80,12 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
         return;
       }
 
+      // Add a check for our specific message types before parsing
+      if (!event.data.includes("VVP_REQUEST_TOP_HOSTNAME") && !event.data.includes("VVP_TOP_HOSTNAME_INFO")) {
+          // console.log('[ContentScript iFrame] Ignoring non-VVP message from top:', event.data);
+          return;
+      }
+
       let parsedData;
       try {
         parsedData = JSON.parse(event.data);
@@ -116,16 +127,19 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
 
     // Request the hostname from the top window, sending stringified JSON
     if (window.top && window.top !== window.self) {
-      console.log(
-        `[ContentScript iFrame] Sending VVP_REQUEST_TOP_HOSTNAME to top window (Origin: ${window.location.origin}).`
-      );
-      const messagePayload = JSON.stringify({
-        type: "VVP_REQUEST_TOP_HOSTNAME",
-        fromIframe: true,
-        iframeOrigin: window.location.origin,
-      });
-      window.top.postMessage(messagePayload, "*");
-      console.log(`[ContentScript iFrame] Sent VVP_REQUEST_TOP_HOSTNAME to top window.`);
+      // Add a small delay before sending the message to give the top window's script time to initialize
+      setTimeout(() => {
+        console.log(
+          `[ContentScript iFrame] Sending VVP_REQUEST_TOP_HOSTNAME to top window (Origin: ${window.location.origin}).`
+        );
+        const messagePayload = JSON.stringify({
+          type: "VVP_REQUEST_TOP_HOSTNAME",
+          fromIframe: true,
+          iframeOrigin: window.location.origin,
+        });
+        window.top.postMessage(messagePayload, "*");
+        console.log(`[ContentScript iFrame] Sent VVP_REQUEST_TOP_HOSTNAME to top window.`);
+      }, 500); // Delay by 500ms
     } else {
       console.warn(
         `[ContentScript iFrame] window.top is null, same as self, or inaccessible. Cannot request hostname from top. Initializing with own hostname: ${iframeOwnHostname}.`
