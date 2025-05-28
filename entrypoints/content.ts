@@ -7,7 +7,7 @@ import { initializeContentScript } from "../src/content-script-init";
 export default defineContentScript({
   matches: ["http://*/*", "https://*/*", "file://*/*"],
   allFrames: true,
-  runAt: "document_idle",
+  runAt: "document_start",
   main: async () => {
     console.log(
       "Content: Script starting - This log should always appear",
