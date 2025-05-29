@@ -238,16 +238,28 @@ export class MediaProcessor {
 
           // Apply playback speed if different
           const targetSpeed = settings.speed / 100;
-          // Always set playbackRate and defaultPlaybackRate to ensure settings apply
-          element.playbackRate = targetSpeed;
-          element.defaultPlaybackRate = targetSpeed;
+          let speedChanged = false;
+          if (Math.abs(element.playbackRate - targetSpeed) > EPSILON) {
+            // console.log(`[MediaProcessor Immediate] Updating playbackRate for ${element.src || '(no src)'} from ${element.playbackRate} to ${targetSpeed}`);
+            element.playbackRate = targetSpeed;
+            speedChanged = true;
+          }
+          // Always set defaultPlaybackRate as it's less likely to be contested
+          // and good to have as a baseline.
+          if (Math.abs(element.defaultPlaybackRate - targetSpeed) > EPSILON) {
+            element.defaultPlaybackRate = targetSpeed;
+            // speedChanged = true; // Not strictly a direct playbackRate change, but related.
+          }
 
-          // If the element is connected and not already tracked, add it.
-          // We assume a change occurred if applySettingsImmediately is called.
-          if (element.isConnected && !this.activeMediaElements.has(element)) {
+          // If we actually changed speed, and the element is not already tracked, add it.
+          if (
+            element.isConnected &&
+            speedChanged &&
+            !this.activeMediaElements.has(element)
+          ) {
             this.activeMediaElements.add(element);
             console.log(
-              `[MediaProcessor Immediate] Added to activeMediaElements: ${
+              `[MediaProcessor Immediate] Added to activeMediaElements after changing speed: ${
                 element.src || "(no src)"
               }. Count: ${this.activeMediaElements.size}`
             );
@@ -316,7 +328,8 @@ export class MediaProcessor {
   public static setupMediaObserver(
     onAdded: (elements: HTMLMediaElement[]) => Promise<void>,
     onRemoved: (elements: HTMLMediaElement[]) => void
-  ): MutationObserver { // Change return type to MutationObserver
+  ): MutationObserver {
+    // Change return type to MutationObserver
     return MediaManager.setupMediaElementObserver(onAdded, onRemoved); // Return the observer
   }
 
