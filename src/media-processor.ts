@@ -213,70 +213,51 @@ export class MediaProcessor {
       "[MediaProcessor] Applying settings immediately to media elements"
     );
 
-    // Removed the lastAppliedSettings check to ensure settings are applied
-    // even if the settings object itself hasn't changed, in case the player
-    // has reset the element's properties.
-    // this.lastAppliedSettings = { ...settings }; // Still useful to update for other potential logic if re-added
-
-    // Batch update for better performance
-    const batchSize = 5;
-    const updateQueue = [...mediaElements];
+    const targetSpeed = settings.speed / 100;
+    let index = 0;
 
     const processBatch = () => {
-      const batch = updateQueue.splice(0, batchSize);
-      const EPSILON = 0.001; // Small value for float comparison
+      const startTime = performance.now();
+      let processed = 0;
 
-      batch.forEach((element) => {
+      // Process elements in batches without blocking UI
+      while (index < mediaElements.length && performance.now() - startTime < 10) {
+        const element = mediaElements[index++];
+        processed++;
+        
         try {
+          // Skip disconnected elements
           if (!element.isConnected) {
-            this.activeMediaElements.delete(element); // Clean up if disconnected
-            return; // Skip disconnected elements in the batch
+            this.activeMediaElements.delete(element);
+            continue;
           }
-          // Store current state
-          const wasPlaying = !element.paused;
-          const currentTime = element.currentTime;
 
-          // Apply playback speed if different
-          const targetSpeed = settings.speed / 100;
-          // Always set playbackRate and defaultPlaybackRate to ensure settings apply.
-          // This is crucial because some media players might reset these values
-          // after our script initially sets them, or when a new video source loads.
+          // Apply playback speed
           element.playbackRate = targetSpeed;
           element.defaultPlaybackRate = targetSpeed;
 
-          // If the element is connected, add it to activeMediaElements.
-          // We assume a change occurred if applySettingsImmediately is called,
-          // or we want to ensure it's tracked for future updates.
-          if (element.isConnected && !this.activeMediaElements.has(element)) {
+          // Track connected elements
+          if (!this.activeMediaElements.has(element)) {
             this.activeMediaElements.add(element);
-            console.log(
-              `[MediaProcessor Immediate] Added to activeMediaElements: ${
-                element.src || "(no src)"
-              }. Count: ${this.activeMediaElements.size}`
-            );
-          }
-
-          // Ensure it stays paused at the same position if it was paused
-          if (element.paused) {
-            element.currentTime = currentTime;
           }
         } catch (e) {
           console.error(
-            `MediaProcessor: Error applying settings immediately to ${
+            `MediaProcessor: Error applying settings to ${
               element.src || "(no src)"
             }:`,
             e
           );
         }
-      });
+      }
 
-      // Process next batch after microtask queue clears
-      if (updateQueue.length > 0) {
-        setTimeout(processBatch, 0);
+      // Continue processing if elements remain
+      if (index < mediaElements.length) {
+        requestAnimationFrame(processBatch);
       }
     };
 
-    processBatch();
+    // Start processing
+    requestAnimationFrame(processBatch);
   }
 
   /**
