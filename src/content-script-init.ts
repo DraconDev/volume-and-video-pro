@@ -361,7 +361,9 @@ export async function initializeContentScript(
   }
 
   // Watch for dynamic changes
-  MediaProcessor.setupMediaObserver(
+:start_line:364
+-------
+  const mediaObserver = MediaProcessor.setupMediaObserver(
     async (addedElements: HTMLMediaElement[]) => {
       console.log(
         `[ContentScript] Processing ${addedElements.length} newly added media elements.`
