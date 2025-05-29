@@ -328,8 +328,8 @@ export class MediaProcessor {
   public static setupMediaObserver(
     onAdded: (elements: HTMLMediaElement[]) => Promise<void>,
     onRemoved: (elements: HTMLMediaElement[]) => void
-  ): void {
-    MediaManager.setupMediaElementObserver(onAdded, onRemoved);
+  ): MutationObserver { // Change return type to MutationObserver
+    return MediaManager.setupMediaElementObserver(onAdded, onRemoved); // Return the observer
   }
 
   findMediaElements(): HTMLMediaElement[] {
