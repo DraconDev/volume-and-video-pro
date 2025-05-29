@@ -393,10 +393,14 @@ export async function initializeContentScript(
       const remainingManagedElements = mediaProcessor.getManagedMediaElements();
       if (
         remainingManagedElements.length === 0 &&
-        !settingsHandler.needsAudioProcessing()
+:start_line:396
+-------
+        // The AudioContext should be cleaned up if no media elements are being managed,
+        // regardless of whether audio processing settings are active.
+        // Keeping it alive when no elements are present is a memory leak.
       ) {
         console.log(
-          "[ContentScript] No managed media elements left and no audio processing needed. Cleaning up AudioProcessor."
+          "[ContentScript] No managed media elements left. Cleaning up AudioProcessor."
         );
         mediaProcessor.audioProcessor.cleanup();
       }
