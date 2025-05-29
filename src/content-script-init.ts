@@ -7,9 +7,7 @@ export async function initializeContentScript(
   mediaProcessor: MediaProcessor,
   hostname: string
 ) {
-  console.log(
-    `[ContentScript] Initializing script for hostname: ${hostname}`
-  );
+  console.log(`[ContentScript] Initializing script for hostname: ${hostname}`);
   settingsHandler.initialize(hostname); // Initialize with the correct hostname
 
   // --- AudioContext Resume Handler ---
@@ -230,8 +228,7 @@ export async function initializeContentScript(
             settingsHandler.updateSettings(message.settings); // Update local settings cache
 
             const newSettings = settingsHandler.getCurrentSettings(); // Get the just-updated settings
-            const needsProcessingNow =
-              settingsHandler.needsAudioProcessing(); // Check based on new settings
+            const needsProcessingNow = settingsHandler.needsAudioProcessing(); // Check based on new settings
 
             console.log(
               `Content: Settings updated via message. New effective settings: ${JSON.stringify(
@@ -240,7 +237,8 @@ export async function initializeContentScript(
             );
 
             // Get the list of currently managed media elements from MediaProcessor
-            const managedMediaElements = mediaProcessor.getManagedMediaElements();
+            const managedMediaElements =
+              mediaProcessor.getManagedMediaElements();
             console.log(
               `[ContentScript Listener] Found ${managedMediaElements.length} managed media elements to re-process with new settings.`
             );
