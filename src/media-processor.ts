@@ -68,23 +68,23 @@ export class MediaProcessor {
     settings: AudioSettings,
     needsAudioEffectsSetup: boolean
   ): Promise<void> {
-    console.log(
-      `[MediaProcessor] processMediaElements called for ${mediaElements.length} element(s). Needs audio effects setup: ${needsAudioEffectsSetup}. Settings:`,
-      JSON.stringify(settings)
-    );
+    // Only log if we have elements to process
+    if (mediaElements.length > 0) {
+      console.debug(
+        `[MediaProcessor] Processing ${mediaElements.length} media element(s). Audio effects: ${needsAudioEffectsSetup}`
+      );
+    }
 
-    // This method now directly handles speed application for the given elements.
+    // Apply speed settings immediately
     mediaElements.forEach((element) => {
       if (element.isConnected) {
         this.updatePlaybackSpeed(element, settings.speed);
       } else {
-        this.activeMediaElements.delete(element); // Clean up if disconnected
+        this.activeMediaElements.delete(element);
       }
     });
 
     if (needsAudioEffectsSetup) {
-      console.log("[MediaProcessor] Audio effects setup is requested.");
-      // Attempt to resume AudioContext before setting up/updating effects
       await this.audioProcessor.tryResumeContext();
 
       for (const element of mediaElements) {
@@ -93,21 +93,11 @@ export class MediaProcessor {
           continue;
         }
         try {
-          console.log(
-            `[MediaProcessor] Calling setupAudioContext for element: ${
-              element.src || "(no src)"
-            }`
-          );
           await this.audioProcessor.setupAudioContext(element, settings);
-          this.activeMediaElements.add(element); // Add to active list on successful setup
-          console.log(
-            `[MediaProcessor] Added to activeMediaElements: ${
-              element.src || "(no src)"
-            }. Count: ${this.activeMediaElements.size}`
-          );
+          this.activeMediaElements.add(element);
         } catch (e) {
           console.error(
-            `[MediaProcessor] Error in setupAudioContext for element ${
+            `[MediaProcessor] Error setting up audio for ${
               element.src || "(no src)"
             }:`,
             e
@@ -119,81 +109,39 @@ export class MediaProcessor {
         this.audioProcessor.audioContext &&
         this.audioProcessor.audioContext.state === "running"
       ) {
-        console.log(
-          "[MediaProcessor] AudioContext is running, calling updateAudioEffects to apply/update global effects."
-        );
         await this.audioProcessor.updateAudioEffects(settings);
-      } else {
-        console.log(
-          "[MediaProcessor] AudioContext not running or does not exist after setup attempts. Skipping global updateAudioEffects."
-        );
-        // This log is now less critical as tryResumeContext was called.
-        // If it's still not running, it means no user gesture has occurred yet.
       }
     } else {
-      console.log(
-        "[MediaProcessor] Audio effects setup not requested. Ensuring any existing processing for these elements is disconnected/bypassed."
-      );
       for (const element of mediaElements) {
         if (!element.isConnected) {
           this.activeMediaElements.delete(element);
           continue;
         }
         try {
-          // Attempt to bypass or disconnect effects for this element
           if (
             typeof (this.audioProcessor as any).bypassEffectsForElement ===
             "function"
           ) {
-            console.log(
-              `[MediaProcessor] Calling bypassEffectsForElement for: ${
-                element.src || "(no src)"
-              }`
-            );
             await (this.audioProcessor as any).bypassEffectsForElement(element);
           } else if (
             typeof (this.audioProcessor as any).disconnectElement === "function"
           ) {
-            console.log(
-              `[MediaProcessor] Calling disconnectElement for: ${
-                element.src || "(no src)"
-              }`
-            );
             await (this.audioProcessor as any).disconnectElement(element);
-          } else {
-            console.log(
-              `[MediaProcessor] No method found on audioProcessor to bypass/disconnect effects for ${
-                element.src || "(no src)"
-              }.`
-            );
-          }
-          // Whether disconnection was successful or not, if effects are not needed,
-          // it's safer to remove it from active list to prevent unintended processing later.
-          // However, it might still be controlled for speed/volume.
-          // For now, let's assume if effects are off, we might not "actively manage" it in the same way.
-          // This part needs careful consideration based on AudioProcessor's capabilities.
-          // A simple approach: if effects are off, it's not "active" in terms of audio graph.
-          if (this.activeMediaElements.has(element)) {
-            // console.log(`[MediaProcessor] Removing from activeMediaElements (effects off): ${element.src || "(no src)"}`);
-            // this.activeMediaElements.delete(element); // Re-evaluating if this is correct. Speed/volume still apply.
           }
         } catch (e) {
           console.error(
-            `[MediaProcessor] Error bypassing/disconnecting effects for element ${
+            `[MediaProcessor] Error disabling effects for ${
               element.src || "(no src)"
             }:`,
             e
           );
         }
       }
-      // If effects are globally turned off, ensure the main audio effects chain is also reset/bypassed
+      
       if (
         this.audioProcessor.audioContext &&
         typeof (this.audioProcessor as any).bypassAllEffects === "function"
       ) {
-        console.log(
-          "[MediaProcessor] Needs no audio effects, calling bypassAllEffects on AudioProcessor."
-        );
         await (this.audioProcessor as any).bypassAllEffects();
       }
     }
