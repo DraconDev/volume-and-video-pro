@@ -18,9 +18,27 @@ export default defineContentScript({
     const settingsHandler = new SettingsHandler();
     const mediaProcessor = new MediaProcessor();
 
+    let hostnameDetectionCleanup: (() => void) | null = null;
+    let contentScriptCleanup: (() => void) | null = null;
+
     // Start the hostname detection and script initialization process
-    setupHostnameDetection(async (hostname: string) => {
-      await initializeContentScript(settingsHandler, mediaProcessor, hostname);
+    hostnameDetectionCleanup = setupHostnameDetection(async (hostname: string) => {
+      contentScriptCleanup = await initializeContentScript(settingsHandler, mediaProcessor, hostname);
     });
+
+    // Add a listener for page unload to perform cleanup
+    const unloadListener = () => {
+      console.log("[ContentScript] Page is unloading. Performing overall cleanup.");
+      if (hostnameDetectionCleanup) {
+        hostnameDetectionCleanup();
+        hostnameDetectionCleanup = null;
+      }
+      if (contentScriptCleanup) {
+        contentScriptCleanup();
+        contentScriptCleanup = null;
+      }
+      window.removeEventListener('unload', unloadListener); // Remove itself
+    };
+    window.addEventListener('unload', unloadListener);
   },
 });
