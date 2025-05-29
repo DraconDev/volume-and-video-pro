@@ -238,28 +238,19 @@ export class MediaProcessor {
 
           // Apply playback speed if different
           const targetSpeed = settings.speed / 100;
-          let speedChanged = false;
-          if (Math.abs(element.playbackRate - targetSpeed) > EPSILON) {
-            // console.log(`[MediaProcessor Immediate] Updating playbackRate for ${element.src || '(no src)'} from ${element.playbackRate} to ${targetSpeed}`);
-            element.playbackRate = targetSpeed;
-            speedChanged = true;
-          }
-          // Always set defaultPlaybackRate as it's less likely to be contested
-          // and good to have as a baseline.
-          if (Math.abs(element.defaultPlaybackRate - targetSpeed) > EPSILON) {
-            element.defaultPlaybackRate = targetSpeed;
-            // speedChanged = true; // Not strictly a direct playbackRate change, but related.
-          }
+          // Always set playbackRate and defaultPlaybackRate to ensure settings apply.
+          // This is crucial because some media players might reset these values
+          // after our script initially sets them, or when a new video source loads.
+          element.playbackRate = targetSpeed;
+          element.defaultPlaybackRate = targetSpeed;
 
-          // If we actually changed speed, and the element is not already tracked, add it.
-          if (
-            element.isConnected &&
-            speedChanged &&
-            !this.activeMediaElements.has(element)
-          ) {
+          // If the element is connected, add it to activeMediaElements.
+          // We assume a change occurred if applySettingsImmediately is called,
+          // or we want to ensure it's tracked for future updates.
+          if (element.isConnected && !this.activeMediaElements.has(element)) {
             this.activeMediaElements.add(element);
             console.log(
-              `[MediaProcessor Immediate] Added to activeMediaElements after changing speed: ${
+              `[MediaProcessor Immediate] Added to activeMediaElements: ${
                 element.src || "(no src)"
               }. Count: ${this.activeMediaElements.size}`
             );
