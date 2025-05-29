@@ -360,8 +360,10 @@ export async function initializeContentScript(
     applyInitialSettings();
   }
 
+:start_line:364
+-------
   // Watch for dynamic changes
-  MediaProcessor.setupMediaObserver(
+  const mediaObserver = MediaProcessor.setupMediaObserver( // Store the observer
     async (addedElements: HTMLMediaElement[]) => {
       console.log(
         `[ContentScript] Processing ${addedElements.length} newly added media elements.`
@@ -403,11 +405,12 @@ export async function initializeContentScript(
     }
   );
 
-  // Ensure AudioContext is closed when the page is hidden or navigated away from
+  // Ensure AudioContext and MutationObserver are closed/disconnected when the page is hidden or navigated away from
   window.addEventListener("pagehide", () => {
     console.log(
-      "[ContentScript] Page is hiding/unloading. Performing final AudioProcessor cleanup."
+      "[ContentScript] Page is hiding/unloading. Performing final cleanup."
     );
     mediaProcessor.audioProcessor.cleanup();
+    mediaObserver.disconnect(); // Disconnect the observer
   });
 }
