@@ -338,32 +338,26 @@ export async function initializeContentScript(
   );
 
   // Initial setup
-  // Apply settings after a short delay to allow the host page to initialize
-  const applyInitialSettings = () => {
-    // No longer async itself, schedules async work
+  // Apply settings immediately after DOMContentLoaded or if the DOM is already ready.
+  const applyInitialSettings = async () => {
     console.log(
-      `[ContentScript DEBUG] Scheduling initial settings application for ${window.location.hostname}`
+      `[ContentScript DEBUG] Applying initial settings for ${window.location.hostname} (immediately)`
     );
-    setTimeout(async () => {
-      console.log(
-        `[ContentScript DEBUG] Applying initial settings for ${window.location.hostname} (after 500ms delay)`
-      );
-      await processMedia(); // processMedia handles finding elements and applying settings
-    }, 500); // Increased delay to 500 milliseconds
+    await processMedia(); // processMedia handles finding elements and applying settings
   };
 
   if (document.readyState === "loading") {
-    // Wait for DOMContentLoaded, then schedule the delayed application
+    // Wait for DOMContentLoaded, then apply settings
     document.addEventListener("DOMContentLoaded", () => {
       console.log(
-        `[ContentScript DEBUG] DOMContentLoaded event for ${window.location.hostname}. Scheduling initial settings.`
+        `[ContentScript DEBUG] DOMContentLoaded event for ${window.location.hostname}. Applying initial settings.`
       );
       applyInitialSettings();
     });
   } else {
-    // DOM is already ready, schedule the delayed application
+    // DOM is already ready, apply settings immediately
     console.log(
-      `[ContentScript DEBUG] DOM already ready for ${window.location.hostname}. Scheduling initial settings.`
+      `[ContentScript DEBUG] DOM already ready for ${window.location.hostname}. Applying initial settings.`
     );
     applyInitialSettings();
   }
