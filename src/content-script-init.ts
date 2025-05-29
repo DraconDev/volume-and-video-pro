@@ -6,9 +6,11 @@ export async function initializeContentScript(
   settingsHandler: SettingsHandler,
   mediaProcessor: MediaProcessor,
   hostname: string
-) {
+): Promise<() => void> {
   console.log(`[ContentScript] Initializing script for hostname: ${hostname}`);
   settingsHandler.initialize(hostname); // Initialize with the correct hostname
+
+  const cleanupFunctions: (() => void)[] = [];
 
   // --- AudioContext Resume Handler ---
   const resumeContextHandler = async (event: Event) => {
@@ -210,130 +212,130 @@ export async function initializeContentScript(
   };
 
   // Listen for settings updates from the background script
-  chrome.runtime.onMessage.addListener(
-    (message: MessageType, sender, sendResponse) => {
+  const messageListener = (message: MessageType, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
+    console.log(
+      "[ContentScript Listener] Received message:",
+      JSON.stringify(message)
+    );
+    if (message.type === "UPDATE_SETTINGS") {
       console.log(
-        "[ContentScript Listener] Received message:",
-        JSON.stringify(message)
+        "[ContentScript Listener] Processing UPDATE_SETTINGS from background/popup"
       );
-      if (message.type === "UPDATE_SETTINGS") {
-        console.log(
-          "[ContentScript Listener] Processing UPDATE_SETTINGS from background/popup"
-        );
-        console.log("Content: Applying settings update received via message.");
-        // Ensure settingsHandler is initialized before applying the update
-        (async () => {
-          try {
-            await settingsHandler.ensureInitialized(); // Wait for initialization
-            settingsHandler.updateSettings(message.settings); // Update local settings cache
+      console.log("Content: Applying settings update received via message.");
+      // Ensure settingsHandler is initialized before applying the update
+      (async () => {
+        try {
+          await settingsHandler.ensureInitialized(); // Wait for initialization
+          settingsHandler.updateSettings(message.settings); // Update local settings cache
 
-            const newSettings = settingsHandler.getCurrentSettings(); // Get the just-updated settings
-            const needsProcessingNow = settingsHandler.needsAudioProcessing(); // Check based on new settings
+          const newSettings = settingsHandler.getCurrentSettings(); // Get the just-updated settings
+          const needsProcessingNow = settingsHandler.needsAudioProcessing(); // Check based on new settings
 
+          console.log(
+            `Content: Settings updated via message. New effective settings: ${JSON.stringify(
+              newSettings
+            )}. Needs audio processing: ${needsProcessingNow}. Reprocessing media elements...`
+          );
+
+          // Get the list of currently managed media elements from MediaProcessor
+          const managedMediaElements =
+            mediaProcessor.getManagedMediaElements();
+          console.log(
+            `[ContentScript Listener] Found ${managedMediaElements.length} managed media elements to re-process with new settings.`
+          );
+
+          // Apply immediate settings (speed, volume) to all managed elements first
+          if (managedMediaElements.length > 0) {
             console.log(
-              `Content: Settings updated via message. New effective settings: ${JSON.stringify(
-                newSettings
-              )}. Needs audio processing: ${needsProcessingNow}. Reprocessing media elements...`
+              `[ContentScript Listener] Applying immediate settings to ${managedMediaElements.length} managed elements.`
             );
-
-            // Get the list of currently managed media elements from MediaProcessor
-            const managedMediaElements =
-              mediaProcessor.getManagedMediaElements();
-            console.log(
-              `[ContentScript Listener] Found ${managedMediaElements.length} managed media elements to re-process with new settings.`
+            mediaProcessor.applySettingsImmediately(
+              managedMediaElements,
+              newSettings
             );
+          }
 
-            // Apply immediate settings (speed, volume) to all managed elements first
-            if (managedMediaElements.length > 0) {
-              console.log(
-                `[ContentScript Listener] Applying immediate settings to ${managedMediaElements.length} managed elements.`
-              );
-              mediaProcessor.applySettingsImmediately(
-                managedMediaElements,
-                newSettings
-              );
-            }
-
-            // Then, process audio effects if needed
-            if (needsProcessingNow) {
-              if (mediaProcessor.canApplyAudioEffects()) {
-                // Only apply audio effects if the AudioContext is already running
-                if (managedMediaElements.length > 0) {
-                  console.log(
-                    `[ContentScript Listener] AudioContext is running. Processing audio effects for ${managedMediaElements.length} managed elements.`
-                  );
-                  await mediaProcessor.processMediaElements(
-                    managedMediaElements,
-                    newSettings,
-                    needsProcessingNow
-                  );
-                } else {
-                  console.log(
-                    "[ContentScript Listener] AudioContext is running, but no managed media elements found. Attempting fallback to fresh scan."
-                  );
-                  const freshScanElements = mediaProcessor.findMediaElements();
-                  if (freshScanElements.length > 0) {
-                    console.log(
-                      `[ContentScript Listener] Fallback: Found ${freshScanElements.length} elements on fresh scan for audio effects. Processing them.`
-                    );
-                    mediaProcessor.applySettingsImmediately(
-                      freshScanElements,
-                      newSettings
-                    ); // Apply immediate settings to fallback elements too
-                    await mediaProcessor.processMediaElements(
-                      freshScanElements,
-                      newSettings,
-                      needsProcessingNow
-                    );
-                  } else {
-                    console.log(
-                      "[ContentScript Listener] Fallback: No elements found on fresh scan either for audio effects."
-                    );
-                  }
-                }
-              } else {
-                console.log(
-                  "[ContentScript Listener] Audio effects needed, but AudioContext is not running. Deferring full audio effects application until user gesture (e.g., play)."
-                );
-                // No action needed here, the 'play' event listener will handle it.
-              }
-            } else {
-              console.log(
-                "[ContentScript Listener] Audio effects not needed. Ensuring any existing processing for managed elements is disconnected/bypassed."
-              );
-              // If audio effects are turned off, ensure they are properly disconnected
+          // Then, process audio effects if needed
+          if (needsProcessingNow) {
+            if (mediaProcessor.canApplyAudioEffects()) {
+              // Only apply audio effects if the AudioContext is already running
               if (managedMediaElements.length > 0) {
+                console.log(
+                  `[ContentScript Listener] AudioContext is running. Processing audio effects for ${managedMediaElements.length} managed elements.`
+                );
                 await mediaProcessor.processMediaElements(
                   managedMediaElements,
                   newSettings,
                   needsProcessingNow
                 );
               } else {
+                console.log(
+                  "[ContentScript Listener] AudioContext is running, but no managed media elements found. Attempting fallback to fresh scan."
+                );
                 const freshScanElements = mediaProcessor.findMediaElements();
                 if (freshScanElements.length > 0) {
+                  console.log(
+                    `[ContentScript Listener] Fallback: Found ${freshScanElements.length} elements on fresh scan for audio effects. Processing them.`
+                  );
+                  mediaProcessor.applySettingsImmediately(
+                    freshScanElements,
+                    newSettings
+                  ); // Apply immediate settings to fallback elements too
                   await mediaProcessor.processMediaElements(
                     freshScanElements,
                     newSettings,
                     needsProcessingNow
                   );
+                } else {
+                  console.log(
+                    "[ContentScript Listener] Fallback: No elements found on fresh scan either for audio effects."
+                  );
                 }
               }
+            } else {
+              console.log(
+                "[ContentScript Listener] Audio effects needed, but AudioContext is not running. Deferring full audio effects application until user gesture (e.g., play)."
+              );
+              // No action needed here, the 'play' event listener will handle it.
             }
-
+          } else {
             console.log(
-              "[ContentScript Listener] Finished applying settings and processing media elements after settings update."
+              "[ContentScript Listener] Audio effects not needed. Ensuring any existing processing for managed elements is disconnected/bypassed."
             );
-          } catch (error) {
-            console.error(
-              "Content: Error during UPDATE_SETTINGS processing (after ensuring initialized):",
-              error
-            );
+            // If audio effects are turned off, ensure they are properly disconnected
+            if (managedMediaElements.length > 0) {
+              await mediaProcessor.processMediaElements(
+                managedMediaElements,
+                newSettings,
+                needsProcessingNow
+              );
+            } else {
+              const freshScanElements = mediaProcessor.findMediaElements();
+              if (freshScanElements.length > 0) {
+                await mediaProcessor.processMediaElements(
+                  freshScanElements,
+                  newSettings,
+                  needsProcessingNow
+                );
+              }
+            }
           }
-        })();
-      }
-      return false;
+
+          console.log(
+            "[ContentScript Listener] Finished applying settings and processing media elements after settings update."
+          );
+        } catch (error) {
+          console.error(
+            "Content: Error during UPDATE_SETTINGS processing (after ensuring initialized):",
+            error
+          );
+        }
+      })();
     }
-  );
+    return false;
+  };
+  chrome.runtime.onMessage.addListener(messageListener);
+  cleanupFunctions.push(() => chrome.runtime.onMessage.removeListener(messageListener));
 
   // Initial setup
   // Apply settings immediately after DOMContentLoaded or if the DOM is already ready.
@@ -344,14 +346,17 @@ export async function initializeContentScript(
     await processMedia(); // processMedia handles finding elements and applying settings
   };
 
+  const domContentLoadedListener = () => {
+    console.log(
+      `[ContentScript DEBUG] DOMContentLoaded event for ${window.location.hostname}. Applying initial settings.`
+    );
+    applyInitialSettings();
+  };
+
   if (document.readyState === "loading") {
     // Wait for DOMContentLoaded, then apply settings
-    document.addEventListener("DOMContentLoaded", () => {
-      console.log(
-        `[ContentScript DEBUG] DOMContentLoaded event for ${window.location.hostname}. Applying initial settings.`
-      );
-      applyInitialSettings();
-    });
+    document.addEventListener("DOMContentLoaded", domContentLoadedListener);
+    cleanupFunctions.push(() => document.removeEventListener("DOMContentLoaded", domContentLoadedListener));
   } else {
     // DOM is already ready, apply settings immediately
     console.log(
@@ -361,7 +366,7 @@ export async function initializeContentScript(
   }
 
   // Watch for dynamic changes
-  MediaProcessor.setupMediaObserver(
+  const mediaObserver = MediaProcessor.setupMediaObserver(
     async (addedElements: HTMLMediaElement[]) => {
       console.log(
         `[ContentScript] Processing ${addedElements.length} newly added media elements.`
@@ -402,12 +407,21 @@ export async function initializeContentScript(
       }
     }
   );
+  cleanupFunctions.push(() => mediaObserver.disconnect());
+
 
   // Ensure AudioContext is closed when the page is hidden or navigated away from
-  window.addEventListener("pagehide", () => {
+  const pageHideListener = () => {
     console.log(
       "[ContentScript] Page is hiding/unloading. Performing final AudioProcessor cleanup."
     );
     mediaProcessor.audioProcessor.cleanup();
-  });
+  };
+  window.addEventListener("pagehide", pageHideListener);
+  cleanupFunctions.push(() => window.removeEventListener("pagehide", pageHideListener));
+
+  return () => {
+    console.log("[ContentScript] Running cleanup functions.");
+    cleanupFunctions.forEach(cleanup => cleanup());
+  };
 }
