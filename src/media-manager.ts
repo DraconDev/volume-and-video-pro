@@ -4,98 +4,33 @@ const mediaConfig = {
   baseSelectors: [
     "video",
     "audio",
-    // Generic class/ID based selectors
+    // Essential player patterns
     "[class*='player']",
     "[class*='video']",
-    "[class*='audio']",
     "[id*='player']",
     "[id*='video']",
-    "[id*='audio']",
-    // Common player libraries/frameworks
+    // Common frameworks
     ".video-js",
     ".jwplayer",
-    ".html5-video-player", // YouTube
+    ".html5-video-player",
     ".plyr",
-    ".vjs-tech", // Video.js tech element
-    ".shaka-video", // Shaka Player
-    ".flowplayer", // Flowplayer
-    ".mejs__container", // MediaElement.js
-    ".uppod-video", // Uppod player
-    ".dplayer", // DPlayer
-    ".artplayer-app", // ArtPlayer
-    ".xgplayer-container", // XGPlayer
-    // Data attributes
+    // Key data attributes
+    "[data-player]",
+    "[data-video]",
     "[data-media]",
-    "[data-player-id]",
-    "[data-video-id]",
-    "[data-audio-id]",
-    "[data-component*='player']",
-    // More generic data attributes
-    "[data-src*='video']",
-    "[data-src*='audio']",
-    "[data-url*='video']",
-    "[data-url*='audio']",
-    "[data-type*='video']",
-    "[data-type*='audio']",
-    "[data-media-id]",
-    "[data-media-src]",
-    // ARIA roles (use with caution, can be broad)
-    "[role='application'][aria-label*='player']",
-    "[role='media']",
-    "[role='img'][aria-label*='video']", // Sometimes video players are just images with role img
-    // Schema.org markup and other microdata
-    "div[itemtype*='schema.org/VideoObject']",
-    "div[itemtype*='schema.org/AudioObject']",
-    "[itemprop*='video']",
-    "[itemprop*='audio']",
-    // Elements with tabindex that might be interactive players
-    "[tabindex][class*='player']",
-    "[tabindex][class*='video']",
-    "[tabindex][class*='audio']",
-    // More common player classes/IDs
-    ".media-player",
-    ".player-container",
-    ".video-container",
-    ".audio-container",
-    ".embed-responsive-item", // Bootstrap video embeds
-    ".wp-video", // WordPress video
-    ".wp-audio", // WordPress audio
-    ".elementor-video", // Elementor video widget
-    ".elementor-audio", // Elementor audio widget
-    // Common iframe sources
+    // Key iframe sources
     "iframe[src*='youtube.com']",
     "iframe[src*='vimeo.com']",
     "iframe[src*='dailymotion.com']",
-    "iframe[src*='twitch.tv']",
-    "iframe[src*='facebook.com']",
-    "iframe[src*='soundcloud.com']",
-    "iframe[src*='spotify.com']",
-    "iframe[src*='wistia.net']",
-    "iframe[src*='brightcove.com']",
-    "iframe[src*='kaltura.com']",
+    "iframe[src*='twitch.tv']"
   ],
   siteSelectors: {
-    "problematicsite.com": [
-      ".problem-player",
-      "div[data-player]",
-      "video[src*='specialstream']",
-    ],
-    "youtube.com": [
-      ".html5-video-player", // Correct selector for the main player container
-    ],
-    "odysee.com": [
-      ".vjs-tech", // Common Video.js tech element
-      ".video-js", // Main Video.js container
-      ".vjs-control-bar", // Video.js control bar
-      "div[class*='player']", // General div with 'player' in class
-      "div[data-player-type='odysee']", // Hypothetical Odysee specific data attribute
-      "video", // Ensure direct video tag is also considered for Odysee
-    ],
-    "netflix.com": ["[data-uia='video-player']", ".PlayerControls"],
-    "hulu.com": ["video", ".HuluPlayer"],
-    "amazon.com": ["[data-player='AmazonVideo']", ".avc-container"],
-    "disneyplus.com": [".dp-video-player", "[data-testid='video-player']"],
-  },
+    "youtube.com": [".html5-video-player"],
+    "netflix.com": ["[data-uia='video-player']"],
+    "hulu.com": [".HuluPlayer"],
+    "amazon.com": ["[data-player='AmazonVideo']"],
+    "disneyplus.com": [".dp-video-player"]
+  }
 };
 
 export class MediaManager {
@@ -143,52 +78,35 @@ export class MediaManager {
   // Updated custom player detection with fallback dynamic scanning
   private static findCustomPlayers(root: ParentNode): HTMLElement[] {
     const customPlayers: HTMLElement[] = [];
-    const baseSelectors: string[] = mediaConfig.baseSelectors; // from reference file
-    // Append extra selectors if needed
-    const selectors = baseSelectors.concat(this.getExtraSelectorsForSite());
-    console.log(`[MediaManager] findCustomPlayers: Searching with selectors: ${selectors.join(", ")}`);
-
+    const baseSelectors = mediaConfig.baseSelectors;
+    const siteSelectors = this.getExtraSelectorsForSite();
+    const allSelectors = [...baseSelectors, ...siteSelectors];
+    
+    // Use a Set to avoid duplicate elements
+    const selectorElements = new Set<Element>();
+    
     try {
-      const elements = root.querySelectorAll(selectors.join(","));
-      console.log(`[MediaManager] findCustomPlayers: QuerySelectorAll found ${elements.length} elements.`);
-      elements.forEach((element) => {
-        if (
-          element instanceof HTMLElement &&
-          !this.processedElements.has(element)
-        ) {
+      // Process each selector individually to avoid massive combined selector
+      for (const selector of allSelectors) {
+        try {
+          const elements = root.querySelectorAll(selector);
+          elements.forEach(el => selectorElements.add(el));
+        } catch (e) {
+          console.warn(`Error with selector '${selector}':`, e);
+        }
+      }
+      
+      // Process collected elements
+      selectorElements.forEach(element => {
+        if (element instanceof HTMLElement && !this.processedElements.has(element)) {
           this.processedElements.add(element);
           customPlayers.push(element);
-          console.log(`[MediaManager] findCustomPlayers: Added custom player container: ${element.tagName} ${element.className || element.id} (src: ${element.getAttribute('src') || 'N/A'})`);
-        } else if (element instanceof HTMLElement) {
-          console.log(`[MediaManager] findCustomPlayers: Skipping already processed custom player container: ${element.tagName} ${element.className || element.id}`);
         }
       });
     } catch (e) {
-      console.warn("Error finding custom players using selectors:", e);
+      console.warn("Error finding custom players:", e);
     }
-
-    // Always perform a broader scan for elements that contain media,
-    // regardless of whether initial selectors found anything.
-    // This ensures we catch players that don't match specific selectors but wrap media.
-    const allElements =
-      root instanceof Element ? Array.from(root.getElementsByTagName("*")) : [];
-    console.log(`[MediaManager] findCustomPlayers: Scanning all ${allElements.length} elements for descendants.`);
-    allElements.forEach((elem) => {
-      if (
-        elem instanceof HTMLElement &&
-        !this.processedElements.has(elem) &&
-        // Check if the element is not a media element itself but contains one
-        !(elem.tagName === "VIDEO" || elem.tagName === "AUDIO") &&
-        elem.querySelector("video, audio")
-      ) {
-        this.processedElements.add(elem);
-        customPlayers.push(elem);
-        console.log(`[MediaManager] findCustomPlayers: Added element containing media: ${elem.tagName} ${elem.className || elem.id} (src: ${elem.getAttribute('src') || 'N/A'})`);
-      } else if (elem instanceof HTMLElement) {
-        // console.log(`[MediaManager] findCustomPlayers: Skipping already processed or non-media-containing element: ${elem.tagName} ${elem.className || elem.id}`);
-      }
-    });
-
+    
     return customPlayers;
   }
 
@@ -201,16 +119,13 @@ export class MediaManager {
     }
 
     const elements: HTMLMediaElement[] = [];
-    console.log(`[MediaManager] findMediaElements: Starting search in root: ${root.nodeName}`);
 
     try {
       // Direct media elements
       const mediaElements = root.querySelectorAll("video, audio");
-      console.log(`[MediaManager] findMediaElements: QuerySelectorAll for "video, audio" found ${mediaElements.length} elements.`);
       mediaElements.forEach((element) => {
         if (element instanceof HTMLMediaElement) {
           elements.push(element);
-          console.log(`[MediaManager] findMediaElements: Added direct media element: ${element.tagName} (src: ${element.src || '(no src)'}, id: ${element.id || 'N/A'})`);
         }
       });
 
@@ -221,16 +136,12 @@ export class MediaManager {
 
       // Custom players (only at top level)
       if (depth === 0) {
-        console.log(`[MediaManager] findMediaElements: Calling findCustomPlayers for top level.`);
         const customPlayers = this.findCustomPlayers(root);
-        console.log(`[MediaManager] findMediaElements: findCustomPlayers returned ${customPlayers.length} custom player containers.`);
         customPlayers.forEach((player) => {
           const mediaInPlayer = player.querySelectorAll("video, audio");
-          console.log(`[MediaManager] findMediaElements: Found ${mediaInPlayer.length} media elements within custom player container: ${player.tagName} ${player.className || player.id}`);
           mediaInPlayer.forEach((element) => {
             if (element instanceof HTMLMediaElement) {
               elements.push(element);
-              console.log(`[MediaManager] findMediaElements: Added media element from custom player: ${element.tagName} (src: ${element.src || '(no src)'}, id: ${element.id || 'N/A'})`);
             }
           });
         });
@@ -240,7 +151,6 @@ export class MediaManager {
         console.warn("Error finding media elements:", e);
       }
     }
-    console.log(`[MediaManager] findMediaElements: Returning ${elements.length} unique media elements.`);
 
     return Array.from(new Set(elements));
   }
@@ -251,16 +161,14 @@ export class MediaManager {
   ): MutationObserver {
     const debouncedCheck = () => {
       if (MediaManager.debounceTimeout) {
-        // Use static debounceTimeout
         clearTimeout(MediaManager.debounceTimeout);
       }
       MediaManager.debounceTimeout = setTimeout(() => {
-        // Use static debounceTimeout
         const elements = this.findMediaElements();
         if (elements.length > 0) {
           onAdded(elements);
         }
-      }, MediaManager.DEBOUNCE_DELAY); // Use static DEBOUNCE_DELAY
+      }, MediaManager.DEBOUNCE_DELAY);
     };
 
     // Initial check
