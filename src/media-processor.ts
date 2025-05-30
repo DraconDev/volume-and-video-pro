@@ -162,50 +162,48 @@ export class MediaProcessor {
     );
 
     const targetSpeed = settings.speed / 100;
-    let index = 0;
-
-    const processBatch = () => {
-      const startTime = performance.now();
-      let processed = 0;
-
-      // Process elements in batches without blocking UI
-      while (index < mediaElements.length && performance.now() - startTime < 10) {
-        const element = mediaElements[index++];
-        processed++;
-        
-        try {
-          // Skip disconnected elements
-          if (!element.isConnected) {
-            this.activeMediaElements.delete(element);
-            continue;
-          }
-
-          // Apply playback speed
-          element.playbackRate = targetSpeed;
-          element.defaultPlaybackRate = targetSpeed;
-
-          // Track connected elements
-          if (!this.activeMediaElements.has(element)) {
-            this.activeMediaElements.add(element);
-          }
-        } catch (e) {
-          console.error(
-            `MediaProcessor: Error applying settings to ${
-              element.src || "(no src)"
-            }:`,
-            e
-          );
+    
+    // Process all elements synchronously for immediate effect
+    for (const element of mediaElements) {
+      try {
+        if (!element.isConnected) {
+          this.activeMediaElements.delete(element);
+          continue;
         }
+        
+        // Apply playback speed immediately
+        element.playbackRate = targetSpeed;
+        element.defaultPlaybackRate = targetSpeed;
+        
+        // Track connected elements
+        if (!this.activeMediaElements.has(element)) {
+          this.activeMediaElements.add(element);
+        }
+      } catch (e) {
+        console.error(
+          `MediaProcessor: Error applying settings to ${
+            element.src || "(no src)"
+          }:`,
+          e
+        );
       }
+    }
+  }
 
-      // Continue processing if elements remain
-      if (index < mediaElements.length) {
-        requestAnimationFrame(processBatch);
-      }
-    };
-
-    // Start processing
-    requestAnimationFrame(processBatch);
+  applySettingsToVisibleMedia(
+    settings: AudioSettings
+  ): void {
+    // Get all media elements and filter for visible ones
+    const visibleMedia = this.getManagedMediaElements().filter(el =>
+      el.offsetWidth > 0 || el.offsetHeight > 0
+    );
+    
+    if (visibleMedia.length > 0) {
+      console.log(
+        `[MediaProcessor] Applying settings to ${visibleMedia.length} visible media elements`
+      );
+      this.applySettingsImmediately(visibleMedia, settings);
+    }
   }
 
   /**
