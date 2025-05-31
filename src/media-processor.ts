@@ -5,6 +5,8 @@ import { MediaManager } from "./media-manager";
 export class MediaProcessor {
   audioProcessor: AudioProcessor;
   private activeMediaElements = new Set<HTMLMediaElement>();
+  private elementSettings = new WeakMap<HTMLMediaElement, AudioSettings>();
+  private elementListeners = new WeakMap<HTMLMediaElement, () => void>();
 
   constructor() {
     this.audioProcessor = new AudioProcessor();
@@ -12,16 +14,16 @@ export class MediaProcessor {
 
   // Method to get currently managed media elements, filtering for connected ones
   public getManagedMediaElements(): HTMLMediaElement[] {
+    const disconnected: HTMLMediaElement[] = [];
+    
     this.activeMediaElements.forEach((el) => {
       if (!el.isConnected) {
-        this.activeMediaElements.delete(el);
-        console.log(
-          `[MediaProcessor] Removed disconnected element from active list: ${
-            el.src || "(no src)"
-          }`
-        );
+        disconnected.push(el);
       }
     });
+    
+    disconnected.forEach(el => this.cleanupElement(el));
+    
     return Array.from(this.activeMediaElements);
   }
 
@@ -167,13 +169,26 @@ export class MediaProcessor {
     for (const element of mediaElements) {
       try {
         if (!element.isConnected) {
-          this.activeMediaElements.delete(element);
+          this.cleanupElement(element);
           continue;
         }
         
         // Apply playback speed immediately
         element.playbackRate = targetSpeed;
         element.defaultPlaybackRate = targetSpeed;
+        
+        // Store current settings for this element
+        this.elementSettings.set(element, settings);
+        
+        // Add play event listener if not already added
+        if (!this.elementListeners.has(element)) {
+          const playHandler = () => {
+            console.log(`[MediaProcessor] Reapplying settings on play event for ${element.src || "(no src)"}`);
+            this.updatePlaybackSpeed(element, settings.speed);
+          };
+          element.addEventListener('play', playHandler);
+          this.elementListeners.set(element, playHandler);
+        }
         
         // Track connected elements
         if (!this.activeMediaElements.has(element)) {
@@ -188,6 +203,20 @@ export class MediaProcessor {
         );
       }
     }
+  }
+  
+  private cleanupElement(element: HTMLMediaElement): void {
+    if (this.activeMediaElements.has(element)) {
+      this.activeMediaElements.delete(element);
+    }
+    
+    const playHandler = this.elementListeners.get(element);
+    if (playHandler) {
+      element.removeEventListener('play', playHandler);
+      this.elementListeners.delete(element);
+    }
+    
+    this.elementSettings.delete(element);
   }
 
   applySettingsToVisibleMedia(
