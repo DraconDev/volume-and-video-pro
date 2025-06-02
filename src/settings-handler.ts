@@ -30,6 +30,16 @@ export class SettingsHandler {
              return;
         }
 
+        // Check if chrome.runtime is available
+        if (typeof chrome === 'undefined' || !chrome.runtime) {
+            console.warn(
+                `SettingsHandler (Target: ${this.targetHostname}): chrome.runtime not available. Using default settings.`
+            );
+            this.currentSettings = { ...defaultSettings };
+            this.resolveInitialization();
+            return;
+        }
+
         console.log(`SettingsHandler (Target: ${this.targetHostname}): Attempting to send GET_INITIAL_SETTINGS.`);
         try {
             const response = await chrome.runtime.sendMessage({
