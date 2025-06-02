@@ -27,7 +27,7 @@ export default defineContentScript({
     });
 
     // Add a listener for page unload to perform cleanup
-    const unloadListener = () => {
+    const beforeUnloadListener = () => {
       console.log("[ContentScript] Page is unloading. Performing overall cleanup.");
       if (hostnameDetectionCleanup) {
         hostnameDetectionCleanup();
@@ -37,8 +37,7 @@ export default defineContentScript({
         contentScriptCleanup();
         contentScriptCleanup = null;
       }
-      window.removeEventListener('unload', unloadListener); // Remove itself
     };
-    window.addEventListener('unload', unloadListener);
+    window.addEventListener('beforeunload', beforeUnloadListener);
   },
 });
