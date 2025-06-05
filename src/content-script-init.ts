@@ -339,7 +339,7 @@ export async function initializeContentScript(
     chrome.runtime.onMessage.addListener(messageListener);
     cleanupFunctions.push(() => chrome.runtime.onMessage.removeListener(messageListener));
   } else {
-    console.warn("[ContentScript] chrome.runtime.onMessage not available - skipping message listener setup");
+    console.debug("[ContentScript] chrome.runtime.onMessage not available - skipping message listener setup");
   }
 
   // Initial setup
