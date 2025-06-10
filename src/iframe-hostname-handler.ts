@@ -3,7 +3,9 @@ import { MediaProcessor } from "./media-processor";
 
 type InitializeScriptCallback = (hostname: string) => Promise<void>;
 
-export function setupHostnameDetection(initializeScript: InitializeScriptCallback): () => void {
+export function setupHostnameDetection(
+  initializeScript: InitializeScriptCallback
+): () => void {
   let cleanupFunctions: (() => void)[] = [];
 
   if (window.self === window.top) {
@@ -16,28 +18,50 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
 
     // Listener for requests from iframes
     const topWindowMessageListener = (event: MessageEvent) => {
-      console.log(`[ContentScript TOP] Received message. Origin: ${event.origin}, Data Type: ${typeof event.data}, Data: ${event.data}`);
+      console.log(
+        `[ContentScript TOP] Received message. Origin: ${
+          event.origin
+        }, Data Type: ${typeof event.data}, Data: ${event.data}`
+      );
 
       // Only process messages that are strings and look like our JSON messages
-      if (typeof event.data !== "string" || !event.data.startsWith('{') || !event.data.endsWith('}')) {
-        console.log('[ContentScript TOP] Ignoring non-JSON or non-VVP message from iframe (format mismatch).');
+      if (
+        typeof event.data !== "string" ||
+        !event.data.startsWith("{") ||
+        !event.data.endsWith("}")
+      ) {
+        console.log(
+          "[ContentScript TOP] Ignoring non-JSON or non-VVP message from iframe (format mismatch)."
+        );
         return;
       }
 
       // Add a check for our specific message types before parsing
-      if (!event.data.includes("VVP_REQUEST_TOP_HOSTNAME") && !event.data.includes("VVP_TOP_HOSTNAME_INFO")) {
-          console.log('[ContentScript TOP] Ignoring non-VVP message from iframe (content mismatch).');
-          return;
+      if (
+        !event.data.includes("VVP_REQUEST_TOP_HOSTNAME") &&
+        !event.data.includes("VVP_TOP_HOSTNAME_INFO")
+      ) {
+        console.log(
+          "[ContentScript TOP] Ignoring non-VVP message from iframe (content mismatch)."
+        );
+        return;
       }
       let parsedData;
       try {
         parsedData = JSON.parse(event.data);
       } catch (e) {
-        console.warn('[ContentScript TOP] Failed to parse event.data string from iframe (likely not our message):', event.data, e);
+        console.warn(
+          "[ContentScript TOP] Failed to parse event.data string from iframe (likely not our message):",
+          event.data,
+          e
+        );
         return;
       }
 
-      console.log(`[ContentScript TOP] Parsed VVP message from iframe (Origin: ${event.origin}):`, parsedData);
+      console.log(
+        `[ContentScript TOP] Parsed VVP message from iframe (Origin: ${event.origin}):`,
+        parsedData
+      );
 
       if (
         event.source && // Ensure source exists (source is the window object of the sender)
@@ -56,14 +80,20 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
           responsePayload,
           event.origin // Respond to the specific origin of the iframe
         );
-        console.log(`[ContentScript TOP] Sent VVP_TOP_HOSTNAME_INFO response to iframe at ${event.origin}.`);
+        console.log(
+          `[ContentScript TOP] Sent VVP_TOP_HOSTNAME_INFO response to iframe at ${event.origin}.`
+        );
       } else {
-        console.log(`[ContentScript TOP] Received other parsed JSON message type (not VVP_REQUEST_TOP_HOSTNAME): ${parsedData.type} from origin ${event.origin}`, parsedData);
+        console.log(
+          `[ContentScript TOP] Received other parsed JSON message type (not VVP_REQUEST_TOP_HOSTNAME): ${parsedData.type} from origin ${event.origin}`,
+          parsedData
+        );
       }
     };
     window.addEventListener("message", topWindowMessageListener);
-    cleanupFunctions.push(() => window.removeEventListener("message", topWindowMessageListener));
-
+    cleanupFunctions.push(() =>
+      window.removeEventListener("message", topWindowMessageListener)
+    );
   } else {
     // --- Running in an IFRAME ---
     const iframeOwnHostname = window.location.hostname;
@@ -75,35 +105,59 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
 
     // Listener for the response from the top window
     const responseListener = (event: MessageEvent) => {
-      console.log(`[ContentScript iFrame] Received message. Origin: ${event.origin}, Data Type: ${typeof event.data}, Data: ${event.data}`);
+      console.log(
+        `[ContentScript iFrame] Received message. Origin: ${
+          event.origin
+        }, Data Type: ${typeof event.data}, Data: ${event.data}`
+      );
 
       // Only process messages from the top window
       if (event.source !== window.top) {
-        console.log(`[ContentScript iFrame] Received message from non-top source: ${event.origin}. Ignoring.`);
+        console.log(
+          `[ContentScript iFrame] Received message from non-top source: ${event.origin}. Ignoring.`
+        );
         return;
       }
 
       // Only process messages that are strings and look like our JSON messages
-      if (typeof event.data !== "string" || !event.data.startsWith('{') || !event.data.endsWith('}')) {
-        console.log('[ContentScript iFrame] Ignoring non-JSON or non-VVP message from top (format mismatch).');
+      if (
+        typeof event.data !== "string" ||
+        !event.data.startsWith("{") ||
+        !event.data.endsWith("}")
+      ) {
+        console.log(
+          "[ContentScript iFrame] Ignoring non-JSON or non-VVP message from top (format mismatch)."
+        );
         return;
       }
 
       // Add a check for our specific message types before parsing
-      if (!event.data.includes("VVP_REQUEST_TOP_HOSTNAME") && !event.data.includes("VVP_TOP_HOSTNAME_INFO")) {
-          console.log('[ContentScript iFrame] Ignoring non-VVP message from top (content mismatch).');
-          return;
+      if (
+        !event.data.includes("VVP_REQUEST_TOP_HOSTNAME") &&
+        !event.data.includes("VVP_TOP_HOSTNAME_INFO")
+      ) {
+        console.log(
+          "[ContentScript iFrame] Ignoring non-VVP message from top (content mismatch)."
+        );
+        return;
       }
 
       let parsedData;
       try {
         parsedData = JSON.parse(event.data);
       } catch (e) {
-        console.warn('[ContentScript iFrame] Failed to parse event.data string from top:', event.data, e);
+        console.warn(
+          "[ContentScript iFrame] Failed to parse event.data string from top:",
+          event.data,
+          e
+        );
         return;
       }
 
-      console.log(`[ContentScript iFrame] Parsed VVP message from top (Origin: ${event.origin}):`, parsedData);
+      console.log(
+        `[ContentScript iFrame] Parsed VVP message from top (Origin: ${event.origin}):`,
+        parsedData
+      );
 
       if (
         parsedData &&
@@ -127,15 +181,23 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
           parsedData
         );
         window.removeEventListener("message", responseListener);
-        cleanupFunctions = cleanupFunctions.filter(f => f !== (() => window.removeEventListener("message", responseListener))); // Remove this specific cleanup
+        cleanupFunctions = cleanupFunctions.filter(
+          (f) =>
+            f !==
+            (() => window.removeEventListener("message", responseListener))
+        ); // Remove this specific cleanup
         initializeScript(parsedData.hostname);
       } else if (parsedData && parsedData.type) {
-        console.log(`[ContentScript iFrame] Received other parsed JSON message type from top: ${parsedData.type} from origin ${event.origin}`, parsedData);
+        console.log(
+          `[ContentScript iFrame] Received other parsed JSON message type from top: ${parsedData.type} from origin ${event.origin}`,
+          parsedData
+        );
       }
     };
     window.addEventListener("message", responseListener);
-    cleanupFunctions.push(() => window.removeEventListener("message", responseListener));
-
+    cleanupFunctions.push(() =>
+      window.removeEventListener("message", responseListener)
+    );
 
     // Request the hostname from the top window, sending stringified JSON
     if (window.top && window.top !== window.self) {
@@ -152,9 +214,13 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
             iframeOrigin: window.location.origin,
           });
           window.top.postMessage(messagePayload, "*");
-          console.log(`[ContentScript iFrame] Sent VVP_REQUEST_TOP_HOSTNAME to top window.`);
+          console.log(
+            `[ContentScript iFrame] Sent VVP_REQUEST_TOP_HOSTNAME to top window.`
+          );
         } else {
-          console.warn(`[ContentScript iFrame] window.top became null or self within setTimeout. Cannot send message.`);
+          console.warn(
+            `[ContentScript iFrame] window.top became null or self within setTimeout. Cannot send message.`
+          );
         }
       }, 500); // Delay by 500ms
       cleanupFunctions.push(() => clearTimeout(requestTimeout));
@@ -165,8 +231,11 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
       // Initialize with own hostname immediately if top is inaccessible or is self
       initializeScript(iframeOwnHostname);
       window.removeEventListener("message", responseListener); // Clean up listener as it's not needed
-      cleanupFunctions = cleanupFunctions.filter(f => f !== (() => window.removeEventListener("message", responseListener))); // Remove this specific cleanup
-      return () => cleanupFunctions.forEach(f => f()); // Return cleanup immediately
+      cleanupFunctions = cleanupFunctions.filter(
+        (f) =>
+          f !== (() => window.removeEventListener("message", responseListener))
+      ); // Remove this specific cleanup
+      return () => cleanupFunctions.forEach((f) => f()); // Return cleanup immediately
     }
 
     // Fallback timeout in case the message never arrives
@@ -175,14 +244,20 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
       `[ContentScript iFrame] Setting fallback timeout for ${TIMEOUT_DURATION}ms. Timeout ID: ${fallbackTimeout}`
     );
     fallbackTimeout = window.setTimeout(() => {
-      console.log(`[ContentScript iFrame] Fallback timeout triggered. Timeout ID: ${fallbackTimeout}. receivedHostname: ${receivedHostname}`);
+      console.log(
+        `[ContentScript iFrame] Fallback timeout triggered. Timeout ID: ${fallbackTimeout}. receivedHostname: ${receivedHostname}`
+      );
       fallbackTimeout = null; // Clear the timeout ID
       if (!receivedHostname) {
         console.warn(
           `[ContentScript iFrame] Did not receive hostname from top after ${TIMEOUT_DURATION}ms. Falling back to own hostname: ${iframeOwnHostname}. Removing response listener.`
         );
         window.removeEventListener("message", responseListener); // Clean up listener
-        cleanupFunctions = cleanupFunctions.filter(f => f !== (() => window.removeEventListener("message", responseListener))); // Remove this specific cleanup
+        cleanupFunctions = cleanupFunctions.filter(
+          (f) =>
+            f !==
+            (() => window.removeEventListener("message", responseListener))
+        ); // Remove this specific cleanup
         initializeScript(iframeOwnHostname); // Initialize with own hostname as fallback
       } else {
         console.log(
@@ -197,5 +272,5 @@ export function setupHostnameDetection(initializeScript: InitializeScriptCallbac
       }
     });
   }
-  return () => cleanupFunctions.forEach(f => f());
+  return () => cleanupFunctions.forEach((f) => f());
 }
