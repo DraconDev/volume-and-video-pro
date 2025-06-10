@@ -76,10 +76,9 @@ export function setupHostnameDetection(
           hostname: topHostname,
           success: true,
         });
-        (event.source as Window).postMessage(
-          responsePayload,
-          event.origin // Respond to the specific origin of the iframe
-        );
+        // Handle sandboxed environments where event.origin might be "null"
+        const targetOrigin = event.origin === "null" ? "*" : event.origin;
+        (event.source as Window).postMessage(responsePayload, targetOrigin);
         console.log(
           `[ContentScript TOP] Sent VVP_TOP_HOSTNAME_INFO response to iframe at ${event.origin}.`
         );
