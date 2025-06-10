@@ -225,9 +225,8 @@ export function setupHostnameDetection(
       cleanupFunctions.push(() => clearTimeout(requestTimeout));
     } else {
       console.warn(
-        `[ContentScript iFrame] window.top is null, same as self, or inaccessible. Cannot request hostname from top. Initializing with own hostname: ${iframeOwnHostname}.`
+        `[ContentScript iFrame] window.top is null, same as self, or inaccessible. Initializing with own hostname: ${iframeOwnHostname}.`
       );
-      // Initialize with own hostname immediately if top is inaccessible or is self
       initializeScript(iframeOwnHostname);
       window.removeEventListener("message", responseListener); // Clean up listener as it's not needed
       cleanupFunctions = cleanupFunctions.filter(
@@ -249,7 +248,7 @@ export function setupHostnameDetection(
       fallbackTimeout = null; // Clear the timeout ID
       if (!receivedHostname) {
         console.warn(
-          `[ContentScript iFrame] Did not receive hostname from top after ${TIMEOUT_DURATION}ms. Falling back to own hostname: ${iframeOwnHostname}. Removing response listener.`
+          `[ContentScript iFrame] Did not receive hostname from top after ${TIMEOUT_DURATION}ms. Using own hostname: ${iframeOwnHostname}. Removing response listener.`
         );
         window.removeEventListener("message", responseListener); // Clean up listener
         cleanupFunctions = cleanupFunctions.filter(
