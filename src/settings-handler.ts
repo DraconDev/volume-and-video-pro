@@ -20,19 +20,13 @@ export class SettingsHandler {
    * @param hostname The hostname to fetch settings for (ideally top-level).
    */
   async initialize(hostname: string): Promise<void> {
-    this.targetHostname = hostname; // Store the target hostname
+    // Handle file:// URLs which have empty hostname
+    this.targetHostname = hostname || 'local-file';
     console.log(
       `SettingsHandler (Target: ${this.targetHostname}): Initializing...`
     );
 
-    if (!this.targetHostname) {
-      console.error(
-        `SettingsHandler (Target: ${this.targetHostname}): Initialization aborted - no valid target hostname provided.`
-      );
-      this.currentSettings = { ...defaultSettings };
-      this.resolveInitialization();
-      return;
-    }
+    // Always continue initialization even for file URLs
 
     console.log(
       `SettingsHandler (Target: ${this.targetHostname}): Attempting to send GET_INITIAL_SETTINGS.`
