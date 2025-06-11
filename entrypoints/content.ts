@@ -13,6 +13,12 @@ export default defineContentScript({
       "Content: Script starting - This log should always appear",
       window.location.href
     );
+    
+    // Skip processing for file URLs
+    if (window.location.protocol === 'file:') {
+      console.log('Skipping content script for file URL');
+      return;
+    }
 
     // Initialize core components
     const settingsHandler = new SettingsHandler();
