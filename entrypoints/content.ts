@@ -9,6 +9,12 @@ export default defineContentScript({
   allFrames: true,
   runAt: "document_idle",
   main: async () => {
+    // Global safety check for Chrome extension APIs
+    if (typeof chrome === 'undefined' || typeof chrome.runtime === 'undefined') {
+      console.error('Chrome extension APIs are not available. Skipping content script execution.');
+      return;
+    }
+
     console.log(
       "Content: Script starting - This log should always appear",
       window.location.href
