@@ -211,8 +211,8 @@ export async function initializeContentScript(
     return true;
   };
 
-  // Only add message listener if chrome.runtime.onMessage is available
-  if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+  // Only add message listener if chrome runtime is available
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
     // Listen for settings updates from the background script
     const messageListener = (message: MessageType, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
       console.log(
