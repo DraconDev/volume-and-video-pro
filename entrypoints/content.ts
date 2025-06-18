@@ -10,7 +10,9 @@ export default defineContentScript({
   runAt: "document_idle",
   main: async () => {
     // Global safety check for Chrome extension APIs
-    if (typeof chrome === 'undefined' || typeof chrome.runtime === 'undefined') {
+    if (typeof chrome === 'undefined' || 
+        typeof chrome.runtime === 'undefined' || 
+        typeof chrome.runtime.onMessage === 'undefined') {
       console.error('Chrome extension APIs are not available. Skipping content script execution.');
       return;
     }
