@@ -254,16 +254,23 @@ export async function initializeContentScript(
               `[ContentScript Listener] Found ${managedMediaElements.length} managed media elements to re-process with new settings.`
             );
 
-            // Apply immediate settings (speed, volume) to all managed elements first
-            if (managedMediaElements.length > 0) {
-              console.log(
-                `[ContentScript Listener] Applying immediate settings to ${managedMediaElements.length} managed elements.`
-              );
-              mediaProcessor.applySettingsImmediately(
-                managedMediaElements,
-                newSettings
-              );
-            }
+      // Apply immediate settings (speed, volume) to all managed elements first
+      const isDisabled = newSettings.speed === 100 && 
+                         newSettings.volume === 100 && 
+                         !newSettings.bassBoost && 
+                         !newSettings.voiceBoost && 
+                         !newSettings.mono;
+      
+      if (managedMediaElements.length > 0) {
+        console.log(
+          `[ContentScript Listener] Applying immediate settings to ${managedMediaElements.length} managed elements. Disabled: ${isDisabled}`
+        );
+        mediaProcessor.applySettingsImmediately(
+          managedMediaElements,
+          newSettings,
+          isDisabled
+        );
+      }
 
             // Then, process audio effects if needed
             if (needsProcessingNow) {
