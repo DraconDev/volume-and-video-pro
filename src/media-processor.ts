@@ -230,8 +230,36 @@ export class MediaProcessor {
         );
       }
     }
+  }
+  
+  private cleanupElement(element: HTMLMediaElement): void {
+    if (this.activeMediaElements.has(element)) {
+      this.activeMediaElements.delete(element);
+    }
+    
+    const playHandler = this.elementListeners.get(element);
+    if (playHandler) {
+      element.removeEventListener('play', playHandler);
+      this.elementListeners.delete(element);
+    }
+    
+    this.elementSettings.delete(element);
+  }
+
+  applySettingsToVisibleMedia(
+    settings: AudioSettings,
+    disabled: boolean = false
+  ): void {
+    // Get all media elements and filter for visible ones
+    const visibleMedia = this.getManagedMediaElements().filter(el =>
+      el.offsetWidth > 0 || el.offsetHeight > 0
+    );
+    
+    if (visibleMedia.length > 0) {
+      console.log(
+        `[MediaProcessor] Applying settings to ${visibleMedia.length} visible media elements`
       );
-      this.applySettingsImmediately(visibleMedia, settings);
+      this.applySettingsImmediately(visibleMedia, settings, disabled);
     }
   }
 
