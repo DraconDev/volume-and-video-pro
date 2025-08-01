@@ -54,7 +54,7 @@ export async function initializeContentScript(
 
   // Function to apply settings to a single media element
   // Defined outside to allow consistent reference for add/remove event listeners
-  const applySettingsToSingleElement = async (element: HTMLMediaElement) => {
+  const applySettingsToSingleElement = async (element: HTMLMediaElement, disabled: boolean = false) => {
     console.log(
       `[ContentScript DEBUG] applySettingsToSingleElement called for ${
         element.src || "(no src)"
@@ -74,7 +74,7 @@ export async function initializeContentScript(
       );
 
       // Apply immediate settings (speed, volume)
-      mediaProcessor.applySettingsImmediately([element], currentSettings);
+      mediaProcessor.applySettingsImmediately([element], currentSettings, disabled);
 
       // Apply audio effects if needed
       if (needsProcessing) {
@@ -200,7 +200,13 @@ export async function initializeContentScript(
         element.addEventListener("loadstart", boundApplySettings);
 
         // Apply settings immediately to the element after adding listeners.
-        applySettingsToSingleElement(element);
+        const isDisabled = currentSettings.speed === 100 && 
+                           currentSettings.volume === 100 && 
+                           !currentSettings.bassBoost && 
+                           !currentSettings.voiceBoost && 
+                           !currentSettings.mono;
+        
+        applySettingsToSingleElement(element, isDisabled);
       });
     } catch (processingError) {
       console.error(
@@ -296,7 +302,8 @@ export async function initializeContentScript(
                     );
                     mediaProcessor.applySettingsImmediately(
                       freshScanElements,
-                      newSettings
+                      newSettings,
+                      isDisabled
                     ); // Apply immediate settings to fallback elements too
                     await mediaProcessor.processMediaElements(
                       freshScanElements,
@@ -409,7 +416,17 @@ export async function initializeContentScript(
         needsProcessing
       );
       // Also apply immediate settings to them
-      mediaProcessor.applySettingsImmediately(addedElements, currentSettings);
+      const isDisabled = currentSettings.speed === 100 && 
+                         currentSettings.volume === 100 && 
+                         !currentSettings.bassBoost && 
+                         !currentSettings.voiceBoost && 
+                         !currentSettings.mono;
+      
+      mediaProcessor.applySettingsImmediately(
+        addedElements, 
+        currentSettings,
+        isDisabled
+      );
     },
     (removedElements: HTMLMediaElement[]) => {
       console.log(
