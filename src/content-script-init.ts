@@ -411,7 +411,17 @@ export async function initializeContentScript(
         needsProcessing
       );
       // Also apply immediate settings to them
-      mediaProcessor.applySettingsImmediately(addedElements, currentSettings);
+      const isDisabled = currentSettings.speed === 100 && 
+                         currentSettings.volume === 100 && 
+                         !currentSettings.bassBoost && 
+                         !currentSettings.voiceBoost && 
+                         !currentSettings.mono;
+      
+      mediaProcessor.applySettingsImmediately(
+        addedElements, 
+        currentSettings,
+        isDisabled
+      );
     },
     (removedElements: HTMLMediaElement[]) => {
       console.log(
