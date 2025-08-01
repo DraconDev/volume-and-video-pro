@@ -175,6 +175,33 @@ export class MediaProcessor {
             this.cleanupElement(element);
           } catch (e) {
             console.error(
+              `MediaProcessor: Error resetting element ${
+                element.src || "(no src)"
+              } in disabled mode:`,
+              e
+            );
+          }
+        }
+      });
+      return;
+    }
+
+    console.log(
+      "[MediaProcessor] Applying settings immediately to media elements"
+    );
+
+    const targetSpeed = settings.speed / 100;
+    
+    // Process all elements synchronously for immediate effect
+    for (const element of mediaElements) {
+      try {
+        if (!element.isConnected) {
+          this.cleanupElement(element);
+          continue;
+        }
+        
+        // Apply playback speed immediately
+        element.playbackRate = targetSpeed;
         element.defaultPlaybackRate = targetSpeed;
         
         // Store current settings for this element
@@ -203,33 +230,6 @@ export class MediaProcessor {
         );
       }
     }
-  }
-  
-  private cleanupElement(element: HTMLMediaElement): void {
-    if (this.activeMediaElements.has(element)) {
-      this.activeMediaElements.delete(element);
-    }
-    
-    const playHandler = this.elementListeners.get(element);
-    if (playHandler) {
-      element.removeEventListener('play', playHandler);
-      this.elementListeners.delete(element);
-    }
-    
-    this.elementSettings.delete(element);
-  }
-
-  applySettingsToVisibleMedia(
-    settings: AudioSettings
-  ): void {
-    // Get all media elements and filter for visible ones
-    const visibleMedia = this.getManagedMediaElements().filter(el =>
-      el.offsetWidth > 0 || el.offsetHeight > 0
-    );
-    
-    if (visibleMedia.length > 0) {
-      console.log(
-        `[MediaProcessor] Applying settings to ${visibleMedia.length} visible media elements`
       );
       this.applySettingsImmediately(visibleMedia, settings);
     }

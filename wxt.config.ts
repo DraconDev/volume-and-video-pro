@@ -5,7 +5,7 @@ export default defineConfig({
     permissions: ["storage", "tabs"],
     host_permissions: ["<all_urls>"],
     name: "Volume & Video Master 1000%",
-    version: "2.4.183",
+    version: "2.4.184",
     description: "Volume & Video Master",
     background: {
       service_worker: "entrypoints/background.ts",
