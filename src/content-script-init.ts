@@ -212,9 +212,17 @@ export async function initializeContentScript(
   };
 
   // Only add message listener if chrome runtime is available
-  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+  if (
+    typeof chrome !== "undefined" &&
+    chrome.runtime &&
+    chrome.runtime.onMessage
+  ) {
     // Listen for settings updates from the background script
-    const messageListener = (message: MessageType, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
+    const messageListener = (
+      message: MessageType,
+      sender: chrome.runtime.MessageSender,
+      sendResponse: (response?: any) => void
+    ) => {
       console.log(
         "[ContentScript Listener] Received message:",
         JSON.stringify(message)
@@ -337,9 +345,13 @@ export async function initializeContentScript(
       return false;
     };
     chrome.runtime.onMessage.addListener(messageListener);
-    cleanupFunctions.push(() => chrome.runtime.onMessage.removeListener(messageListener));
+    cleanupFunctions.push(() =>
+      chrome.runtime.onMessage.removeListener(messageListener)
+    );
   } else {
-    console.debug("[ContentScript] chrome.runtime.onMessage not available - skipping message listener setup");
+    console.debug(
+      "[ContentScript] chrome.runtime.onMessage not available - skipping message listener setup"
+    );
   }
 
   // Initial setup
@@ -361,7 +373,9 @@ export async function initializeContentScript(
   if (document.readyState === "loading") {
     // Wait for DOMContentLoaded, then apply settings
     document.addEventListener("DOMContentLoaded", domContentLoadedListener);
-    cleanupFunctions.push(() => document.removeEventListener("DOMContentLoaded", domContentLoadedListener));
+    cleanupFunctions.push(() =>
+      document.removeEventListener("DOMContentLoaded", domContentLoadedListener)
+    );
   } else {
     // DOM is already ready, apply settings immediately
     console.log(
@@ -414,7 +428,6 @@ export async function initializeContentScript(
   );
   cleanupFunctions.push(() => mediaObserver.disconnect());
 
-
   // Ensure AudioContext is closed when the page is unloaded
   const beforeUnloadListener = () => {
     console.log(
@@ -423,10 +436,12 @@ export async function initializeContentScript(
     mediaProcessor.audioProcessor.cleanup();
   };
   window.addEventListener("beforeunload", beforeUnloadListener);
-  cleanupFunctions.push(() => window.removeEventListener("beforeunload", beforeUnloadListener));
+  cleanupFunctions.push(() =>
+    window.removeEventListener("beforeunload", beforeUnloadListener)
+  );
 
   return () => {
     console.log("[ContentScript] Running cleanup functions.");
-    cleanupFunctions.forEach(cleanup => cleanup());
+    cleanupFunctions.forEach((cleanup) => cleanup());
   };
 }
