@@ -157,24 +157,24 @@ export class MediaProcessor {
 
   applySettingsImmediately(
     mediaElements: HTMLMediaElement[],
-    settings: AudioSettings
+    settings: AudioSettings,
+    disabled: boolean = false
   ): void {
-    console.log(
-      "[MediaProcessor] Applying settings immediately to media elements"
-    );
-
-    const targetSpeed = settings.speed / 100;
-    
-    // Process all elements synchronously for immediate effect
-    for (const element of mediaElements) {
-      try {
-        if (!element.isConnected) {
-          this.cleanupElement(element);
-          continue;
-        }
-        
-        // Apply playback speed immediately
-        element.playbackRate = targetSpeed;
+    if (disabled) {
+      console.log(
+        "[MediaProcessor] Skipping settings application (disabled mode)"
+      );
+      
+      // Reset any previously applied settings
+      mediaElements.forEach(element => {
+        // Only reset if we had applied settings to this element
+        if (this.elementSettings.has(element)) {
+          try {
+            element.playbackRate = 1.0;
+            element.defaultPlaybackRate = 1.0;
+            this.cleanupElement(element);
+          } catch (e) {
+            console.error(
         element.defaultPlaybackRate = targetSpeed;
         
         // Store current settings for this element
