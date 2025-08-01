@@ -297,7 +297,8 @@ export async function initializeContentScript(
                     );
                     mediaProcessor.applySettingsImmediately(
                       freshScanElements,
-                      newSettings
+                      newSettings,
+                      isDisabled
                     ); // Apply immediate settings to fallback elements too
                     await mediaProcessor.processMediaElements(
                       freshScanElements,
