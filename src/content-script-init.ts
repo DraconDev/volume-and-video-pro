@@ -211,10 +211,8 @@ export async function initializeContentScript(
         element.addEventListener("canplay", boundApplySettings);
         element.addEventListener("loadstart", boundApplySettings);
 
-        // Only apply settings if we're not in disabled mode
-        if (!isDisabled) {
-          applySettingsToSingleElement(element);
-        }
+        // Apply settings immediately to the element after adding listeners.
+        applySettingsToSingleElement(element);
       });
     } catch (processingError) {
       console.error(
