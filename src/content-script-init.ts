@@ -74,14 +74,19 @@ export async function initializeContentScript(
       );
 
       // Compute disabled state
-      const isDisabled = currentSettings.speed === 100 && 
-                         currentSettings.volume === 100 && 
-                         !currentSettings.bassBoost && 
-                         !currentSettings.voiceBoost && 
-                         !currentSettings.mono;
-      
+      const isDisabled =
+        currentSettings.speed === 100 &&
+        currentSettings.volume === 100 &&
+        !currentSettings.bassBoost &&
+        !currentSettings.voiceBoost &&
+        !currentSettings.mono;
+
       // Apply immediate settings (speed, volume)
-      mediaProcessor.applySettingsImmediately([element], currentSettings, isDisabled);
+      mediaProcessor.applySettingsImmediately(
+        [element],
+        currentSettings,
+        isDisabled
+      );
 
       // Apply audio effects if needed
       if (needsProcessing) {
@@ -418,14 +423,15 @@ export async function initializeContentScript(
         needsProcessing
       );
       // Also apply immediate settings to them
-      const isDisabled = currentSettings.speed === 100 && 
-                         currentSettings.volume === 100 && 
-                         !currentSettings.bassBoost && 
-                         !currentSettings.voiceBoost && 
-                         !currentSettings.mono;
-      
+      const isDisabled =
+        currentSettings.speed === 100 &&
+        currentSettings.volume === 100 &&
+        !currentSettings.bassBoost &&
+        !currentSettings.voiceBoost &&
+        !currentSettings.mono;
+
       mediaProcessor.applySettingsImmediately(
-        addedElements, 
+        addedElements,
         currentSettings,
         isDisabled
       );
