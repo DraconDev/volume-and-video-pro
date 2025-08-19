@@ -165,13 +165,13 @@ export async function initializeContentScript(
 
     // --- Start of processing steps after successful initialization ---
     try {
-      const mediaElements = mediaProcessor.findMediaElements();
-      console.log(
-        `[ContentScript DEBUG] Found ${mediaElements.length} media elements:`,
-        mediaElements.map((el) => ({
-          src: el.src,
-          tagName: el.tagName,
-          id: el.id,
+      const currentSettings = settingsHandler.getCurrentSettings();
+      const isDisabled = currentSettings.speed === 100 && 
+                         currentSettings.volume === 100 && 
+                         !currentSettings.bassBoost && 
+                         !currentSettings.voiceBoost && 
+                         !currentSettings.mono;
+      
           classList: el.classList.toString(),
         }))
       );
