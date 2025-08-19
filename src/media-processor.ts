@@ -162,14 +162,19 @@ export class MediaProcessor {
   ): void {
     if (disabled) {
       console.log(
-        "[MediaProcessor] Skipping settings application (disabled mode)"
+        "[MediaProcessor] Disabling media processing and pausing media elements"
       );
       
-      // Reset any previously applied settings
+      // Reset any previously applied settings and pause elements
       mediaElements.forEach(element => {
         // Only reset if we had applied settings to this element
         if (this.elementSettings.has(element)) {
           try {
+            // Pause the element if it's playing
+            if (!element.paused) {
+              element.pause();
+            }
+            
             element.playbackRate = 1.0;
             element.defaultPlaybackRate = 1.0;
             this.cleanupElement(element);
