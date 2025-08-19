@@ -314,18 +314,25 @@ export async function initializeContentScript(
                   const freshScanElements = mediaProcessor.findMediaElements();
                   if (freshScanElements.length > 0) {
                     console.log(
-                      `[ContentScript Listener] Fallback: Found ${freshScanElements.length} elements on fresh scan for audio effects. Processing them.`
+                      `[ContentScript Listener] Fallback: Found ${freshScanElements.length} elements on fresh scan for audio effects.`
                     );
                     mediaProcessor.applySettingsImmediately(
                       freshScanElements,
                       newSettings,
                       isDisabled
                     ); // Apply immediate settings to fallback elements too
-                    await mediaProcessor.processMediaElements(
-                      freshScanElements,
-                      newSettings,
-                      needsProcessingNow
-                    );
+                    
+                    // Only process audio effects if not in disabled mode and needed
+                    if (!isDisabled && needsProcessingNow) {
+                      console.log(
+                        `[ContentScript Listener] Processing audio effects for ${freshScanElements.length} fallback elements.`
+                      );
+                      await mediaProcessor.processMediaElements(
+                        freshScanElements,
+                        newSettings,
+                        needsProcessingNow
+                      );
+                    }
                   } else {
                     console.log(
                       "[ContentScript Listener] Fallback: No elements found on fresh scan either for audio effects."
