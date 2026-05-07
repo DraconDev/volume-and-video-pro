@@ -1,11 +1,8 @@
-import { Settings } from "http2";
 import {
   AudioSettings,
   SiteSettings,
   defaultSettings,
-  defaultSiteSettings,
 } from "./types";
-import EventEmitter from "events";
 // Import the broadcast functions directly
 import {
   broadcastSiteSettingsUpdate,
@@ -13,12 +10,11 @@ import {
   broadcastGlobalSettingsUpdate,
 } from "./settings-event-handler";
 
-export class SettingsManager extends EventEmitter {
+export class SettingsManager {
   globalSettings: AudioSettings;
   private siteSettings: Map<string, SiteSettings>;
 
   constructor() {
-    super();
     this.globalSettings = { ...defaultSettings };
     this.siteSettings = new Map();
   }
