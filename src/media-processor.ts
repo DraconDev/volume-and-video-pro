@@ -210,7 +210,11 @@ export class MediaProcessor {
         if (!this.elementListeners.has(element)) {
           const playHandler = () => {
             console.log(`[MediaProcessor] Reapplying settings on play event for ${element.src || "(no src)"}`);
-            this.updatePlaybackSpeed(element, settings.speed);
+            // Read current settings from WeakMap instead of capturing stale closure
+            const currentSettings = this.elementSettings.get(element);
+            if (currentSettings) {
+              this.updatePlaybackSpeed(element, currentSettings.speed);
+            }
           };
           element.addEventListener('play', playHandler);
           this.elementListeners.set(element, playHandler);

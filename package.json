@@ -2,7 +2,7 @@
   "name": "volume-and-video-pro",
   "description": "Volume & Video Master - Advanced audio and video controls for your browser",
   "private": true,
-  "version": "3.5.12",
+  "version": "3.6.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -22,11 +22,14 @@
     "@types/chrome": "^0.0.280",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@vitest/coverage-v8": "^4.1.5",
     "@wxt-dev/module-react": "^1.1.1",
     "autoprefixer": "^10.4.20",
+    "jsdom": "^29.1.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.6.3",
+    "vitest": "^4.1.5",
     "wxt": "^0.19.13"
   }
 }
