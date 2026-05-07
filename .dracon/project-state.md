@@ -1,21 +1,21 @@
 # Project State
 
 ## Current Focus
-Added message type for retrieving initial settings in the browser extension
+Improved manifest synchronization by adding package.json description to the extension manifest.
 
 ## Context
-This change enables the extension to request initial settings from the background script when content scripts initialize, ensuring consistent state across the extension components.
+The extension manifest needs to stay in sync with package.json to ensure consistent versioning and metadata across the project. This change was prompted by the need to automatically update the extension's description in the manifest.
 
 ## Completed
-- [x] Added `GetInitialSettingsMessage` type for message passing
-- [x] Updated `MessageType` union to include the new message type
+- [x] Added `createRequire` to read package.json metadata
+- [x] Updated manifest to include both version and description from package.json
 
 ## In Progress
-- [x] Implementation of message handling for this new message type
+- [ ] None (this is a complete change)
 
 ## Blockers
-- None identified for this specific change
+- None (this is a complete change)
 
 ## Next Steps
-1. Implement message handling in the background script to respond to `GET_INITIAL_SETTINGS`
-2. Update content scripts to properly handle the response from this message type
+1. Verify the manifest updates correctly in the built extension
+2. Ensure the description appears correctly in the browser extension store

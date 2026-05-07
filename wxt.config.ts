@@ -1,6 +1,9 @@
 import { defineConfig } from "wxt";
+import { createRequire } from "node:module";
 
-// Read version from package.json so manifest stays in sync automatically
+const require = createRequire(import.meta.url);
+
+// Read version and description from package.json so manifest stays in sync automatically
 const { version, description } = require("../package.json");
 
 export default defineConfig({
