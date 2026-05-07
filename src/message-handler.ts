@@ -11,6 +11,58 @@ function getHostname(url: string): string {
   }
 }
 
+async function handleGetInitialSettings(
+  message: any,
+  sender: chrome.runtime.MessageSender,
+  sendResponse: (response?: any) => void
+) {
+  const hostname = message.hostname || (sender.tab?.url ? getHostname(sender.tab.url) : null);
+
+  if (!hostname) {
+    console.warn("Message Handler: GET_INITIAL_SETTINGS received without hostname.");
+    sendResponse({ settings: { ...defaultSettings } });
+    return;
+  }
+
+  try {
+    // Ensure settings are loaded before proceeding
+    await settingsManager.initialize();
+    console.log(`Message Handler: Getting initial settings for ${hostname}`);
+
+    const siteConfig = settingsManager.getSettingsForSite(hostname);
+    console.log(
+      `[DEBUG] Message Handler (GET_INITIAL_SETTINGS): Retrieved siteConfig for ${hostname}:`,
+      JSON.stringify(siteConfig, null, 2)
+    );
+
+    let effectiveSettings: any;
+
+    // Determine the correct settings based on site config and mode
+    if (siteConfig?.activeSetting === "site" && siteConfig.settings) {
+      effectiveSettings = siteConfig.settings;
+    } else if (siteConfig?.activeSetting === "disabled") {
+      // For disabled, send default settings so audio processing is bypassed/neutral
+      effectiveSettings = { ...defaultSettings, speed: 100 };
+    } else {
+      // Use global settings (guaranteed to be loaded or defaults now)
+      effectiveSettings = settingsManager.globalSettings;
+    }
+
+    console.log(
+      `Message Handler: Sending initial settings for ${hostname} to tab ${sender.tab?.id}:`,
+      effectiveSettings
+    );
+    sendResponse({ settings: { ...effectiveSettings } });
+  } catch (error) {
+    console.error(
+      `Message Handler: Error processing GET_INITIAL_SETTINGS for ${hostname}:`,
+      error
+    );
+    // Send defaults on error
+    sendResponse({ settings: { ...defaultSettings, speed: 100 } });
+  }
+}
+
 async function handleUpdateSettings(
   message: UpdateSettingsMessage,
   sender: chrome.runtime.MessageSender,
@@ -79,9 +131,6 @@ async function handleUpdateSettings(
       );
     }
 
-    // SettingsEventHandler will now handle notifying the content script
-    // based on events emitted by SettingsManager. No need to forward here.
-
     sendResponse({ success: true });
   } catch (error) {
     console.error("Message Handler: Error processing update", error);
@@ -90,7 +139,7 @@ async function handleUpdateSettings(
 }
 
 async function handleUpdateSiteMode(
-  message: any, //MessageType, // TODO: Type this correctly
+  message: any,
   sender: chrome.runtime.MessageSender,
   sendResponse: (response?: any) => void
 ) {
@@ -106,7 +155,6 @@ async function handleUpdateSiteMode(
   }
 
   if (mode !== "global" && mode !== "site" && mode !== "disabled") {
-    // Updated validation
     const error = `Invalid mode provided: ${mode}`;
     console.error("Message Handler:", error);
     sendResponse({ success: false, error });
@@ -181,7 +229,9 @@ export function setupMessageHandler() {
 
       (async () => {
         try {
-          if (message.type === "UPDATE_SETTINGS") {
+          if (message.type === "GET_INITIAL_SETTINGS") {
+            await handleGetInitialSettings(message, sender, sendResponse);
+          } else if (message.type === "UPDATE_SETTINGS") {
             await handleUpdateSettings(message, sender, sendResponse);
           } else if (message.type === "UPDATE_SITE_MODE") {
             await handleUpdateSiteMode(message, sender, sendResponse);

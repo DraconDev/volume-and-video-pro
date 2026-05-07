@@ -1,24 +1,25 @@
 # Project State
 
 ## Current Focus
-Removal of background script message handling and tab tracking functionality
+Enhanced message handling for initial settings retrieval with proper site configuration and fallback mechanisms
 
 ## Context
-This change removes the message handling infrastructure and tab tracking from the background script, which was previously used to manage settings and content script communication. The removal suggests a shift towards simpler audio processing without the need for dynamic tab management or settings synchronization.
+The extension needs to properly initialize settings for content scripts based on site-specific configurations while maintaining robust error handling and fallback behavior.
 
 ## Completed
-- [x] Removed message listener for `GET_INITIAL_SETTINGS` and `CONTENT_SCRIPT_READY` messages
-- [x] Eliminated hostname extraction helper function
-- [x] Removed active tab tracking system
-- [x] Deleted tab removal cleanup handler
-- [x] Simplified background script initialization
+- [x] Added `handleGetInitialSettings` function to process initial settings requests
+- [x] Implemented hostname extraction from message or sender tab URL
+- [x] Added comprehensive settings resolution logic based on site configuration
+- [x] Included proper error handling with fallback to default settings
+- [x] Added debug logging for settings retrieval and processing
+- [x] Updated message handler routing to include new message type
 
 ## In Progress
-- [ ] None (this appears to be a complete removal of functionality)
+- [ ] No active work in progress beyond the completed changes
 
 ## Blockers
-- None identified in this change
+- None identified for this specific change
 
 ## Next Steps
-1. Verify that content scripts now receive default settings without background mediation
-2. Confirm that audio processing continues to work without the removed tab management
+1. Verify integration with content scripts that rely on initial settings
+2. Test edge cases with various site configurations and error scenarios
