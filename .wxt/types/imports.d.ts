@@ -21,7 +21,6 @@ declare global {
   const injectScript: typeof import('wxt/client')['injectScript']
   const storage: typeof import('wxt/storage')['storage']
   const useAppConfig: typeof import('wxt/client')['useAppConfig']
-  const useAudioSettings: typeof import('/home/dracon/Dev/browser-extensions-shared/volume-and-video-pro/hooks/useAudioSettings')['useAudioSettings']
   const useCallback: typeof import('react')['useCallback']
   const useContext: typeof import('react')['useContext']
   const useEffect: typeof import('react')['useEffect']
