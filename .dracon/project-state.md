@@ -1,23 +1,24 @@
 # Project State
 
 ## Current Focus
-Optimize content script performance by disabling audio processing when all settings are at default values
+Improved audio processing disabled state handling and media source tracking
 
 ## Context
-The content script was processing media elements even when no audio adjustments were active, which was unnecessary. This change adds a more precise check for the disabled state and skips processing when all settings are at their default values.
+The changes address two key issues:
+1. More accurate media source tracking for audio processing
+2. Consistent disabled state handling across components
 
 ## Completed
-- [x] Updated `isDisabled` check to explicitly verify bassBoost and voiceBoost are at 100 (default)
-- [x] Simplified event listener management by removing the WeakMap approach
-- [x] Applied settings immediately after adding listeners rather than conditionally
-- [x] Removed the `disabled` parameter from settings application methods
+- [x] Fixed media source tracking by using `currentSrc` instead of `src` property
+- [x] Standardized disabled state handling in audio settings
+- [x] Made site configuration updates more consistent when disabling audio
 
 ## In Progress
-- [x] Performance optimization for content script initialization
+- [x] Refactored audio processor to handle disabled states properly
 
 ## Blockers
-- None identified
+- None identified in this commit
 
 ## Next Steps
-1. Verify performance improvements with real-world usage
-2. Consider additional optimizations for memory management
+1. Verify disabled state handling works across all media types
+2. Test with various media sources (blob URLs, HLS streams)

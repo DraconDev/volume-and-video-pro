@@ -51,10 +51,8 @@ async function handleUpdateSettings(
       settings: message.settings,
     });
 
-    // Get current site config
-    const currentSiteConfig = await settingsManager.getSettingsForSite(
-      hostname
-    );
+    // Get current site config (synchronous method)
+    const currentSiteConfig = settingsManager.getSettingsForSite(hostname);
     const isCurrentlyGlobal = currentSiteConfig?.activeSetting === "global";
 
     if (!message.enabled) {

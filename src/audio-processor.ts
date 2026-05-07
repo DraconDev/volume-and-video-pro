@@ -52,7 +52,8 @@ export class AudioProcessor {
           }`
         );
         // Check if the media source has changed OR if the source node is somehow null
-        if (this.audioContext && (nodes.currentSrc !== mediaElement.src || !nodes.source)) {
+        // Use currentSrc instead of src to handle blob/HLS URLs correctly
+        if (this.audioContext && (nodes.currentSrc !== mediaElement.currentSrc || !nodes.source)) {
           console.log(
             `[AudioProcessor] Media source changed from ${
               nodes.currentSrc
@@ -67,7 +68,7 @@ export class AudioProcessor {
             }
           }
           nodes.source = this.audioContext.createMediaElementSource(mediaElement);
-          nodes.currentSrc = mediaElement.src;
+          nodes.currentSrc = mediaElement.currentSrc;
         }
         // nodes.mono will be updated by connectNodes based on settings.mono
 
@@ -126,7 +127,7 @@ export class AudioProcessor {
       merger,
       element: mediaElement,
       mono: settings.mono, // Initialize mono setting, connectNodes will use settings.mono
-      currentSrc: mediaElement.src, // Initialize currentSrc
+      currentSrc: mediaElement.currentSrc, // Initialize currentSrc
     };
 
     // Connect nodes based on settings

@@ -57,7 +57,7 @@ export const useAudioSettings = (defaultSettings: AudioSettings) => {
     );
 
     const handleSettingsToggle = useCallback(
-        (type: "global" | "site" | "default") => {
+        (type: "global" | "site" | "disabled") => {
             if (!currentUrl) return;
 
             const updateTab = (
@@ -147,14 +147,14 @@ export const useAudioSettings = (defaultSettings: AudioSettings) => {
                 // Always update when disabling
                 const newSiteConfigs = { ...siteConfigs };
                 newSiteConfigs[currentUrl] = {
-                    enabled: true,
+                    enabled: false,
                     settings: defaultSettings,
-                    activeSetting: "default",
+                    activeSetting: "disabled",
                 };
                 setSiteConfigs(newSiteConfigs);
                 chrome.storage.sync.set({ siteConfigs: newSiteConfigs });
 
-                updateTab(defaultSettings, false, true);
+                updateTab(defaultSettings, false, false);
             }
         },
         [
@@ -194,7 +194,7 @@ export const useAudioSettings = (defaultSettings: AudioSettings) => {
 
                                 if (activeSetting === "global") {
                                     setSettings(result.globalSettings);
-                                } else if (activeSetting === "default") {
+                                } else if (activeSetting === "disabled") {
                                     setSettings(defaultSettings);
                                 } else {
                                     setSettings(
