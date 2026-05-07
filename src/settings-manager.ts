@@ -136,13 +136,17 @@ export class SettingsManager {
       ...settings,
     };
 
-    // Broadcast immediately before persistence
-    broadcastGlobalSettingsUpdate(this.globalSettings);
+    // Persist settings first to ensure data integrity
+    await this.persistSettings(hostname);
     console.log(
-      "SettingsManager: Updated global settings & called broadcast immediately"
+      "SettingsManager: Global settings persisted successfully"
     );
 
-    await this.persistSettings(hostname);
+    // Then broadcast the update to other tabs
+    broadcastGlobalSettingsUpdate(this.globalSettings);
+    console.log(
+      "SettingsManager: Updated global settings & called broadcast"
+    );
   }
 
   async updateSiteSettings(
@@ -186,13 +190,17 @@ export class SettingsManager {
     siteConfig.enabled = true;
     this.siteSettings.set(hostname, siteConfig);
 
-    // Broadcast immediately before persistence
-    broadcastSiteSettingsUpdate(hostname, siteConfig.settings);
+    // Persist settings first to ensure data integrity
+    await this.persistSettings(hostname);
     console.log(
-      "SettingsManager: Updated site settings & called broadcast immediately"
+      "SettingsManager: Site settings persisted successfully"
     );
 
-    await this.persistSettings(hostname);
+    // Then broadcast the update to other tabs
+    broadcastSiteSettingsUpdate(hostname, siteConfig.settings);
+    console.log(
+      "SettingsManager: Updated site settings & called broadcast"
+    );
   }
 
   async updateSiteMode(

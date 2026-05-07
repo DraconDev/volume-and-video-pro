@@ -1,24 +1,22 @@
 # Project State
 
 ## Current Focus
-Improved audio processing disabled state handling and media source tracking
+Reordered settings persistence and broadcast operations to ensure data integrity before propagation
 
 ## Context
-The changes address two key issues:
-1. More accurate media source tracking for audio processing
-2. Consistent disabled state handling across components
+The change addresses potential race conditions where settings updates might be broadcast before being properly persisted. This could lead to inconsistent state across tabs.
 
 ## Completed
-- [x] Fixed media source tracking by using `currentSrc` instead of `src` property
-- [x] Standardized disabled state handling in audio settings
-- [x] Made site configuration updates more consistent when disabling audio
+- [x] Moved persistence operation before broadcast in both global and site settings updates
+- [x] Updated logging to reflect the new operation sequence
+- [x] Maintained the same functionality while improving reliability
 
 ## In Progress
-- [x] Refactored audio processor to handle disabled states properly
+- [x] No active work in progress beyond the completed changes
 
 ## Blockers
-- None identified in this commit
+- None identified for this specific change
 
 ## Next Steps
-1. Verify disabled state handling works across all media types
-2. Test with various media sources (blob URLs, HLS streams)
+1. Verify no regression in settings synchronization across browser tabs
+2. Consider adding error handling for persistence failures
