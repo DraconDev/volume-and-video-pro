@@ -1,23 +1,22 @@
 # Project State
 
 ## Current Focus
-Version bump and minor UI state cleanup in the popup component
+Refactored popup component to use React hooks consistently and optimize performance
 
 ## Context
-The project is preparing for a new release (2.7.0) and performing some cleanup in the popup UI state management.
+The popup component was updated to properly use React's `useCallback` for event handlers and memoized functions, which improves performance by preventing unnecessary re-renders and recreations of functions.
 
 ## Completed
-- [x] Removed duplicate state update in settings management
-- [x] Removed redundant state updates in mode switching logic
-- [x] Updated package metadata with proper name and description
-- [x] Bumped version number to 2.7.0
+- [x] Added `useCallback` to `handleSettingChange`, `formatDiff`, `handleReset`, and `handleToggleMode` functions
+- [x] Added proper dependency arrays to memoized functions
+- [x] Added `useCallback` import to the component
 
 ## In Progress
-- [x] No active work in progress beyond the completed changes
+- [ ] No active work in progress
 
 ## Blockers
-- None identified in this commit
+- None identified
 
 ## Next Steps
-1. Verify all UI state updates work correctly after cleanup
-2. Test the extension with the updated version number
+1. Verify performance improvements in the popup component
+2. Ensure all other components using similar patterns are updated

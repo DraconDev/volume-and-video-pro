@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { AudioSettings } from "../../src/types";
 
 import { SettingsToggle } from "../../components/SettingsToggle";
@@ -74,7 +74,7 @@ function App() {
 
   // Removed incorrect useEffect listening for "settingsUpdated"
 
-  const handleSettingChange = async (
+  const handleSettingChange = useCallback(async (
     key: keyof AudioSettings,
     value: number | boolean
   ) => {
@@ -144,7 +144,7 @@ function App() {
       300,
       newSettings
     ); // Pass newSettings as argument to setTimeout callback
-  };
+  }, [settings, isSiteEnabled, isUsingGlobalSettings]);
 
   // Initialize updateTimeoutRef
   const updateTimeoutRef = useRef<number | null>(null);
@@ -158,16 +158,16 @@ function App() {
     };
   }, []);
 
-  const formatDiff = (value: number) => {
+  const formatDiff = useCallback((value: number) => {
     return `${value}%`;
-  };
+  }, []);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     if (!isSiteEnabled) return; // Prevent reset when site is disabled
     setSettings(defaultSettings);
-  };
+  }, [isSiteEnabled]);
 
-  const handleToggleMode = async (mode: "global" | "site" | "disabled") => {
+  const handleToggleMode = useCallback(async (mode: "global" | "site" | "disabled") => {
     try {
       const [tab] = await chrome.tabs.query({
         active: true,
@@ -208,7 +208,7 @@ function App() {
     } catch (error) {
       console.error("Popup: Error toggling mode:", error);
     }
-  };
+  }, [isSiteEnabled]);
 
   // Only affect display, not actual settings
   const displaySettings = isSiteEnabled ? settings : defaultSettings;
