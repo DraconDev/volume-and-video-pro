@@ -90,9 +90,8 @@ export function setupHostnameDetection(
       }
     };
     window.addEventListener("message", topWindowMessageListener);
-    cleanupFunctions.push(() =>
-      window.removeEventListener("message", topWindowMessageListener)
-    );
+    const removeTopListener = () => window.removeEventListener("message", topWindowMessageListener);
+    cleanupFunctions.push(removeTopListener);
   } else {
     // --- Running in an IFRAME ---
     const iframeOwnHostname = window.location.hostname;
@@ -180,11 +179,8 @@ export function setupHostnameDetection(
           parsedData
         );
         window.removeEventListener("message", responseListener);
-        cleanupFunctions = cleanupFunctions.filter(
-          (f) =>
-            f !==
-            (() => window.removeEventListener("message", responseListener))
-        ); // Remove this specific cleanup
+        // Remove the cleanup function by filtering with the same reference
+        cleanupFunctions = cleanupFunctions.filter((f) => f !== removeResponseListener);
         initializeScript(parsedData.hostname);
       } else if (parsedData && parsedData.type) {
         console.log(
@@ -193,10 +189,12 @@ export function setupHostnameDetection(
         );
       }
     };
+
+    // Store the cleanup function in a variable so we can reference it for removal
+    const removeResponseListener = () => window.removeEventListener("message", responseListener);
+
     window.addEventListener("message", responseListener);
-    cleanupFunctions.push(() =>
-      window.removeEventListener("message", responseListener)
-    );
+    cleanupFunctions.push(removeResponseListener);
 
     // Request the hostname from the top window, sending stringified JSON
     if (window.top && window.top !== window.self) {
@@ -229,10 +227,7 @@ export function setupHostnameDetection(
       );
       initializeScript(iframeOwnHostname);
       window.removeEventListener("message", responseListener); // Clean up listener as it's not needed
-      cleanupFunctions = cleanupFunctions.filter(
-        (f) =>
-          f !== (() => window.removeEventListener("message", responseListener))
-      ); // Remove this specific cleanup
+      cleanupFunctions = cleanupFunctions.filter((f) => f !== removeResponseListener);
       return () => cleanupFunctions.forEach((f) => f()); // Return cleanup immediately
     }
 
@@ -251,11 +246,7 @@ export function setupHostnameDetection(
           `[ContentScript iFrame] Did not receive hostname from top after ${TIMEOUT_DURATION}ms. Using own hostname: ${iframeOwnHostname}. Removing response listener.`
         );
         window.removeEventListener("message", responseListener); // Clean up listener
-        cleanupFunctions = cleanupFunctions.filter(
-          (f) =>
-            f !==
-            (() => window.removeEventListener("message", responseListener))
-        ); // Remove this specific cleanup
+        cleanupFunctions = cleanupFunctions.filter((f) => f !== removeResponseListener);
         initializeScript(iframeOwnHostname); // Initialize with own hostname as fallback
       } else {
         console.log(
