@@ -10,6 +10,7 @@ export async function initializeContentScript(
   mediaProcessor: MediaProcessor,
   hostname: string
 ): Promise<() => void> {
+  console.log(`[ContentScript] Initializing script for hostname: ${hostname}`);
   settingsHandler.initialize(hostname);
 
   const cleanupFunctions: (() => void)[] = [];
@@ -20,6 +21,7 @@ export async function initializeContentScript(
 
   // Process media with current settings
   const processMedia = async () => {
+    console.log(
       `[ContentScript DEBUG] processMedia called for ${window.location.hostname}`
     );
     try {
@@ -39,6 +41,7 @@ export async function initializeContentScript(
       const isDisabled = isSettingsDisabled(currentSettings);
 
       const mediaElements = mediaProcessor.findMediaElements();
+      console.log(
         `[ContentScript DEBUG] Found ${mediaElements.length} media elements`
       );
 
@@ -68,6 +71,7 @@ export async function initializeContentScript(
       chrome.runtime.onMessage.removeListener(messageHandler)
     );
   } else {
+    console.debug(
       "[ContentScript] chrome.runtime.onMessage not available - skipping message listener setup"
     );
   }
@@ -81,6 +85,7 @@ export async function initializeContentScript(
   cleanupFunctions.push(...domCleanup);
 
   return () => {
+    console.log("[ContentScript] Running cleanup functions.");
     cleanupFunctions.forEach((cleanup) => cleanup());
   };
 }

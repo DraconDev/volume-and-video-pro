@@ -210,12 +210,14 @@ export class MediaManager {
       });
 
       if (addedMediaElements.length > 0) {
+        console.log(
           "[MediaManager Observer] Added media elements detected, triggering debounced check."
         );
         debouncedCheck(); // Trigger debounced check for added elements
       }
 
       if (removedMediaElements.length > 0) {
+        console.log(
           `[MediaManager Observer] Removed ${removedMediaElements.length} media elements, triggering cleanup.`
         );
         onRemoved(removedMediaElements); // Immediately call onRemoved for cleanup

@@ -13,6 +13,7 @@ export function createMediaEventHandlers(
   const elementsWithListeners = new WeakSet<HTMLMediaElement>();
 
   const applySettingsToSingleElement = async (element: HTMLMediaElement) => {
+    console.log(
       `[ContentScript DEBUG] applySettingsToSingleElement called for ${
         element.src || "(no src)"
       }`
@@ -22,6 +23,7 @@ export function createMediaEventHandlers(
       const currentSettings = settingsHandler.getCurrentSettings();
       const needsProcessing = settingsHandler.needsAudioProcessing();
 
+      console.log(
         `[ContentScript DEBUG] Applying settings to single element ${
           element.src || "(no src)"
         }:`
@@ -75,6 +77,7 @@ export function createMediaEventHandlers(
   };
 
   const resumeContextHandler = async (event: Event) => {
+    console.log(
       "Content: Media interaction detected, attempting to resume AudioContext."
     );
     await mediaProcessor.attemptContextResume();

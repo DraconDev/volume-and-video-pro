@@ -28,6 +28,7 @@ function sendMessageToTab(tabId: number, message: MessageType, frameId?: number)
       const errorMessage = String(error);
       if (errorMessage.includes("Could not establish connection") || errorMessage.includes("No tab with id")) {
         // These are common if the tab closed or content script isn't ready; log as debug.
+        console.debug(
           `SettingsEventHandler: Error sending message to tab ${tabId} (type: ${message.type}). Tab might be closed or content script not ready. Error:`,
           errorMessage
         );
@@ -52,6 +53,8 @@ export async function broadcastSiteSettingsUpdate(
     console.warn("SettingsEventHandler: broadcastSiteSettingsUpdate called with no hostname.");
     return;
   }
+  console.log(`[!!!] Broadcasting site settings update for ${hostname}`);
+  console.log(
     `SettingsEventHandler: Broadcasting site settings data for ${hostname}`,
     newSiteSettings
   );
@@ -59,6 +62,7 @@ export async function broadcastSiteSettingsUpdate(
   // Query for tabs that match the hostname directly
   const tabs = await chrome.tabs.query({ url: `*://${hostname}/*` });
   
+  console.log(
     `[EventHandler] Found ${tabs.length} tabs matching hostname ${hostname} for site settings update.`
   );
 
@@ -71,6 +75,7 @@ export async function broadcastSiteSettingsUpdate(
         settings: newSiteSettings,
         hostname: hostname,
       };
+      console.log(
         `[EventHandler] Sending site settings update to tab ${tab.id} (${hostname})`,
         message
       );
@@ -89,10 +94,13 @@ export async function broadcastSiteSettingsUpdate(
 export async function broadcastGlobalSettingsUpdate(
   newGlobalSettings: AudioSettings
 ) {
+  console.log(`[!!!] Broadcasting global settings update`); // ADDED LOG
+  console.log(
     "SettingsEventHandler: Broadcasting global settings data",
     newGlobalSettings
   );
   const tabs = await chrome.tabs.query({});
+  console.log(
     `[EventHandler] Found ${tabs.length} tabs to check for global update`
   ); // Log tab count
   for (const tab of tabs) {
@@ -100,11 +108,13 @@ export async function broadcastGlobalSettingsUpdate(
       const tabHostname = getHostname(tab.url);
       if (tabHostname) {
         const siteConfig = settingsManager.getSettingsForSite(tabHostname);
+        console.log(
           `[EventHandler] Checking tab ${tab.id} (${tabHostname}) for global update. Site config:`,
           siteConfig
         ); // Log check
         // Send update if no site config exists or if site is set to global mode
         if (!siteConfig || siteConfig.activeSetting === "global") {
+          console.log(
             `[EventHandler] Tab ${tab.id} (${tabHostname}) qualifies for global update.`
           ); // Log qualification
           const message: UpdateSettingsMessage = {
@@ -112,6 +122,7 @@ export async function broadcastGlobalSettingsUpdate(
             settings: newGlobalSettings,
             hostname: tabHostname,
           };
+          console.log(
             `[EventHandler] Sending global update to tab ${tab.id} (${tabHostname})`,
             message
           ); // ADDED LOG
@@ -135,6 +146,8 @@ export async function broadcastSiteModeUpdate(
     console.warn("SettingsEventHandler: broadcastSiteModeUpdate called with no hostname.");
     return;
   }
+  console.log(`[!!!] Broadcasting site mode update for ${hostname} to ${mode}`);
+  console.log(`SettingsEventHandler: Broadcasting mode data for ${hostname}`, {
     mode,
     effectiveSettings,
   });
@@ -142,6 +155,7 @@ export async function broadcastSiteModeUpdate(
   // Query for tabs that match the hostname directly
   const tabs = await chrome.tabs.query({ url: `*://${hostname}/*` });
 
+  console.log(
     `[EventHandler] Found ${tabs.length} tabs matching hostname ${hostname} for site mode update.`
   );
 
@@ -154,6 +168,7 @@ export async function broadcastSiteModeUpdate(
         settings: effectiveSettings, // Send the settings appropriate for the new mode
         hostname: hostname,
       };
+      console.log(
         `[EventHandler] Sending site mode update (as UPDATE_SETTINGS) to tab ${tab.id} (${hostname})`,
         message
       );
@@ -165,4 +180,5 @@ export async function broadcastSiteModeUpdate(
 }
 
 export function setupSettingsEventHandler() {
+  console.log("SettingsEventHandler: Listeners are now handled directly by SettingsManager");
 }
