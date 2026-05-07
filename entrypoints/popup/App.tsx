@@ -97,17 +97,15 @@ function App() {
       clearTimeout(updateTimeoutRef.current);
     }
 
-    // Set a new timeout, passing the specific newSettings for this change
+    // Set a new timeout, passing both the settings AND the mode flag to avoid stale closure
     updateTimeoutRef.current = window.setTimeout(
-      async (settingsToSend: AudioSettings) => {
-        // Add AudioSettings type
+      async (payload: { settingsToSend: AudioSettings; isGlobal: boolean }) => {
+        const { settingsToSend, isGlobal } = payload;
         console.log("[Popup] Debounce triggered. Sending update..."); // Log debounce execution
         try {
-          // Use the settingsToSend passed into the callback, which corresponds to this specific change event
-          const finalIsUsingGlobal = isUsingGlobalSettings; // Read latest global/site mode state here
           console.log("[Popup] Debounce - Final state to send:", {
             settingsToSend,
-            finalIsUsingGlobal,
+            isGlobal,
           }); // Log state being sent
 
           const [tab] = await chrome.tabs.query({
@@ -117,17 +115,17 @@ function App() {
           if (tab?.url && tab.id) {
             const hostname = new URL(tab.url).hostname;
 
-            if (finalIsUsingGlobal) {
+            if (isGlobal) {
               await settingsManager.updateGlobalSettings(
                 settingsToSend,
                 tab.id,
                 hostname
-              ); // Use settingsToSend
+              );
               console.log("[Popup] Debounce - Called updateGlobalSettings"); // Log which function was called
             } else {
               await settingsManager.updateSiteSettings(
                 hostname,
-                settingsToSend, // Use settingsToSend
+                settingsToSend,
                 tab.id
               );
               console.log("[Popup] Debounce - Called updateSiteSettings"); // Log which function was called
@@ -142,8 +140,8 @@ function App() {
         }
       },
       300,
-      newSettings
-    ); // Pass newSettings as argument to setTimeout callback
+      { settingsToSend: newSettings, isGlobal: isUsingGlobalSettings }
+    ); // Pass both settings and current mode flag
   }, [settings, isSiteEnabled, isUsingGlobalSettings]);
 
   // Initialize updateTimeoutRef
