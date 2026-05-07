@@ -142,7 +142,7 @@ async function handleContentScriptReady(
     }
 
     const hostname = message.hostname || getHostname(sender.tab.url);
-    const siteConfig = await settingsManager.getSettingsForSite(hostname);
+    const siteConfig = settingsManager.getSettingsForSite(hostname);
 
     const settingsToSend = siteConfig?.settings || defaultSettings;
     const isGlobal = siteConfig?.activeSetting === "global";
