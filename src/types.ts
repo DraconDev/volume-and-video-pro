@@ -60,3 +60,18 @@ export type StorageData = {
   globalSettings?: AudioSettings;
   siteSettings?: { [hostname: string]: SiteSettings };
 };
+
+/**
+ * Check if all audio settings are at their default (disabled) values.
+ * This is a pure function used across content script and popup.
+ */
+export function isSettingsDisabled(settings: AudioSettings): boolean {
+  return (
+    settings.speed === 100 &&
+    settings.volume === 100 &&
+    settings.bassBoost === 100 &&
+    settings.voiceBoost === 100 &&
+    !settings.mono
+  );
+}
+
