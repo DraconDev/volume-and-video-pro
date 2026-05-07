@@ -1,24 +1,24 @@
 # Project State
 
 ## Current Focus
-Added stable media event handlers to manage audio processing and settings application for media elements.
+Added DOM lifecycle management and message handling for dynamic media processing in content scripts
 
 ## Context
-This change addresses the need for reliable media event handling in the content script to properly apply audio settings and process media elements when they become available or play.
+The extension needs to handle dynamic media elements (added/removed) and respond to settings updates from the background/popup. This requires observing DOM changes and processing media elements accordingly.
 
 ## Completed
-- [x] Created stable event handlers for media elements to prevent listener leaks
-- [x] Implemented handlers for loadedmetadata, canplay, and loadstart events
-- [x] Added context resume handler for play events
-- [x] Included settings application logic for individual media elements
-- [x] Added debug logging for media event processing
+- [x] Added DOM lifecycle observer to handle initial settings application and dynamic media changes
+- [x] Created message handler to process UPDATE_SETTINGS messages from background/popup
+- [x] Implemented cleanup functions for event listeners and observers
+- [x] Added audio processing logic for both existing and newly added media elements
+- [x] Included proper cleanup of AudioContext when page unloads
 
 ## In Progress
-- [x] Implementation of media event handling system
+- [ ] Testing and validation of edge cases for dynamic media processing
 
 ## Blockers
-- None identified for this specific change
+- Need to verify performance impact of MutationObserver on complex pages
 
 ## Next Steps
-1. Integrate these handlers with the media element discovery system
-2. Verify proper handling of dynamic media element creation on pages
+1. Write comprehensive tests for dynamic media processing scenarios
+2. Optimize performance for pages with frequent DOM mutations
