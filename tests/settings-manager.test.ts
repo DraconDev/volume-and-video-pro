@@ -64,7 +64,7 @@ describe("SettingsManager", () => {
     await manager.updateSiteSettings("example.com", siteSettings, 1);
 
     const siteConfig = manager.getSettingsForSite("example.com");
-    expect(siteConfig.settings.volume).toBe(300);
+    expect(siteConfig.settings!.volume).toBe(300);
     expect(manager.globalSettings.volume).toBe(200);
   });
 
