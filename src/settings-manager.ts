@@ -248,30 +248,6 @@ export class SettingsManager {
     return { settingsToUse: settingsToBroadcast, siteConfig }; // Return the guaranteed object
   }
 
-  private getSettingsForPlayback(
-    hostname: string,
-    mode: string,
-    siteConfig: SiteSettings
-  ): AudioSettings {
-    if (mode === "global") {
-      console.log("SettingsManager: Using global settings for playback:", {
-        ...this.globalSettings,
-      });
-      return { ...this.globalSettings };
-    }
-
-    if (mode === "site" && siteConfig.settings) {
-      console.log("SettingsManager: Using site settings for playback:", {
-        ...siteConfig.settings,
-      });
-      return { ...siteConfig.settings };
-    }
-
-    // Simplify to just return disabled settings
-    console.log("SettingsManager: Using disabled settings for playback");
-    return { ...defaultSettings };
-  }
-
   async disableSite(hostname: string, tabId?: number) {
     let siteConfig = this.siteSettings.get(hostname);
 

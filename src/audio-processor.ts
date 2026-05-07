@@ -344,11 +344,6 @@ export class AudioProcessor {
     }
   }
 
-  // Keep the old private method for resetAllToDisabled for now, or refactor resetAllToDisabled to use the public one.
-  private disconnectAudioNodes(element: HTMLMediaElement): void {
-    this.disconnectElementNodes(element); // Just call the public version
-  }
-
   async updateAudioEffects(settings: AudioSettings): Promise<void> {
     console.log(
       "[AudioProcessor] Updating audio effects with settings:",

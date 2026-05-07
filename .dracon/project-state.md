@@ -1,23 +1,22 @@
 # Project State
 
 ## Current Focus
-Synchronize extension manifest version and description with package.json to maintain consistency across the project
+Removed site-specific mode selector UI and refactored audio settings management
 
 ## Context
-The extension's manifest file needs to stay in sync with the package.json file to ensure versioning and description consistency across the project. This change ensures that whenever the package.json is updated, the manifest file automatically reflects those changes.
+The site mode selector UI was removed as part of a broader refactoring to simplify audio settings management. The changes align with recent work to streamline audio processing and remove redundant code paths.
 
 ## Completed
-- [x] Updated manifest.json to read version and description from package.json
-- [x] Modified wxt.config.ts to correctly reference package.json location
-- [x] Updated manifest.json version to 3.4.2 to match package.json
-- [x] Updated manifest.json description to include more detailed information about the extension's capabilities
+- [x] Removed SiteModeSelector.tsx component (site-specific mode selection UI)
+- [x] Removed redundant private method in AudioProcessor (disconnectAudioNodes)
+- [x] Removed site-specific settings resolution logic from SettingsManager
 
 ## In Progress
-- [ ] No active work in progress
+- [x] Ongoing refactoring of audio settings management
 
 ## Blockers
-- None
+- None identified
 
 ## Next Steps
-1. Verify that the manifest file updates correctly when package.json is modified
-2. Test the extension to ensure all functionality remains intact after the manifest synchronization
+1. Complete audio settings refactoring
+2. Verify audio processing behavior with site-specific settings disabled
