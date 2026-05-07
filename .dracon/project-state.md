@@ -1,23 +1,23 @@
 # Project State
 
 ## Current Focus
-Refactored debounced settings update to properly handle both global and site-specific modes
+Refactored audio node disconnection logic in the audio processor
 
 ## Context
-The previous implementation had a stale closure issue where the `isUsingGlobalSettings` state might not reflect the current mode when the debounced update executed. This could lead to incorrect settings being applied.
+The audio processor was refactoring to improve reliability and maintainability. The changes focus on proper cleanup of audio nodes when media elements are removed or disconnected from the DOM.
 
 ## Completed
-- [x] Modified debounced update to pass both settings and current mode flag
-- [x] Updated timeout callback to properly destructure and use the passed payload
-- [x] Removed redundant state reading in favor of the passed mode flag
-- [x] Improved logging to show which settings function was called
+- [x] Refactored audio node disconnection logic to properly clean up audio nodes when media elements are removed or disconnected from the DOM
+- [x] Improved error handling during audio node disconnection
+- [x] Added logging for audio node disconnection events
+- [x] Updated the audio processor cleanup method to properly reset all audio processing state
 
 ## In Progress
 - [ ] No active work in progress
 
 ## Blockers
-- None identified
+- None
 
 ## Next Steps
-1. Verify the new implementation handles both global and site-specific modes correctly
-2. Test edge cases where mode toggles occur during debounce periods
+1. Test the updated audio processor with various media scenarios to ensure proper cleanup
+2. Verify that audio effects are properly reapplied when new media elements are added to the page
