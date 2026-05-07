@@ -1,26 +1,23 @@
 # Project State
 
 ## Current Focus
-Removed audio settings management hook to simplify audio processing logic
+Refactored event listener handling in content script initialization to ensure consistent type safety and behavior.
 
 ## Context
-The `useAudioSettings` hook was handling complex state management for audio settings across different sites and global configurations. This was causing performance issues and unnecessary complexity in the content script.
+The previous implementation had inconsistent event listener signatures and potential memory management issues with WeakMap-based handlers. This change standardizes the event handling to use proper EventListener signatures and ensures type safety.
 
 ## Completed
-- [x] Removed the `useAudioSettings` hook which handled:
-  - Site-specific audio settings
-  - Global audio settings
-  - Settings persistence
-  - Tab communication
-  - State synchronization
+- [x] Standardized event listener signatures for all media element events
+- [x] Removed outdated WeakMap memory management comment
+- [x] Improved type safety by explicitly casting event targets
+- [x] Maintained consistent behavior while improving code clarity
 
 ## In Progress
-- [ ] None - this was a complete removal
+- [x] Refactored event listener handling
 
 ## Blockers
-- None - this was a deliberate simplification
+- None identified
 
 ## Next Steps
-1. Update content scripts to use simplified audio processing
-2. Ensure fallback media elements respect the disabled state
-3. Verify performance improvements in audio processing
+1. Verify no regression in event handling behavior
+2. Test with various media element scenarios to ensure consistent behavior

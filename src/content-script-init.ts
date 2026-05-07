@@ -189,13 +189,8 @@ export async function initializeContentScript(
           "play",
           resumeContextHandler as EventListener
         );
-        // Note: We cannot reliably remove old boundApplySettings listeners because
-        // they were created from a WeakMap that was recreated each processMedia call.
-        // We rely on the fact that adding the same handler multiple times is idempotent
-        // in modern browsers (though not spec-guaranteed), and we use a persistent
-        // WeakMap stored outside processMedia for new handlers.
 
-        // Add listeners
+        // Add listeners - wrap applySettingsToSingleElement to match EventListener signature
         element.addEventListener(
           "play",
           resumeContextHandler as EventListener,
@@ -203,9 +198,15 @@ export async function initializeContentScript(
             once: false,
           }
         );
-        element.addEventListener("loadedmetadata", applySettingsToSingleElement);
-        element.addEventListener("canplay", applySettingsToSingleElement);
-        element.addEventListener("loadstart", applySettingsToSingleElement);
+        element.addEventListener("loadedmetadata", (event: Event) => {
+          applySettingsToSingleElement(event.target as HTMLMediaElement);
+        });
+        element.addEventListener("canplay", (event: Event) => {
+          applySettingsToSingleElement(event.target as HTMLMediaElement);
+        });
+        element.addEventListener("loadstart", (event: Event) => {
+          applySettingsToSingleElement(event.target as HTMLMediaElement);
+        });
 
         // Only apply settings if we're not in disabled mode
         if (!isDisabled) {
