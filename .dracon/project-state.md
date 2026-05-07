@@ -1,22 +1,21 @@
 # Project State
 
 ## Current Focus
-Removed site-specific mode selector UI and refactored audio settings management
+Refactored audio node disconnection logic in the audio processor.
 
 ## Context
-The site mode selector UI was removed as part of a broader refactoring to simplify audio settings management. The changes align with recent work to streamline audio processing and remove redundant code paths.
+The change was prompted by a need to improve the clarity and maintainability of audio processing cleanup operations. The original method name `disconnectAudioNodes` was replaced with `disconnectElementNodes` to better reflect its purpose of handling all nodes associated with a specific media element.
 
 ## Completed
-- [x] Removed SiteModeSelector.tsx component (site-specific mode selection UI)
-- [x] Removed redundant private method in AudioProcessor (disconnectAudioNodes)
-- [x] Removed site-specific settings resolution logic from SettingsManager
+- [x] Renamed `disconnectAudioNodes` to `disconnectElementNodes` for clearer semantics
+- [x] Maintained the same functionality while improving code readability
 
 ## In Progress
-- [x] Ongoing refactoring of audio settings management
+- [ ] None (this is a focused refactoring)
 
 ## Blockers
-- None identified
+- None (this is a small, self-contained change)
 
 ## Next Steps
-1. Complete audio settings refactoring
-2. Verify audio processing behavior with site-specific settings disabled
+1. Verify no functional regression in audio processing
+2. Consider if additional audio-related refactorings are needed

@@ -385,7 +385,7 @@ export class AudioProcessor {
   async resetAllToDisabled(): Promise<void> {
     // Reset all audio contexts and disconnect nodes
     this.audioElementMap.forEach((nodes, element) => {
-      this.disconnectAudioNodes(element);
+      this.disconnectElementNodes(element);
       // Don't close context here, let cleanup handle it or reuse it
       // nodes.context.close();
     });
