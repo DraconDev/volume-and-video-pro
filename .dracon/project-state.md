@@ -1,22 +1,22 @@
 # Project State
 
 ## Current Focus
-Reordered settings persistence and broadcast operations to ensure data integrity before propagation
+Improved audio processing cleanup and version bump to 2.6.0
 
 ## Context
-The change addresses potential race conditions where settings updates might be broadcast before being properly persisted. This could lead to inconsistent state across tabs.
+The changes optimize audio node cleanup and media processing management, particularly when disabling effects. The version bump reflects these improvements.
 
 ## Completed
-- [x] Moved persistence operation before broadcast in both global and site settings updates
-- [x] Updated logging to reflect the new operation sequence
-- [x] Maintained the same functionality while improving reliability
+- [x] Improved audio node cleanup in `audio-processor.ts` with better nullification and type safety
+- [x] Enhanced media processing in `media-processor.ts` with more efficient cleanup when effects are disabled
+- [x] Updated extension version to 2.6.0 in `wxt.config.ts`
 
 ## In Progress
-- [x] No active work in progress beyond the completed changes
+- [ ] No active work in progress
 
 ## Blockers
-- None identified for this specific change
+- None identified
 
 ## Next Steps
-1. Verify no regression in settings synchronization across browser tabs
-2. Consider adding error handling for persistence failures
+1. Test the audio processing cleanup improvements
+2. Verify media processing behavior with disabled effects

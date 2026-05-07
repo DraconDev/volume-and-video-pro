@@ -114,25 +114,21 @@ export class MediaProcessor {
         await this.audioProcessor.updateAudioEffects(settings);
       }
     } else {
+      // No audio effects needed - disconnect existing audio nodes for these elements
       for (const element of mediaElements) {
         if (!element.isConnected) {
           this.activeMediaElements.delete(element);
           continue;
         }
         try {
-          if (
-            typeof (this.audioProcessor as any).bypassEffectsForElement ===
-            "function"
-          ) {
-            await (this.audioProcessor as any).bypassEffectsForElement(element);
-          } else if (
-            typeof (this.audioProcessor as any).disconnectElement === "function"
-          ) {
-            await (this.audioProcessor as any).disconnectElement(element);
+          // Disconnect audio processing for this element since effects are no longer needed
+          if (this.audioProcessor.hasProcessing(element)) {
+            this.audioProcessor.disconnectElementNodes(element);
+            this.activeMediaElements.delete(element);
           }
         } catch (e) {
           console.error(
-            `[MediaProcessor] Error disabling effects for ${
+            `[MediaProcessor] Error disconnecting effects for ${
               element.src || "(no src)"
             }:`,
             e
@@ -140,11 +136,9 @@ export class MediaProcessor {
         }
       }
       
-      if (
-        this.audioProcessor.audioContext &&
-        typeof (this.audioProcessor as any).bypassAllEffects === "function"
-      ) {
-        await (this.audioProcessor as any).bypassAllEffects();
+      // If no more active elements with processing, clean up the audio context
+      if (this.activeMediaElements.size === 0) {
+        this.audioProcessor.cleanup();
       }
     }
   }
