@@ -38,12 +38,7 @@ export async function initializeContentScript(
 
     try {
       const currentSettings = settingsHandler.getCurrentSettings();
-      const isDisabled =
-        currentSettings.volume === 100 &&
-        currentSettings.speed === 100 &&
-        currentSettings.bassBoost === 100 &&
-        currentSettings.voiceBoost === 100 &&
-        !currentSettings.mono;
+      const isDisabled = isSettingsDisabled(currentSettings);
 
       const mediaElements = mediaProcessor.findMediaElements();
       console.log(
