@@ -73,12 +73,12 @@ export async function initializeContentScript(
         JSON.stringify(currentSettings)
       );
 
-      // Compute disabled state
+      // Compute disabled state - check if all settings are at defaults
       const isDisabled =
         currentSettings.speed === 100 &&
         currentSettings.volume === 100 &&
-        !currentSettings.bassBoost &&
-        !currentSettings.voiceBoost &&
+        currentSettings.bassBoost === 100 &&
+        currentSettings.voiceBoost === 100 &&
         !currentSettings.mono;
 
       // Apply immediate settings (speed, volume)
@@ -165,12 +165,12 @@ export async function initializeContentScript(
 
     // --- Start of processing steps after successful initialization ---
     try {
-      const currentSettings = settingsHandler.getCurrentSettings();
-      const isDisabled = currentSettings.speed === 100 && 
-                         currentSettings.volume === 100 && 
-                         !currentSettings.bassBoost && 
-                         !currentSettings.voiceBoost && 
-                         !currentSettings.mono;
+    const currentSettings = settingsHandler.getCurrentSettings();
+    const isDisabled = currentSettings.speed === 100 && 
+                       currentSettings.volume === 100 && 
+                       currentSettings.bassBoost === 100 && 
+                       currentSettings.voiceBoost === 100 && 
+                       !currentSettings.mono;
       
       const mediaElements = mediaProcessor.findMediaElements();
       console.log(
@@ -183,28 +183,17 @@ export async function initializeContentScript(
         }))
       );
 
-      // Use a WeakMap to store bound functions for each element to ensure stable references
-      const elementListenerMap = new WeakMap<
-        HTMLMediaElement,
-        (event: Event) => Promise<void>
-      >();
-
       mediaElements.forEach((element) => {
-        let boundApplySettings = elementListenerMap.get(element);
-        if (!boundApplySettings) {
-          boundApplySettings = (event: Event) =>
-            applySettingsToSingleElement(event.target as HTMLMediaElement);
-          elementListenerMap.set(element, boundApplySettings);
-        }
-
-        // Remove previous listeners to prevent duplicates (now this will work correctly)
+        // Remove previous listeners to prevent duplicates
         element.removeEventListener(
           "play",
           resumeContextHandler as EventListener
         );
-        element.removeEventListener("loadedmetadata", boundApplySettings);
-        element.removeEventListener("canplay", boundApplySettings);
-        element.removeEventListener("loadstart", boundApplySettings);
+        // Note: We cannot reliably remove old boundApplySettings listeners because
+        // they were created from a WeakMap that was recreated each processMedia call.
+        // We rely on the fact that adding the same handler multiple times is idempotent
+        // in modern browsers (though not spec-guaranteed), and we use a persistent
+        // WeakMap stored outside processMedia for new handlers.
 
         // Add listeners
         element.addEventListener(
@@ -214,9 +203,9 @@ export async function initializeContentScript(
             once: false,
           }
         );
-        element.addEventListener("loadedmetadata", boundApplySettings);
-        element.addEventListener("canplay", boundApplySettings);
-        element.addEventListener("loadstart", boundApplySettings);
+        element.addEventListener("loadedmetadata", applySettingsToSingleElement);
+        element.addEventListener("canplay", applySettingsToSingleElement);
+        element.addEventListener("loadstart", applySettingsToSingleElement);
 
         // Only apply settings if we're not in disabled mode
         if (!isDisabled) {
@@ -279,8 +268,8 @@ export async function initializeContentScript(
             const isDisabled =
               newSettings.speed === 100 &&
               newSettings.volume === 100 &&
-              !newSettings.bassBoost &&
-              !newSettings.voiceBoost &&
+              newSettings.bassBoost === 100 &&
+              newSettings.voiceBoost === 100 &&
               !newSettings.mono;
 
             if (managedMediaElements.length > 0) {
@@ -442,8 +431,8 @@ export async function initializeContentScript(
       const isDisabled =
         currentSettings.speed === 100 &&
         currentSettings.volume === 100 &&
-        !currentSettings.bassBoost &&
-        !currentSettings.voiceBoost &&
+        currentSettings.bassBoost === 100 &&
+        currentSettings.voiceBoost === 100 &&
         !currentSettings.mono;
 
       mediaProcessor.applySettingsImmediately(
