@@ -53,6 +53,7 @@ export class AudioProcessor {
         );
         // Check if the media source has changed OR if the source node is somehow null
         // Use currentSrc instead of src to handle blob/HLS URLs correctly
+        let sourceChanged = false;
         if (this.audioContext && (nodes.currentSrc !== mediaElement.currentSrc || !nodes.source)) {
           console.log(
             `[AudioProcessor] Media source changed from ${
@@ -69,11 +70,21 @@ export class AudioProcessor {
           }
           nodes.source = this.audioContext.createMediaElementSource(mediaElement);
           nodes.currentSrc = mediaElement.currentSrc;
+          sourceChanged = true;
         }
-        // nodes.mono will be updated by connectNodes based on settings.mono
 
-        // connectNodes will now handle full disconnection of the downstream graph and reconnection.
-        await this.connectNodes(nodes, settings);
+        // Only reconnect the graph topology if mono setting changed or source changed.
+        // Reconnecting on every parameter change causes audible clicks/pops.
+        const monoChanged = nodes.mono !== settings.mono;
+        if (sourceChanged || monoChanged) {
+          console.log(
+            `[AudioProcessor] Graph topology changed (sourceChanged=${sourceChanged}, monoChanged=${monoChanged}). Reconnecting nodes.`
+          );
+          await this.connectNodes(nodes, settings);
+        } else {
+          // Just update parameter values without disconnecting/reconnecting
+          await this.updateNodeSettings(nodes, settings);
+        }
       } else {
         console.log(
           `[AudioProcessor] Creating new audio nodes for element: ${
