@@ -81,3 +81,23 @@ export function isSettingsDisabled(settings: AudioSettings): boolean {
   );
 }
 
+/**
+ * Debug logger that can be disabled in production.
+ * Set localStorage.debugVvp = 'true' to enable debug output.
+ */
+const DEBUG_ENABLED =
+  typeof localStorage !== "undefined" &&
+  localStorage.getItem("debugVvp") === "true";
+
+export function debugLog(...args: any[]) {
+  if (DEBUG_ENABLED) {
+    console.log("[VVP]", ...args);
+  }
+}
+
+export function debugWarn(...args: any[]) {
+  if (DEBUG_ENABLED) {
+    console.warn("[VVP]", ...args);
+  }
+}
+
