@@ -1,6 +1,6 @@
 import { MediaProcessor } from "./media-processor";
 import { SettingsHandler } from "./settings-handler";
-import { MessageType } from "./types";
+import { MessageType, isSettingsDisabled } from "./types";
 
 export async function initializeContentScript(
   settingsHandler: SettingsHandler,
@@ -73,13 +73,8 @@ export async function initializeContentScript(
         JSON.stringify(currentSettings)
       );
 
-      // Compute disabled state - check if all settings are at defaults
-      const isDisabled =
-        currentSettings.speed === 100 &&
-        currentSettings.volume === 100 &&
-        currentSettings.bassBoost === 100 &&
-        currentSettings.voiceBoost === 100 &&
-        !currentSettings.mono;
+      // Compute disabled state using shared helper
+      const isDisabled = isSettingsDisabled(currentSettings);
 
       // Apply immediate settings (speed, volume)
       mediaProcessor.applySettingsImmediately(
@@ -141,6 +136,20 @@ export async function initializeContentScript(
     }
   };
 
+  // Stable event handler references to prevent listener leaks
+  const onLoadedMetadata = (event: Event) => {
+    applySettingsToSingleElement(event.target as HTMLMediaElement);
+  };
+  const onCanPlay = (event: Event) => {
+    applySettingsToSingleElement(event.target as HTMLMediaElement);
+  };
+  const onLoadStart = (event: Event) => {
+    applySettingsToSingleElement(event.target as HTMLMediaElement);
+  };
+
+  // Track which elements have had listeners added to avoid duplicates
+  const elementsWithListeners = new WeakSet<HTMLMediaElement>();
+
   // Process media with current settings
   const processMedia = async () => {
     console.log(
@@ -165,13 +174,9 @@ export async function initializeContentScript(
 
     // --- Start of processing steps after successful initialization ---
     try {
-    const currentSettings = settingsHandler.getCurrentSettings();
-    const isDisabled = currentSettings.speed === 100 && 
-                       currentSettings.volume === 100 && 
-                       currentSettings.bassBoost === 100 && 
-                       currentSettings.voiceBoost === 100 && 
-                       !currentSettings.mono;
-      
+      const currentSettings = settingsHandler.getCurrentSettings();
+      const isDisabled = isSettingsDisabled(currentSettings);
+
       const mediaElements = mediaProcessor.findMediaElements();
       console.log(
         `[ContentScript DEBUG] Found ${mediaElements.length} media elements:`,
@@ -184,29 +189,16 @@ export async function initializeContentScript(
       );
 
       mediaElements.forEach((element) => {
-        // Remove previous listeners to prevent duplicates
-        element.removeEventListener(
-          "play",
-          resumeContextHandler as EventListener
-        );
+        // Only add listeners once per element to prevent leaks
+        if (!elementsWithListeners.has(element)) {
+          elementsWithListeners.add(element);
 
-        // Add listeners - wrap applySettingsToSingleElement to match EventListener signature
-        element.addEventListener(
-          "play",
-          resumeContextHandler as EventListener,
-          {
-            once: false,
-          }
-        );
-        element.addEventListener("loadedmetadata", (event: Event) => {
-          applySettingsToSingleElement(event.target as HTMLMediaElement);
-        });
-        element.addEventListener("canplay", (event: Event) => {
-          applySettingsToSingleElement(event.target as HTMLMediaElement);
-        });
-        element.addEventListener("loadstart", (event: Event) => {
-          applySettingsToSingleElement(event.target as HTMLMediaElement);
-        });
+          // Add listeners using stable references
+          element.addEventListener("loadedmetadata", onLoadedMetadata);
+          element.addEventListener("canplay", onCanPlay);
+          element.addEventListener("loadstart", onLoadStart);
+          element.addEventListener("play", resumeContextHandler as EventListener);
+        }
 
         // Only apply settings if we're not in disabled mode
         if (!isDisabled) {
@@ -266,12 +258,7 @@ export async function initializeContentScript(
             );
 
             // Apply immediate settings (speed, volume) to all managed elements first
-            const isDisabled =
-              newSettings.speed === 100 &&
-              newSettings.volume === 100 &&
-              newSettings.bassBoost === 100 &&
-              newSettings.voiceBoost === 100 &&
-              !newSettings.mono;
+            const isDisabled = isSettingsDisabled(newSettings);
 
             if (managedMediaElements.length > 0) {
               console.log(
@@ -311,7 +298,7 @@ export async function initializeContentScript(
                       newSettings,
                       isDisabled
                     ); // Apply immediate settings to fallback elements too
-                    
+
                     // Only process audio effects if not in disabled mode and needed
                     if (!isDisabled && needsProcessingNow) {
                       console.log(
@@ -429,12 +416,7 @@ export async function initializeContentScript(
         needsProcessing
       );
       // Also apply immediate settings to them
-      const isDisabled =
-        currentSettings.speed === 100 &&
-        currentSettings.volume === 100 &&
-        currentSettings.bassBoost === 100 &&
-        currentSettings.voiceBoost === 100 &&
-        !currentSettings.mono;
+      const isDisabled = isSettingsDisabled(currentSettings);
 
       mediaProcessor.applySettingsImmediately(
         addedElements,
