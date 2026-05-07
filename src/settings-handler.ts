@@ -21,7 +21,6 @@ export class SettingsHandler {
    */
   async initialize(hostname: string): Promise<void> {
     this.targetHostname = hostname; // Store the target hostname
-    console.log(
       `SettingsHandler (Target: ${this.targetHostname}): Initializing...`
     );
 
@@ -34,7 +33,6 @@ export class SettingsHandler {
       return;
     }
 
-    console.log(
       `SettingsHandler (Target: ${this.targetHostname}): Attempting to send GET_INITIAL_SETTINGS.`
     );
     try {
@@ -43,14 +41,12 @@ export class SettingsHandler {
         hostname: this.targetHostname,
       });
 
-      console.log(
         `SettingsHandler (Target: ${this.targetHostname}): GET_INITIAL_SETTINGS response received:`,
         response
       );
 
       if (response && response.settings) {
         this.currentSettings = response.settings;
-        console.log(
           `SettingsHandler (Target: ${this.targetHostname}): Successfully applied initial settings from background:`,
           JSON.stringify(this.currentSettings)
         );
@@ -72,7 +68,6 @@ export class SettingsHandler {
         JSON.stringify(this.currentSettings)
       );
     } finally {
-      console.log(
         `SettingsHandler (Target: ${this.targetHostname}): Initialization promise resolving. Final currentSettings state for this init cycle:`,
         JSON.stringify(this.currentSettings)
       );
@@ -100,7 +95,6 @@ export class SettingsHandler {
    * updates from the background script via messages.
    */
   updateSettings(settings: AudioSettings): void {
-    console.log(
       `SettingsHandler (Target: ${this.targetHostname}): Settings updated directly`,
       settings
     );
@@ -129,7 +123,6 @@ export class SettingsHandler {
       )
       // Add other relevant settings checks here if needed
     );
-    // console.log(`SettingsHandler (${this.hostname}): needsAudioProcessing = ${needsProcessing}`);
     return needsProcessing;
   }
 }

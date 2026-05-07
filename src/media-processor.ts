@@ -37,7 +37,6 @@ export class MediaProcessor {
       this.activeMediaElements.delete(element); // Clean up if found in active list
       return;
     }
-    // console.log( // This log can be very noisy, enable if needed for specific speed debugging
     //   `[MediaProcessor] Updating speed for element ${
     //     element.src || "(no src)"
     //   } to ${speed}`
@@ -72,7 +71,6 @@ export class MediaProcessor {
   ): Promise<void> {
     // Only log if we have elements to process
     if (mediaElements.length > 0) {
-      console.debug(
         `[MediaProcessor] Processing ${mediaElements.length} media element(s). Audio effects: ${needsAudioEffectsSetup}`
       );
     }
@@ -155,7 +153,6 @@ export class MediaProcessor {
     disabled: boolean = false
   ): void {
     if (disabled) {
-      console.log(
         "[MediaProcessor] Disabling media processing and pausing media elements"
       );
       
@@ -185,7 +182,6 @@ export class MediaProcessor {
       return;
     }
 
-    console.log(
       "[MediaProcessor] Applying settings immediately to media elements"
     );
 
@@ -209,7 +205,6 @@ export class MediaProcessor {
         // Add play event listener if not already added
         if (!this.elementListeners.has(element)) {
           const playHandler = () => {
-            console.log(`[MediaProcessor] Reapplying settings on play event for ${element.src || "(no src)"}`);
             // Read current settings from WeakMap instead of capturing stale closure
             const currentSettings = this.elementSettings.get(element);
             if (currentSettings) {
@@ -259,7 +254,6 @@ export class MediaProcessor {
     );
     
     if (visibleMedia.length > 0) {
-      console.log(
         `[MediaProcessor] Applying settings to ${visibleMedia.length} visible media elements`
       );
       this.applySettingsImmediately(visibleMedia, settings, disabled);
@@ -271,7 +265,6 @@ export class MediaProcessor {
    * Useful for immediate application of filter/audio changes
    */
   async forceAudioEffectsUpdate(settings: AudioSettings): Promise<void> {
-    console.log("[MediaProcessor] Forcing audio effects update");
 
     if (
       this.audioProcessor["audioContext"] &&
@@ -285,7 +278,6 @@ export class MediaProcessor {
 
         // Force update of audio effects
         await this.audioProcessor.updateAudioEffects(settings);
-        console.log(
           "[MediaProcessor] Successfully forced audio effects update"
         );
       } catch (e) {
@@ -295,7 +287,6 @@ export class MediaProcessor {
         );
       }
     } else {
-      console.log(
         "[MediaProcessor] Creating new audio context for forced update"
       );
       const mockElement = document.createElement("audio");
