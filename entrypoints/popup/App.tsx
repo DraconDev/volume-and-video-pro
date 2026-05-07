@@ -82,7 +82,6 @@ function App() {
 
     const newSettings = {
       ...settings,
-      ...settings, // Use current state as base
       [key]: value,
     };
     console.log(
@@ -182,8 +181,6 @@ function App() {
       const hostname = new URL(tab.url).hostname;
 
       // Don't update actual settings, just switch modes
-      setIsUsingGlobalSettings(mode === "global");
-      setIsUsingGlobalSettings(mode === "global");
       setIsUsingGlobalSettings(mode === "global");
       setIsSiteEnabled(mode !== "disabled");
 
