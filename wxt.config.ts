@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 
 // Read version and description from package.json so manifest stays in sync automatically
-const { version, description } = require("../package.json");
+const { version, description } = require("./package.json");
 
 export default defineConfig({
   manifest: {
