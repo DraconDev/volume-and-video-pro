@@ -1,22 +1,24 @@
 # Project State
 
 ## Current Focus
-Improve content script ready message handling in the background script
+Removal of background script message handling and tab tracking functionality
 
 ## Context
-The change modifies how the background script processes the CONTENT_SCRIPT_READY message to ensure settings are properly retrieved and sent to the content script.
+This change removes the message handling infrastructure and tab tracking from the background script, which was previously used to manage settings and content script communication. The removal suggests a shift towards simpler audio processing without the need for dynamic tab management or settings synchronization.
 
 ## Completed
-- [x] Modified the K function to properly retrieve settings for the hostname
-- [x] Updated the message sending to include the correct settings and state information
-- [x] Improved error handling for invalid sender tabs
+- [x] Removed message listener for `GET_INITIAL_SETTINGS` and `CONTENT_SCRIPT_READY` messages
+- [x] Eliminated hostname extraction helper function
+- [x] Removed active tab tracking system
+- [x] Deleted tab removal cleanup handler
+- [x] Simplified background script initialization
 
 ## In Progress
-- [ ] No active work in progress
+- [ ] None (this appears to be a complete removal of functionality)
 
 ## Blockers
-- None identified
+- None identified in this change
 
 ## Next Steps
-1. Verify the changes don't introduce new edge cases in settings propagation
-2. Test with various tab states (active/inactive, different URLs)
+1. Verify that content scripts now receive default settings without background mediation
+2. Confirm that audio processing continues to work without the removed tab management
