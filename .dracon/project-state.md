@@ -1,22 +1,26 @@
 # Project State
 
 ## Current Focus
-Refactored popup component to use React hooks consistently and optimize performance
+Removed audio settings management hook to simplify audio processing logic
 
 ## Context
-The popup component was updated to properly use React's `useCallback` for event handlers and memoized functions, which improves performance by preventing unnecessary re-renders and recreations of functions.
+The `useAudioSettings` hook was handling complex state management for audio settings across different sites and global configurations. This was causing performance issues and unnecessary complexity in the content script.
 
 ## Completed
-- [x] Added `useCallback` to `handleSettingChange`, `formatDiff`, `handleReset`, and `handleToggleMode` functions
-- [x] Added proper dependency arrays to memoized functions
-- [x] Added `useCallback` import to the component
+- [x] Removed the `useAudioSettings` hook which handled:
+  - Site-specific audio settings
+  - Global audio settings
+  - Settings persistence
+  - Tab communication
+  - State synchronization
 
 ## In Progress
-- [ ] No active work in progress
+- [ ] None - this was a complete removal
 
 ## Blockers
-- None identified
+- None - this was a deliberate simplification
 
 ## Next Steps
-1. Verify performance improvements in the popup component
-2. Ensure all other components using similar patterns are updated
+1. Update content scripts to use simplified audio processing
+2. Ensure fallback media elements respect the disabled state
+3. Verify performance improvements in audio processing
