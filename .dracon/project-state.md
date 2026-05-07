@@ -1,21 +1,21 @@
 # Project State
 
 ## Current Focus
-Automatically sync extension manifest version and description with package.json
+Added message type for retrieving initial settings in the browser extension
 
 ## Context
-Previously, the manifest version and description were hardcoded, which could lead to version mismatches between the package and the extension. This change ensures the manifest stays in sync with package.json automatically.
+This change enables the extension to request initial settings from the background script when content scripts initialize, ensuring consistent state across the extension components.
 
 ## Completed
-- [x] Added dynamic version and description from package.json
-- [x] Removed hardcoded version and description values
+- [x] Added `GetInitialSettingsMessage` type for message passing
+- [x] Updated `MessageType` union to include the new message type
 
 ## In Progress
-- [x] No active work in progress
+- [x] Implementation of message handling for this new message type
 
 ## Blockers
-- None
+- None identified for this specific change
 
 ## Next Steps
-1. Verify the extension version updates correctly during builds
-2. Ensure the description remains accurate across releases
+1. Implement message handling in the background script to respond to `GET_INITIAL_SETTINGS`
+2. Update content scripts to properly handle the response from this message type

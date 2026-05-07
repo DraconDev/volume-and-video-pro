@@ -51,10 +51,16 @@ export interface UpdateSiteModeMessage {
   mode?: "global" | "site" | "disabled";
 }
 
+export interface GetInitialSettingsMessage {
+  type: "GET_INITIAL_SETTINGS";
+  hostname?: string;
+}
+
 export type MessageType =
   | UpdateSettingsMessage
   | ContentScriptReadyMessage
-  | UpdateSiteModeMessage;
+  | UpdateSiteModeMessage
+  | GetInitialSettingsMessage;
 
 export type StorageData = {
   globalSettings?: AudioSettings;
