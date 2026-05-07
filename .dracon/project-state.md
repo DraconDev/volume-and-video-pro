@@ -1,24 +1,21 @@
 # Project State
 
 ## Current Focus
-Refactored audio settings disabled state detection and media element event handling in content script initialization
+Automatically sync extension manifest version and description with package.json
 
 ## Context
-The change improves maintainability by centralizing the disabled state detection logic and prevents memory leaks by properly managing media element event listeners.
+Previously, the manifest version and description were hardcoded, which could lead to version mismatches between the package and the extension. This change ensures the manifest stays in sync with package.json automatically.
 
 ## Completed
-- [x] Extracted disabled state detection into shared utility function `isSettingsDisabled`
-- [x] Added stable event handler references to prevent listener leaks
-- [x] Implemented WeakSet to track elements with added listeners
-- [x] Consolidated duplicate event listener logic
-- [x] Improved code organization with clear separation of concerns
+- [x] Added dynamic version and description from package.json
+- [x] Removed hardcoded version and description values
 
 ## In Progress
-- [ ] None (changes are complete)
+- [x] No active work in progress
 
 ## Blockers
-- None (changes are complete)
+- None
 
 ## Next Steps
-1. Verify the refactored code works with all media element scenarios
-2. Consider adding unit tests for the new disabled state detection logic
+1. Verify the extension version updates correctly during builds
+2. Ensure the description remains accurate across releases

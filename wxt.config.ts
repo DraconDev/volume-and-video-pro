@@ -1,12 +1,15 @@
 import { defineConfig } from "wxt";
 
+// Read version from package.json so manifest stays in sync automatically
+const { version, description } = require("../package.json");
+
 export default defineConfig({
   manifest: {
     permissions: ["storage", "tabs"],
     host_permissions: ["<all_urls>"],
     name: "Volume & Video Master 1000%",
-    version: "2.7.0",
-    description: "Volume & Video Master",
+    version,
+    description: description || "Volume & Video Master",
     background: {
       service_worker: "entrypoints/background.ts",
       type: "module",
