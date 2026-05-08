@@ -1,21 +1,21 @@
 # Project State
 
 ## Current Focus
-Centralizing debug logging imports across iframe and media management components
+Centralized debug logging imports in settings-manager.ts
 
 ## Context
-This change continues the ongoing refactoring to standardize debug logging across the codebase, following previous commits that centralized debug logging functionality.
+This change continues the ongoing refactoring of debug logging across the codebase, ensuring consistent import handling.
 
 ## Completed
-- [x] Added `debugLog` import to iframe hostname handler
-- [x] Added `debugLog` import to media manager
+- [x] Removed duplicate debugLog import in settings-manager.ts
+- [x] Consolidated debug logging imports with centralized pattern
 
 ## In Progress
-- [x] Standardizing debug logging imports across additional components
+- [x] Ongoing debug logging refactoring across the codebase
 
 ## Blockers
-- None identified for this specific change
+- No blockers identified for this specific change
 
 ## Next Steps
-1. Verify debug logging consistency across all components
-2. Continue refactoring other modules to use centralized debug logging
+1. Verify debug logging consistency in other affected modules
+2. Continue centralized debug logging refactoring across remaining components
