@@ -6,7 +6,7 @@ import { initializeContentScript } from "../src/content-script-init";
 import { debugLog } from "../src/types";
 
 export default defineContentScript({
-  matches: ["http://*/*", "https://*/*", "file://*/*"],
+  matches: ["http://*/*", "https://*/*"],
   allFrames: true,
   runAt: "document_idle",
   main: async () => {
@@ -22,12 +22,6 @@ export default defineContentScript({
       "Content: Script starting - This log should always appear",
       window.location.href
     );
-    
-    // Skip processing for file URLs
-    if (window.location.protocol === 'file:') {
-      debugLog('Skipping content script for file URL');
-      return;
-    }
 
     // Initialize core components
     const settingsHandler = new SettingsHandler();
