@@ -33,6 +33,24 @@ export default defineConfig({
         matches: ["<all_urls>"],
       },
     ],
+
+    // Firefox-specific settings
+    browser_specific_settings: {
+      gecko: {
+        id: "volume-video-master@example.com",
+        strict_min_version: "109.0",
+        // Required as of November 2025: declare data collection practices
+        data_collection_permissions: {
+          // We do not collect any user data
+          "collection-ping-history": false,
+          "collection-ping-form-data": false,
+          "collection-ping-web-notifications": false,
+          "collection-ping-tab-data": false,
+          "collection-ping-location": false,
+          "collection-ping-user-activity": false,
+        },
+      },
+    },
   },
   modules: ["@wxt-dev/module-react"],
 });
