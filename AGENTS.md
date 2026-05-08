@@ -95,6 +95,17 @@ Settings changes are debounced (300ms). Both `settingsToSend` and `isGlobal` fla
 };
 ```
 
+### Debug Logging
+
+All debug `console.log` statements use `debugLog()` from `types.ts`. This is a no-op in production unless `localStorage.debugVvp = 'true'` is set.
+
+```typescript
+import { debugLog } from "./types";
+debugLog("Message:", data); // Only logs when debugVvp is enabled
+```
+
+Keep `console.error` and `console.warn` for actual issues — these always print.
+
 ## Testing
 
 - Framework: vitest + jsdom
