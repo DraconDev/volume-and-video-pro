@@ -1,25 +1,21 @@
 # Project State
 
 ## Current Focus
-Centralized debug logging across audio processing and content script modules
+Centralizing debug logging imports across iframe and media management components
 
 ## Context
-The recent changes refactor debug logging to use a centralized `debugLog` function across multiple modules, improving consistency and maintainability.
+This change continues the ongoing refactoring to standardize debug logging across the codebase, following previous commits that centralized debug logging functionality.
 
 ## Completed
-- [x] Added `debugLog` import to audio processor module
-- [x] Added `debugLog` import to content script initialization
-- [x] Added `debugLog` import to media processor module
-- [x] Added `debugLog` import to message handler module
-- [x] Added `debugLog` import to settings handler module
-- [x] Added `debugLog` import to settings manager module
+- [x] Added `debugLog` import to iframe hostname handler
+- [x] Added `debugLog` import to media manager
 
 ## In Progress
-- [ ] No active work in progress
+- [x] Standardizing debug logging imports across additional components
 
 ## Blockers
-- None identified
+- None identified for this specific change
 
 ## Next Steps
-1. Verify all debug logging calls are properly using the centralized function
-2. Update any remaining modules that may need the debug logging functionality
+1. Verify debug logging consistency across all components
+2. Continue refactoring other modules to use centralized debug logging

@@ -1,3 +1,5 @@
+import { debugLog } from "./types";
+
 const mediaConfig = {
   baseSelectors: [
     "video",

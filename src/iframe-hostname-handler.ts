@@ -1,5 +1,6 @@
 import { SettingsHandler } from "./settings-handler";
 import { MediaProcessor } from "./media-processor";
+import { debugLog } from "./types";
 
 type InitializeScriptCallback = (hostname: string) => Promise<void>;
 
