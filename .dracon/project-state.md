@@ -1,24 +1,20 @@
 # Project State
 
 ## Current Focus
-Refactored audio settings management and added store documentation
+Fix WXT type error in configuration by adding explicit type casting
 
 ## Context
-The extension is being prepared for store submission by centralizing debug logging and adding necessary documentation files. The audio settings management was refactored to improve content script initialization and remove redundant debug logging.
+The WXT framework's type definitions don't currently include the `data_collection_permissions` configuration option, causing TypeScript errors. This change temporarily suppresses the error while waiting for framework updates.
 
 ## Completed
-- [x] Centralized debug logging across all components
-- [x] Refactored audio settings management with improved content script initialization
-- [x] Added store documentation files (privacy policy, scripting justification, checklist, description)
-- [x] Updated extension manifest version to 3.18.18
-- [x] Removed redundant debug logging from audio processing and content scripts
+- [x] Added `as any` type cast to suppress TypeScript error in WXT configuration
 
 ## In Progress
-- [x] Finalizing store submission materials
+- [x] Waiting for WXT framework to update type definitions
 
 ## Blockers
-- None identified
+- Framework dependency: WXT types need to be updated to include `data_collection_permissions`
 
 ## Next Steps
-1. Review and finalize store submission materials
-2. Prepare for extension store submission
+1. Monitor WXT framework releases for type definition updates
+2. Remove type cast once framework types are updated

@@ -49,7 +49,7 @@ export default defineConfig({
           "collection-ping-location": false,
           "collection-ping-user-activity": false,
         },
-      },
+      } as any, // Cast needed until WXT types include data_collection_permissions
     },
   },
   modules: ["@wxt-dev/module-react"],
