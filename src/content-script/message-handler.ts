@@ -1,6 +1,6 @@
 import { MediaProcessor } from "../media-processor";
 import { SettingsHandler } from "../settings-handler";
-import { MessageType, isSettingsDisabled } from "../types";
+import { MessageType, isSettingsDisabled, debugLog } from "../types";
 
 /**
  * Handles UPDATE_SETTINGS messages from background/popup.

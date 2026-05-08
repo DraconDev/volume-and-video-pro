@@ -1,21 +1,22 @@
 # Project State
 
 ## Current Focus
-Centralized debug logging imports in settings-manager.ts
+Centralized debug logging imports across content script modules
 
 ## Context
-This change continues the ongoing refactoring of debug logging across the codebase, ensuring consistent import handling.
+This change continues the effort to standardize debug logging across the extension by adding the centralized `debugLog` utility to content script modules that previously only imported `isSettingsDisabled`.
 
 ## Completed
-- [x] Removed duplicate debugLog import in settings-manager.ts
-- [x] Consolidated debug logging imports with centralized pattern
+- [x] Added `debugLog` import to `dom-lifecycle.ts`
+- [x] Added `debugLog` import to `media-events.ts`
+- [x] Added `debugLog` import to `message-handler.ts`
 
 ## In Progress
-- [x] Ongoing debug logging refactoring across the codebase
+- [ ] No active work in progress
 
 ## Blockers
-- No blockers identified for this specific change
+- None identified
 
 ## Next Steps
-1. Verify debug logging consistency in other affected modules
-2. Continue centralized debug logging refactoring across remaining components
+1. Verify all content script modules now have consistent debug logging
+2. Review if additional modules need similar updates

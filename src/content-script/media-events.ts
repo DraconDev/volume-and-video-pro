@@ -1,6 +1,6 @@
 import { MediaProcessor } from "../media-processor";
 import { SettingsHandler } from "../settings-handler";
-import { isSettingsDisabled } from "../types";
+import { isSettingsDisabled, debugLog } from "../types";
 
 /**
  * Creates stable event handlers for media elements to prevent listener leaks.
