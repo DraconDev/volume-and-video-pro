@@ -1,5 +1,5 @@
 import { settingsManager } from "./settings-manager";
-import { MessageType, defaultSettings, UpdateSettingsMessage } from "./types";
+import { MessageType, defaultSettings, UpdateSettingsMessage , debugLog } from "./types";
 
 // Helper function to get hostname from URL
 function getHostname(url: string): string {

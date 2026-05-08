@@ -3,7 +3,7 @@ import {
   SiteSettings,
   defaultSettings,
   debugLog,
-} from "./types";
+, debugLog } from "./types";
 // Import the broadcast functions directly
 import {
   broadcastSiteSettingsUpdate,

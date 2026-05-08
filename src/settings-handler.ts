@@ -1,4 +1,4 @@
-import { AudioSettings, defaultSettings } from "./types";
+import { AudioSettings, defaultSettings , debugLog } from "./types";
 
 export class SettingsHandler {
   private currentSettings: AudioSettings;

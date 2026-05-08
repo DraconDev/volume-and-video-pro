@@ -1,4 +1,4 @@
-import { AudioSettings } from "./types";
+import { AudioSettings , debugLog } from "./types";
 
 export interface AudioNodes {
   context: AudioContext;
