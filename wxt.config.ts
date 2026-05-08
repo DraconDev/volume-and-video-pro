@@ -38,18 +38,18 @@ export default defineConfig({
     browser_specific_settings: {
       gecko: {
         id: "volume-video-master@example.com",
-        strict_min_version: "109.0",
+        // data_collection_permissions requires Firefox 140+
+        strict_min_version: "140.0",
         // Required as of November 2025: declare data collection practices
         data_collection_permissions: {
           // We do not collect any user data
-          "collection-ping-history": false,
-          "collection-ping-form-data": false,
-          "collection-ping-web-notifications": false,
-          "collection-ping-tab-data": false,
-          "collection-ping-location": false,
-          "collection-ping-user-activity": false,
-        },
-      } as any, // Cast needed until WXT types include data_collection_permissions
+          required: ["none"],
+        } as any, // Cast needed until WXT types include data_collection_permissions
+      },
+      gecko_android: {
+        // data_collection_permissions requires Firefox for Android 142+
+        strict_min_version: "142.0",
+      } as any,
     },
   },
   modules: ["@wxt-dev/module-react"],

@@ -1,21 +1,23 @@
 # Project State
 
 ## Current Focus
-Added a new image asset (1.png) to the public directory
+Updated Firefox-specific extension configuration to comply with new data collection requirements.
 
 ## Context
-This image was added to support visual elements in the extension's user interface, likely for display purposes or branding.
+Firefox's upcoming November 2025 requirements for declaring data collection practices necessitate updating the extension's manifest configuration. The new `data_collection_permissions` field requires Firefox 140+ for desktop and 142+ for Android.
 
 ## Completed
-- [x] Added public/1.png (131KB image file)
+- [x] Added `1.png` to public assets and updated type definitions
+- [x] Updated Firefox minimum version to 140.0 for desktop
+- [x] Added Firefox for Android configuration with minimum version 142.0
+- [x] Updated data collection permissions to explicitly declare no data collection
 
 ## In Progress
-- [ ] None (standalone asset addition)
+- [ ] No active work in progress
 
 ## Blockers
-- None (asset addition is complete)
+- WXT type definitions need to be updated to include `data_collection_permissions`
 
 ## Next Steps
-1. Verify image usage in relevant UI components
-2. Confirm image meets design specifications
-```
+1. Update WXT types to include `data_collection_permissions`
+2. Verify extension works with Firefox 140+ and 142+
