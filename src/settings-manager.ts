@@ -69,7 +69,7 @@ export class SettingsManager {
           siteSettings: this.pendingSettings.siteSettings,
         };
         await chrome.storage.sync.set(settings);
-        console.log("SettingsManager: Settings persisted successfully", {
+        debugLog("SettingsManager: Settings persisted successfully", {
           hostname,
         });
 
@@ -88,7 +88,7 @@ export class SettingsManager {
 
     // If no site config exists, create a default one using global settings
     if (!siteConfig) {
-      console.log(
+      debugLog(
         `SettingsManager: No config found for ${hostname}, creating default global config.`
       );
       siteConfig = {
@@ -124,7 +124,7 @@ export class SettingsManager {
     tabId?: number,
     hostname?: string
   ) {
-    console.log("SettingsManager: Updating global settings", {
+    debugLog("SettingsManager: Updating global settings", {
       oldSettings: { ...this.globalSettings },
       newSettings: settings,
       tabId,
@@ -139,13 +139,13 @@ export class SettingsManager {
 
     // Persist settings first to ensure data integrity
     await this.persistSettings(hostname);
-    console.log(
+    debugLog(
       "SettingsManager: Global settings persisted successfully"
     );
 
     // Then broadcast the update to other tabs
     broadcastGlobalSettingsUpdate(this.globalSettings);
-    console.log(
+    debugLog(
       "SettingsManager: Updated global settings & called broadcast"
     );
   }
@@ -155,16 +155,16 @@ export class SettingsManager {
     settings: AudioSettings,
     tabId?: number
   ) {
-    console.log("SettingsManager: Updating site settings for", hostname, {
+    debugLog("SettingsManager: Updating site settings for", hostname, {
       tabId,
     });
 
     if (!settings) {
-      console.log("SettingsManager: No settings provided");
+      debugLog("SettingsManager: No settings provided");
       return;
     }
     if (!hostname) {
-      console.log("SettingsManager: No hostname provided");
+      debugLog("SettingsManager: No hostname provided");
       return;
     }
 
@@ -177,12 +177,12 @@ export class SettingsManager {
         activeSetting: "site",
         settings: { ...defaultSettings },
       };
-      console.log(
+      debugLog(
         "SettingsManager: Created new site config with default settings"
       );
     }
     if (!siteConfig) {
-      console.log("SettingsManager: Initializing site with default settings");
+      debugLog("SettingsManager: Initializing site with default settings");
       return;
     }
     // Update with new settings
@@ -193,13 +193,13 @@ export class SettingsManager {
 
     // Persist settings first to ensure data integrity
     await this.persistSettings(hostname);
-    console.log(
+    debugLog(
       "SettingsManager: Site settings persisted successfully"
     );
 
     // Then broadcast the update to other tabs
     broadcastSiteSettingsUpdate(hostname, siteConfig.settings);
-    console.log(
+    debugLog(
       "SettingsManager: Updated site settings & called broadcast"
     );
   }
@@ -241,7 +241,7 @@ export class SettingsManager {
 
     // Directly call the broadcast function instead of emitting an event
     broadcastSiteModeUpdate(hostname, mode, settingsToBroadcast);
-    console.log("SettingsManager: Updated site mode & called broadcast", {
+    debugLog("SettingsManager: Updated site mode & called broadcast", {
       hostname,
       mode,
       settingsToBroadcast,
@@ -272,7 +272,7 @@ export class SettingsManager {
     // Ensure the passed object strictly matches AudioSettings type
     const disabledSettings: AudioSettings = { ...defaultSettings };
     broadcastSiteModeUpdate(hostname, "disabled", disabledSettings);
-    console.log("SettingsManager: Disabled site & called broadcast", {
+    debugLog("SettingsManager: Disabled site & called broadcast", {
       hostname,
     }); // Added log
 

@@ -10,7 +10,7 @@ export async function initializeContentScript(
   mediaProcessor: MediaProcessor,
   hostname: string
 ): Promise<() => void> {
-  console.log(`[ContentScript] Initializing script for hostname: ${hostname}`);
+  debugLog(`[ContentScript] Initializing script for hostname: ${hostname}`);
   settingsHandler.initialize(hostname);
 
   const cleanupFunctions: (() => void)[] = [];
@@ -21,7 +21,7 @@ export async function initializeContentScript(
 
   // Process media with current settings
   const processMedia = async () => {
-    console.log(
+    debugLog(
       `[ContentScript DEBUG] processMedia called for ${window.location.hostname}`
     );
     try {
@@ -41,7 +41,7 @@ export async function initializeContentScript(
       const isDisabled = isSettingsDisabled(currentSettings);
 
       const mediaElements = mediaProcessor.findMediaElements();
-      console.log(
+      debugLog(
         `[ContentScript DEBUG] Found ${mediaElements.length} media elements`
       );
 
@@ -85,7 +85,7 @@ export async function initializeContentScript(
   cleanupFunctions.push(...domCleanup);
 
   return () => {
-    console.log("[ContentScript] Running cleanup functions.");
+    debugLog("[ContentScript] Running cleanup functions.");
     cleanupFunctions.forEach((cleanup) => cleanup());
   };
 }

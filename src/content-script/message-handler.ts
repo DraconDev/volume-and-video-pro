@@ -14,12 +14,12 @@ export function createMessageHandler(
     sender: chrome.runtime.MessageSender,
     sendResponse: (response?: any) => void
   ) => {
-    console.log(
+    debugLog(
       "[ContentScript Listener] Received message:",
       JSON.stringify(message)
     );
     if (message.type === "UPDATE_SETTINGS") {
-      console.log(
+      debugLog(
         "[ContentScript Listener] Processing UPDATE_SETTINGS from background/popup"
       );
       (async () => {

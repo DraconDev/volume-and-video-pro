@@ -27,10 +27,10 @@ async function handleGetInitialSettings(
   try {
     // Ensure settings are loaded before proceeding
     await settingsManager.initialize();
-    console.log(`Message Handler: Getting initial settings for ${hostname}`);
+    debugLog(`Message Handler: Getting initial settings for ${hostname}`);
 
     const siteConfig = settingsManager.getSettingsForSite(hostname);
-    console.log(
+    debugLog(
       `[DEBUG] Message Handler (GET_INITIAL_SETTINGS): Retrieved siteConfig for ${hostname}:`,
       JSON.stringify(siteConfig, null, 2)
     );
@@ -48,7 +48,7 @@ async function handleGetInitialSettings(
       effectiveSettings = settingsManager.globalSettings;
     }
 
-    console.log(
+    debugLog(
       `Message Handler: Sending initial settings for ${hostname} to tab ${sender.tab?.id}:`,
       effectiveSettings
     );
@@ -96,7 +96,7 @@ async function handleUpdateSettings(
       hostname = getHostname(targetUrl);
     }
 
-    console.log("Message Handler: Processing update for", {
+    debugLog("Message Handler: Processing update for", {
       hostname,
       tabId: targetTabId,
       isPopup: !sender.tab,
@@ -217,7 +217,7 @@ async function handleContentScriptReady(
 export function setupMessageHandler() {
   chrome.runtime.onMessage.addListener(
     (message: MessageType, sender, sendResponse) => {
-      console.log(
+      debugLog(
         "Message Handler: Received message:",
         message,
         "from tab:",

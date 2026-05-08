@@ -14,14 +14,14 @@ export function setupDomLifecycle(
 
   // Apply settings immediately after DOMContentLoaded or if DOM is already ready
   const applyInitialSettings = async () => {
-    console.log(
+    debugLog(
       `[ContentScript DEBUG] Applying initial settings for ${window.location.hostname}`
     );
     await processMedia();
   };
 
   const domContentLoadedListener = () => {
-    console.log(
+    debugLog(
       `[ContentScript DEBUG] DOMContentLoaded event for ${window.location.hostname}`
     );
     applyInitialSettings();
@@ -39,7 +39,7 @@ export function setupDomLifecycle(
   // Watch for dynamic changes
   const mediaObserver = MediaProcessor.setupMediaObserver(
     async (addedElements: HTMLMediaElement[]) => {
-      console.log(
+      debugLog(
         `[ContentScript] Processing ${addedElements.length} newly added media elements.`
       );
       await settingsHandler.ensureInitialized();
@@ -60,7 +60,7 @@ export function setupDomLifecycle(
       );
     },
     (removedElements: HTMLMediaElement[]) => {
-      console.log(
+      debugLog(
         `[ContentScript] Cleaning up ${removedElements.length} removed media elements.`
       );
       removedElements.forEach((element: HTMLMediaElement) => {
@@ -72,7 +72,7 @@ export function setupDomLifecycle(
         remainingManagedElements.length === 0 &&
         !settingsHandler.needsAudioProcessing()
       ) {
-        console.log(
+        debugLog(
           "[ContentScript] No managed media elements left. Cleaning up AudioProcessor."
         );
         mediaProcessor.audioProcessor.cleanup();
@@ -83,7 +83,7 @@ export function setupDomLifecycle(
 
   // Ensure AudioContext is closed when the page is unloaded
   const beforeUnloadListener = () => {
-    console.log(
+    debugLog(
       "[ContentScript] Page is unloading. Performing final AudioProcessor cleanup."
     );
     mediaProcessor.audioProcessor.cleanup();
