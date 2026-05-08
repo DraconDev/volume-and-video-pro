@@ -2,6 +2,7 @@ import {
   AudioSettings,
   SiteSettings,
   defaultSettings,
+  debugLog,
 } from "./types";
 // Import the broadcast functions directly
 import {
@@ -28,20 +29,20 @@ export class SettingsManager {
 
     if (storage.siteSettings) {
       this.siteSettings = new Map(Object.entries(storage.siteSettings));
-      console.log(
+      debugLog(
         "[DEBUG] SettingsManager Initialized with stored site settings. SiteSettings Map:",
         this.siteSettings
-      ); // Add log
+      );
     } else {
       this.siteSettings = new Map(); // Ensure map is empty if nothing in storage
-      console.log(
+      debugLog(
         "[DEBUG] SettingsManager Initialized with no stored site settings."
-      ); // Add log
+      );
     }
-    console.log(
+    debugLog(
       "[DEBUG] SettingsManager Initialized. Global Settings:",
       this.globalSettings
-    ); // Also log global settings
+    );
   }
 
   private persistTimeout: NodeJS.Timeout | null = null;
