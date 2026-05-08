@@ -1,23 +1,26 @@
 # Project State
 
 ## Current Focus
-Updated Firefox-specific extension configuration to comply with new data collection requirements.
+Fixed Firefox AMO validation issues and updated extension configuration for Firefox compatibility.
 
 ## Context
-Firefox's upcoming November 2025 requirements for declaring data collection practices necessitate updating the extension's manifest configuration. The new `data_collection_permissions` field requires Firefox 140+ for desktop and 142+ for Android.
+The extension failed Firefox AMO validation due to incorrect manifest structure and insufficient minimum version requirements. These changes ensure compliance with Firefox's extension policies.
 
 ## Completed
-- [x] Added `1.png` to public assets and updated type definitions
-- [x] Updated Firefox minimum version to 140.0 for desktop
-- [x] Added Firefox for Android configuration with minimum version 142.0
-- [x] Updated data collection permissions to explicitly declare no data collection
+- [x] Fixed `data_collection_permissions` structure to match Firefox requirements
+- [x] Updated `strict_min_version` to 140.0 (desktop) and 142.0 (Android)
+- [x] Documented innerHTML warnings as false positives from React framework code
+- [x] Added comprehensive Firefox validation fixes documentation
+- [x] Updated build configuration for Firefox-specific requirements
 
 ## In Progress
-- [ ] No active work in progress
+- [ ] Update extension ID in `wxt.config.ts` before final submission
 
 ## Blockers
-- WXT type definitions need to be updated to include `data_collection_permissions`
+- Requires manual update of extension ID before AMO submission
 
 ## Next Steps
-1. Update WXT types to include `data_collection_permissions`
-2. Verify extension works with Firefox 140+ and 142+
+1. Update extension ID in `wxt.config.ts` to use your actual email/domain
+2. Rebuild extension with `pnpm zip:firefox`
+3. Submit to AMO with the provided review notes about innerHTML warnings
+4. Include both extension ZIP and source ZIP in the submission

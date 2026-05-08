@@ -44,8 +44,8 @@ export default defineConfig({
         data_collection_permissions: {
           // We do not collect any user data
           required: ["none"],
-        } as any, // Cast needed until WXT types include data_collection_permissions
-      },
+        },
+      } as any, // Cast needed until WXT types include data_collection_permissions
       gecko_android: {
         // data_collection_permissions requires Firefox for Android 142+
         strict_min_version: "142.0",
