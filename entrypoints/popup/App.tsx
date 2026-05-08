@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { AudioSettings } from "../../src/types";
+import { AudioSettings, debugLog } from "../../src/types";
 
 import { SettingsToggle } from "../../components/SettingsToggle";
 import { AudioControls } from "../../components/AudioControls";
@@ -33,7 +33,7 @@ function App() {
         }
 
         const hostname = new URL(tab.url).hostname;
-        console.log("Popup: Loading settings for hostname:", hostname);
+        debugLog("Popup: Loading settings for hostname:", hostname);
 
         // Initialize settings manager
         await settingsManager.initialize();
@@ -84,7 +84,7 @@ function App() {
       ...settings,
       [key]: value,
     };
-    console.log(
+    debugLog(
       `[Popup] handleSettingChange: Key=${key}, Value=${value}. New settings object:`,
       newSettings
     ); // Log immediate change intent
@@ -101,9 +101,9 @@ function App() {
     updateTimeoutRef.current = window.setTimeout(
       async (payload: { settingsToSend: AudioSettings; isGlobal: boolean }) => {
         const { settingsToSend, isGlobal } = payload;
-        console.log("[Popup] Debounce triggered. Sending update..."); // Log debounce execution
+        debugLog("[Popup] Debounce triggered. Sending update..."); // Log debounce execution
         try {
-          console.log("[Popup] Debounce - Final state to send:", {
+          debugLog("[Popup] Debounce - Final state to send:", {
             settingsToSend,
             isGlobal,
           }); // Log state being sent
@@ -121,14 +121,14 @@ function App() {
                 tab.id,
                 hostname
               );
-              console.log("[Popup] Debounce - Called updateGlobalSettings"); // Log which function was called
+              debugLog("[Popup] Debounce - Called updateGlobalSettings"); // Log which function was called
             } else {
               await settingsManager.updateSiteSettings(
                 hostname,
                 settingsToSend,
                 tab.id
               );
-              console.log("[Popup] Debounce - Called updateSiteSettings"); // Log which function was called
+              debugLog("[Popup] Debounce - Called updateSiteSettings"); // Log which function was called
             }
           } else {
             console.warn(
@@ -199,7 +199,7 @@ function App() {
         settingsForUI = result.settingsToUse;
         setSettings(settingsForUI);
       }
-      console.log(
+      debugLog(
         `Popup: Mode toggled to ${mode}, UI settings updated to:`,
         settingsForUI
       ); // Corrected log

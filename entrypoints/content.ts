@@ -3,6 +3,7 @@ import { MediaProcessor } from "./../src/media-processor";
 import { SettingsHandler } from "../src/settings-handler";
 import { setupHostnameDetection } from "../src/iframe-hostname-handler";
 import { initializeContentScript } from "../src/content-script-init";
+import { debugLog } from "../src/types";
 
 export default defineContentScript({
   matches: ["http://*/*", "https://*/*", "file://*/*"],
@@ -17,14 +18,14 @@ export default defineContentScript({
       return;
     }
 
-    console.log(
+    debugLog(
       "Content: Script starting - This log should always appear",
       window.location.href
     );
     
     // Skip processing for file URLs
     if (window.location.protocol === 'file:') {
-      console.log('Skipping content script for file URL');
+      debugLog('Skipping content script for file URL');
       return;
     }
 
@@ -42,7 +43,7 @@ export default defineContentScript({
 
     // Add a listener for page unload to perform cleanup
     const beforeUnloadListener = () => {
-      console.log("[ContentScript] Page is unloading. Performing overall cleanup.");
+      debugLog("[ContentScript] Page is unloading. Performing overall cleanup.");
       if (hostnameDetectionCleanup) {
         hostnameDetectionCleanup();
         hostnameDetectionCleanup = null;
