@@ -17,6 +17,8 @@ function App() {
   const [settings, setSettings] = useState<AudioSettings>(defaultSettings);
   const [isUsingGlobalSettings, setIsUsingGlobalSettings] = useState(true);
   const [isSiteEnabled, setIsSiteEnabled] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   // Load initial settings
   useEffect(() => {
