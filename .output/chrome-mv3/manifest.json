@@ -1,1 +1,73 @@
-{"manifest_version":3,"name":"Volume & Video Master 1000%","description":"Volume & Video Master - Advanced audio and video controls for your browser","version":"3.21.8","icons":{"16":"icon/16.png","32":"icon/32.png","48":"icon/48.png","96":"icon/96.png","128":"icon/128.png"},"permissions":["storage","tabs"],"host_permissions":["<all_urls>"],"background":{"service_worker":"background.js"},"action":{"default_icon":{"16":"icon/16.png","32":"icon/32.png","48":"icon/48.png","128":"icon/128.png"},"default_title":"Volume & Video Master 1000%","default_popup":"popup.html"},"web_accessible_resources":[{"resources":["assets/*"],"matches":["<all_urls>"]}],"browser_specific_settings":{"gecko":{"id":"volume-video-master@example.com","strict_min_version":"140.0","data_collection_permissions":{"required":["none"]}},"gecko_android":{"strict_min_version":"142.0"}},"content_scripts":[{"matches":["http://*/*","https://*/*"],"all_frames":true,"run_at":"document_idle","js":["content-scripts/content.js"]}]}
+{
+  "manifest_version": 3,
+  "name": "Volume & Video Master 1000%",
+  "description": "Volume & Video Master - Advanced audio and video controls for your browser",
+  "version": "3.21.9",
+  "icons": {
+    "16": "icon/16.png",
+    "32": "icon/32.png",
+    "48": "icon/48.png",
+    "96": "icon/96.png",
+    "128": "icon/128.png"
+  },
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "http://*/*",
+    "https://*/*",
+    "http://localhost/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icon/16.png",
+      "32": "icon/32.png",
+      "48": "icon/48.png",
+      "128": "icon/128.png"
+    },
+    "default_title": "Volume & Video Master 1000%",
+    "default_popup": "popup.html"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "volume-video-master@example.com",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
+    }
+  },
+  "commands": {
+    "wxt:reload-extension": {
+      "description": "Reload the extension during development",
+      "suggested_key": {
+        "default": "Alt+R"
+      }
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval' http://localhost:3002; object-src 'self';",
+    "sandbox": "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3002; sandbox allow-scripts allow-forms allow-popups allow-modals; child-src 'self';"
+  }
+}
