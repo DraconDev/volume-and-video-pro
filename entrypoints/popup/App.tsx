@@ -31,6 +31,7 @@ function App() {
         });
         if (!tab?.url) {
           console.error("Popup: No active tab found");
+          setInitError("No active tab detected");
           return;
         }
 
@@ -63,11 +64,10 @@ function App() {
         }
         // The 'else' block previously here is now unreachable because getSettingsForSite always returns a config.
       } catch (error) {
-        console.error("Popup: Error loading settings:", error, {
-          currentSettings: settings,
-          isUsingGlobalSettings,
-          isSiteEnabled,
-        });
+        console.error("Popup: Error loading settings:", error);
+        setInitError(String(error));
+      } finally {
+        setInitialized(true);
       }
     };
 
@@ -212,6 +212,19 @@ function App() {
 
   // Only affect display, not actual settings
   const displaySettings = isSiteEnabled ? settings : defaultSettings;
+
+  // Show fallback content while initializing or on error
+  if (!initialized) {
+    return (
+      <div className="w-[280px] p-4 bg-[var(--color-bg)] text-[var(--color-text)]">
+        {initError ? (
+          <p className="text-red-400 text-sm">{initError}</p>
+        ) : (
+          <p className="text-[var(--color-text-secondary)] text-sm">Loading...</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="w-[280px] p-4 font-sans bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col space-y-4">
