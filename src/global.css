@@ -12,6 +12,7 @@
     --color-surface: #2a2b2e;
     --color-surface-hover: #3a3b3e;
     --color-border: #374151;
+    --color-bg-secondary: #374151;
     --color-slider-bg: #4b5563;
   }
 
@@ -111,7 +112,7 @@
   }
 }
 
-* {
+/* Base font for the popup — individual components may opt into bold */
+body {
   font-size: 14px;
-  font-weight: 700 !important;
 }
