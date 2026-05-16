@@ -2,7 +2,7 @@
   "name": "volume-and-video-pro",
   "description": "Volume & Video Master - Advanced audio and video controls for your browser",
   "private": true,
-  "version": "3.22.3",
+  "version": "3.22.4",
   "type": "module",
   "scripts": {
     "dev": "wxt",
